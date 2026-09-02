@@ -23,12 +23,38 @@
 
         <!-- ACTIONS ROW -->
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="text-secondary font-weight-bold mb-0">Biométricos Configurados en Red</h5>
             <div>
-                <a href="?route=dispositivos&action=sincronizar" class="btn btn-success btn-sm shadow-sm">
-                    <i class="fa-solid fa-arrows-rotate mr-1"></i> Sincronizar Todos Ahora
-                </a>
-                <button class="btn btn-primary btn-sm shadow-sm ml-1" onclick="openNewDeviceModal()">
+                <h5 class="text-dark font-weight-bold mb-0">
+                    <i class="fa-solid fa-server mr-1 text-primary"></i> Biométricos Configurados en Red
+                </h5>
+                <small class="text-muted">Gestión de terminales ZKTeco, conectividad IP y protocolos</small>
+            </div>
+            <div class="d-flex align-items-center">
+                <!-- Botón Principal: Sync Rápido Hoy -->
+                <button type="button" class="btn btn-success btn-sm shadow-sm" onclick="syncAllDevices('today', this)">
+                    <i class="fa-solid fa-bolt mr-1"></i> Sincronizar Hoy (Rápido)
+                </button>
+
+                <!-- Menú Desplegable de Opciones Avanzadas -->
+                <div class="btn-group ml-1">
+                    <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle shadow-sm bg-white" data-toggle="dropdown" aria-expanded="false">
+                        <i class="fa-solid fa-sliders mr-1"></i> Opciones
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-right shadow border-0">
+                        <a class="dropdown-item py-2" href="javascript:void(0)" onclick="syncAllDevices('full', this)">
+                            <i class="fa-solid fa-database mr-2 text-primary"></i> Sincronización Histórica Completa
+                        </a>
+                        <?php if (($currentUser['rol'] ?? '') === 'ADMIN'): ?>
+                            <div class="dropdown-divider"></div>
+                            <h6 class="dropdown-header text-danger font-weight-bold"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Mantenimiento de Hardware</h6>
+                            <a class="dropdown-item py-2 text-danger" href="javascript:void(0)" onclick="openClearMemoryModal()">
+                                <i class="fa-solid fa-broom mr-2"></i> Respaldar y Liberar Memoria del Reloj
+                            </a>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary btn-sm shadow-sm ml-2" onclick="openNewDeviceModal()">
                     <i class="fa-solid fa-plus mr-1"></i> Nuevo Dispositivo
                 </button>
             </div>
@@ -48,15 +74,15 @@
         <!-- DEVICE CARDS -->
         <div class="row">
             <?php foreach ($dispositivos as $d): ?>
-                <div class="col-md-6 col-lg-4">
-                    <div class="card card-outline <?= $d['estado_conexion'] === 'ONLINE' ? 'card-success' : 'card-danger' ?> shadow-sm">
+                <div class="col-md-6 col-lg-4" id="card-col-<?= $d['id'] ?>">
+                    <div class="card card-outline <?= $d['estado_conexion'] === 'ONLINE' ? 'card-success' : 'card-danger' ?> shadow-sm" id="device-card-<?= $d['id'] ?>">
                         <div class="card-header">
-                            <h3 class="card-title font-weight-bold"><?= htmlspecialchars($d['nombre']) ?></h3>
-                            <div class="card-tools">
+                            <h3 class="card-title font-weight-bold text-dark"><?= htmlspecialchars($d['nombre']) ?></h3>
+                            <div class="card-tools" id="device-badge-<?= $d['id'] ?>">
                                 <?php if ($d['estado_conexion'] === 'ONLINE'): ?>
-                                    <span class="badge badge-success px-2 py-1"><i class="fa-solid fa-signal mr-1"></i> ONLINE</span>
+                                    <span class="badge badge-success px-2 py-1"><i class="fa-solid fa-signal mr-1"></i> EN LÍNEA</span>
                                 <?php else: ?>
-                                    <span class="badge badge-danger px-2 py-1"><i class="fa-solid fa-circle-xmark mr-1"></i> OFFLINE</span>
+                                    <span class="badge badge-danger px-2 py-1"><i class="fa-solid fa-circle-xmark mr-1"></i> DESCONECTADO</span>
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -68,34 +94,53 @@
                                 </li>
                                 <li class="list-group-item d-flex justify-content-between py-1">
                                     <b class="text-secondary">Protocolo / Clave:</b>
-                                    <span><?= $d['protocolo'] ?> (ComKey: <?= $d['clave_comunicacion'] ?>)</span>
+                                    <span>Protocolo <?= $d['protocolo'] ?> (Clave: <?= $d['clave_comunicacion'] ?>)</span>
                                 </li>
                                 <li class="list-group-item d-flex justify-content-between py-1">
                                     <b class="text-secondary">Ubicación / Sede:</b>
                                     <span><i class="fa-solid fa-location-dot text-danger mr-1"></i><?= htmlspecialchars($d['ubicacion'] ?? 'General') ?></span>
                                 </li>
                                 <li class="list-group-item d-flex justify-content-between py-1">
-                                    <b class="text-secondary">Último Sync:</b>
-                                    <span class="text-muted"><?= $d['ultimo_sync'] ? substr($d['ultimo_sync'], 0, 16) : 'Nunca' ?></span>
+                                    <b class="text-secondary">Última Sincronización:</b>
+                                    <span class="text-muted" id="device-sync-<?= $d['id'] ?>"><?= $d['ultimo_sync'] ? substr($d['ultimo_sync'], 0, 16) : 'Nunca' ?></span>
                                 </li>
                             </ul>
 
-                            <?php if (!empty($d['ultimo_error'])): ?>
-                                <div class="alert alert-danger p-2 small mb-2">
-                                    <i class="fa-solid fa-triangle-exclamation mr-1"></i> <?= htmlspecialchars(mb_strimwidth($d['ultimo_error'], 0, 90, '...')) ?>
-                                </div>
-                            <?php endif; ?>
+                            <div id="device-error-<?= $d['id'] ?>">
+                                <?php if (!empty($d['ultimo_error'])): ?>
+                                    <div class="alert alert-danger p-2 small mb-2">
+                                        <i class="fa-solid fa-triangle-exclamation mr-1"></i> <?= htmlspecialchars(mb_strimwidth($d['ultimo_error'], 0, 90, '...')) ?>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
 
-                            <div class="d-flex justify-content-between">
-                                <button class="btn btn-outline-primary btn-sm flex-grow-1 mr-1" onclick="testConnection(<?= $d['id'] ?>, this)">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <button type="button" class="btn btn-outline-primary btn-sm flex-grow-1 mr-1" onclick="testConnection(<?= $d['id'] ?>, this)">
                                     <i class="fa-solid fa-plug mr-1"></i> Probar Conexión
                                 </button>
-                                <a href="?route=dispositivos&action=sincronizar&id=<?= $d['id'] ?>" class="btn btn-outline-success btn-sm mr-1" title="Sincronizar este dispositivo">
-                                    <i class="fa-solid fa-rotate"></i>
-                                </a>
-                                <button class="btn btn-outline-secondary btn-sm" onclick="openEditDeviceModal(<?= htmlspecialchars(json_encode($d)) ?>)" title="Editar">
-                                    <i class="fa-solid fa-pen"></i>
+                                <button type="button" class="btn btn-success btn-sm mr-1" onclick="syncDevice(<?= $d['id'] ?>, this, 'today')" title="Sincronizar hoy (rápido)">
+                                    <i class="fa-solid fa-bolt"></i>
                                 </button>
+                                
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" data-toggle="dropdown">
+                                        <i class="fa-solid fa-gear"></i>
+                                    </button>
+                                    <div class="dropdown-menu dropdown-menu-right shadow border-0">
+                                        <a class="dropdown-item small" href="javascript:void(0)" onclick="syncDevice(<?= $d['id'] ?>, null, 'full')">
+                                            <i class="fa-solid fa-database mr-2 text-primary"></i> Sincronización Histórica
+                                        </a>
+                                        <a class="dropdown-item small" href="javascript:void(0)" onclick="openEditDeviceModal(<?= htmlspecialchars(json_encode($d)) ?>)">
+                                            <i class="fa-solid fa-pen mr-2 text-secondary"></i> Editar Configuración
+                                        </a>
+                                        <?php if (($currentUser['rol'] ?? '') === 'ADMIN'): ?>
+                                            <div class="dropdown-divider"></div>
+                                            <a class="dropdown-item small text-danger" href="javascript:void(0)" onclick="confirmClearDeviceMemory(<?= $d['id'] ?>, '<?= htmlspecialchars($d['nombre']) ?>')">
+                                                <i class="fa-solid fa-broom mr-2"></i> Liberar Memoria del Reloj
+                                            </a>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -131,7 +176,20 @@
                             <tr>
                                 <td class="text-secondary"><?= $l['fecha_hora'] ?></td>
                                 <td class="font-weight-bold text-dark"><?= htmlspecialchars($l['dispositivo_nombre'] ?? 'Global') ?></td>
-                                <td><span class="badge badge-light border"><?= $l['tipo_evento'] ?></span></td>
+                                <td>
+                                    <?php
+                                        $eventoLabel = match($l['tipo_evento']) {
+                                            'SYNC_AUTO' => 'Sincronización Automática',
+                                            'SYNC_MANUAL' => 'Sincronización Manual',
+                                            'TEST_CONEXION' => 'Prueba de Conexión',
+                                            'CLEAR_ATTENDANCE' => 'Limpieza de Memoria',
+                                            'SYNC_USERS' => 'Sincronización de Usuarios',
+                                            'ERROR' => 'Error',
+                                            default => htmlspecialchars($l['tipo_evento'])
+                                        };
+                                    ?>
+                                    <span class="badge badge-light border"><?= $eventoLabel ?></span>
+                                </td>
                                 <td class="text-center font-weight-bold"><?= $l['total_descargados'] ?></td>
                                 <td class="text-center text-success font-weight-bold">+<?= $l['total_insertados'] ?></td>
                                 <td class="text-center text-muted"><?= $l['total_duplicados'] ?></td>
@@ -201,7 +259,7 @@
                     </div>
                     <div class="col-6">
                         <div class="form-group">
-                            <label class="small font-weight-bold text-secondary">Clave (ComKey)</label>
+                            <label class="small font-weight-bold text-secondary">Clave de Comunicación (ComKey)</label>
                             <input type="number" name="clave_comunicacion" id="dev_clave" class="form-control form-control-sm" value="0">
                         </div>
                     </div>
@@ -231,6 +289,18 @@
 </div>
 
 <script>
+function escapeHtml(text) {
+    if (!text) return '';
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.toString().replace(/[&<>"']/g, function(m) { return map[m]; });
+}
+
 function openNewDeviceModal() {
     document.getElementById('deviceModalTitle').innerText = 'Nuevo Reloj Biométrico';
     document.getElementById('dev_id').value = '';
@@ -259,39 +329,327 @@ function openEditDeviceModal(d) {
     $('#modalDispositivo').modal('show');
 }
 
+function updateDeviceCardUI(deviceId, status, lastSync, lastError) {
+    const card = document.getElementById(`device-card-${deviceId}`);
+    const badge = document.getElementById(`device-badge-${deviceId}`);
+    const syncEl = document.getElementById(`device-sync-${deviceId}`);
+    const errorEl = document.getElementById(`device-error-${deviceId}`);
+
+    if (card) {
+        if (status === 'ONLINE') {
+            card.classList.remove('card-danger');
+            card.classList.add('card-success');
+        } else {
+            card.classList.remove('card-success');
+            card.classList.add('card-danger');
+        }
+    }
+
+    if (badge) {
+        if (status === 'ONLINE') {
+            badge.innerHTML = '<span class="badge badge-success px-2 py-1"><i class="fa-solid fa-signal mr-1"></i> EN LÍNEA</span>';
+        } else {
+            badge.innerHTML = '<span class="badge badge-danger px-2 py-1"><i class="fa-solid fa-circle-xmark mr-1"></i> DESCONECTADO</span>';
+        }
+    }
+
+    if (syncEl && lastSync) {
+        syncEl.innerText = lastSync;
+    }
+
+    if (errorEl) {
+        if (status === 'ONLINE' || !lastError) {
+            errorEl.innerHTML = '';
+        } else {
+            const shortError = lastError.length > 90 ? lastError.substring(0, 90) + '...' : lastError;
+            errorEl.innerHTML = `
+                <div class="alert alert-danger p-2 small mb-2">
+                    <i class="fa-solid fa-triangle-exclamation mr-1"></i> ${escapeHtml(shortError)}
+                </div>
+            `;
+        }
+    }
+}
+
 function testConnection(deviceId, btn) {
     const originalHtml = btn.innerHTML;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Conectando...';
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Probando...';
     btn.disabled = true;
 
-    fetch(`?route=dispositivos&action=test&id=${deviceId}`)
+    fetch(`?route=dispositivos&action=test&id=${deviceId}`, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(async res => {
+        const text = await res.text();
+        try {
+            return JSON.parse(text);
+        } catch (e) {
+            throw new Error(text || 'Respuesta vacía o formato inválido del servidor.');
+        }
+    })
+    .then(data => {
+        btn.innerHTML = originalHtml;
+        btn.disabled = false;
+
+        updateDeviceCardUI(deviceId, data.estado_conexion, data.ultimo_sync, data.ultimo_error);
+
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: '¡Conexión Exitosa con ZKTeco!',
+                html: `<pre class="text-left bg-dark text-white p-3 rounded small" style="max-height: 250px; overflow-y: auto;">${escapeHtml(data.output)}</pre>`,
+                confirmButtonText: 'Aceptar',
+                confirmButtonColor: '#28a745'
+            });
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Fallo de Conexión',
+                html: `<pre class="text-left bg-dark text-white p-3 rounded small" style="max-height: 250px; overflow-y: auto;">${escapeHtml(data.output)}</pre>`,
+                confirmButtonText: 'Entendido',
+                confirmButtonColor: '#dc3545'
+            });
+        }
+    })
+    .catch(err => {
+        btn.innerHTML = originalHtml;
+        btn.disabled = false;
+        Swal.fire('Error', 'No se pudo completar la prueba de comunicación: ' + err.message, 'error');
+    });
+}
+
+function monitorSyncProgress(btn, originalHtml, customTitle) {
+    let secondsElapsed = 0;
+    
+    Swal.fire({
+        title: customTitle || 'Sincronizando Relojes Biométricos...',
+        html: `
+            <div class="text-center py-2">
+                <i class="fa-solid fa-arrows-rotate fa-spin fa-3x text-success mb-3"></i>
+                <p class="mb-1 font-weight-bold text-dark" id="swal-sync-msg">Descargando marcaciones y usuarios desde ZKTeco...</p>
+                <div class="badge badge-light border px-2 py-1 text-muted mb-2" id="swal-sync-timer">Tiempo transcurrido: 0s</div>
+                <pre class="text-left bg-dark text-white p-2 rounded small" id="swal-sync-log" style="max-height: 120px; overflow-y: auto; font-size: 11px; display: none;"></pre>
+            </div>
+        `,
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        showConfirmButton: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
+    const timerInterval = setInterval(() => {
+        secondsElapsed++;
+        const timerEl = document.getElementById('swal-sync-timer');
+        if (timerEl) {
+            timerEl.innerText = `Tiempo transcurrido: ${secondsElapsed}s`;
+        }
+    }, 1000);
+
+    const pollInterval = setInterval(() => {
+        fetch('?route=dispositivos&action=sync_status', {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
         .then(res => res.json())
         .then(data => {
-            btn.innerHTML = originalHtml;
-            btn.disabled = false;
-            
-            if (data.success) {
-                Swal.fire({
-                    icon: 'success',
-                    title: '¡Conexión Exitosa con ZKTeco!',
-                    html: `<pre class="text-left bg-dark text-white p-3 rounded small">${data.output}</pre>`,
-                    confirmButtonText: 'Aceptar'
-                });
-            } else {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Fallo de Conexión',
-                    html: `<pre class="text-left bg-dark text-white p-3 rounded small">${data.output}</pre>`,
-                    confirmButtonText: 'Entendido'
-                });
+            const logEl = document.getElementById('swal-sync-log');
+            if (logEl && data.log_tail) {
+                logEl.style.display = 'block';
+                logEl.innerText = data.log_tail;
+                logEl.scrollTop = logEl.scrollHeight;
+            }
+
+            if (!data.running) {
+                clearInterval(pollInterval);
+                clearInterval(timerInterval);
+
+                if (btn) {
+                    btn.innerHTML = originalHtml;
+                    btn.disabled = false;
+                }
+
+                if (data.dispositivos) {
+                    data.dispositivos.forEach(d => {
+                        updateDeviceCardUI(d.id, d.estado_conexion, d.ultimo_sync ? d.ultimo_sync.substring(0, 16) : 'Nunca', d.ultimo_error);
+                    });
+                }
+
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Sincronización Completada!',
+                        html: `<pre class="text-left bg-dark text-white p-3 rounded small" style="max-height: 250px; overflow-y: auto;">${escapeHtml(data.output)}</pre>`,
+                        confirmButtonText: 'Aceptar',
+                        confirmButtonColor: '#28a745'
+                    }).then(() => {
+                        location.href = '?route=dispositivos';
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Resultado de Sincronización',
+                        html: `<pre class="text-left bg-dark text-white p-3 rounded small" style="max-height: 250px; overflow-y: auto;">${escapeHtml(data.output)}</pre>`,
+                        confirmButtonText: 'Entendido'
+                    }).then(() => {
+                        location.href = '?route=dispositivos';
+                    });
+                }
             }
         })
         .catch(err => {
+            console.error("Polling error:", err);
+        });
+    }, 2500);
+}
+
+function syncDevice(deviceId, btn, mode = 'today') {
+    const originalHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        btn.disabled = true;
+    }
+
+    const title = (mode === 'today') ? 'Sincronización Rápida de Hoy...' : 'Sincronización Histórica Completa...';
+
+    fetch(`?route=dispositivos&action=sincronizar&id=${deviceId}&mode=${mode}&ajax=1`, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(res => res.json())
+    .then(data => {
+        monitorSyncProgress(btn, originalHtml, title);
+    })
+    .catch(err => {
+        if (btn) {
             btn.innerHTML = originalHtml;
             btn.disabled = false;
-            Swal.fire('Error', 'No se pudo completar la prueba de comunicación.', 'error');
+        }
+        Swal.fire('Error', 'No se pudo iniciar la sincronización: ' + err.message, 'error');
+    });
+}
+
+function syncAllDevices(mode = 'today', btn = null) {
+    const originalHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Sincronizando...';
+        btn.disabled = true;
+    }
+
+    const title = (mode === 'today') ? 'Sincronizando Todos los Relojes (Solo Hoy)...' : 'Sincronizando Todo el Histórico...';
+
+    fetch(`?route=dispositivos&action=sincronizar&mode=${mode}&ajax=1`, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(res => res.json())
+    .then(data => {
+        monitorSyncProgress(btn, originalHtml, title);
+    })
+    .catch(err => {
+        if (btn) {
+            btn.innerHTML = originalHtml;
+            btn.disabled = false;
+        }
+        Swal.fire('Error', 'No se pudo iniciar la sincronización masiva: ' + err.message, 'error');
+    });
+}
+
+function confirmClearDeviceMemory(deviceId, deviceName) {
+    Swal.fire({
+        title: '¿Liberar memoria del reloj?',
+        html: `
+            <div class="text-left small text-secondary">
+                <p>Estás a punto de vaciar el búfer de marcaciones del biométrico <b>${escapeHtml(deviceName)}</b>.</p>
+                <div class="alert alert-warning p-2">
+                    <i class="fa-solid fa-triangle-exclamation mr-1"></i> 
+                    <b>Asegúrate de haber sincronizado primero</b> para que todos los registros históricos estén respaldados en la base de datos MySQL.
+                </div>
+                <p class="mb-0">Al liberar la memoria, las futuras sincronizaciones tomarán <b>menos de 0.5 segundos</b> en lugar de procesar miles de registros antiguos.</p>
+            </div>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: '<i class="fa-solid fa-broom mr-1"></i> Sí, liberar memoria',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Conectando con el biométrico...',
+                text: 'Enviando comando de limpieza de registros...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            const formData = new FormData();
+            formData.append('id', deviceId);
+
+            fetch('?route=dispositivos&action=limpiar_memoria', {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Memoria Liberada!',
+                        text: data.output || 'Se ha vaciado la memoria del reloj. Las siguientes sincronizaciones serán ultrarrápidas.',
+                        confirmButtonColor: '#28a745'
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'No se pudo liberar memoria',
+                        text: data.output || 'Ocurrió un error al comunicarse con el reloj.'
+                    });
+                }
+            })
+            .catch(err => {
+                Swal.fire('Error', 'Fallo de red: ' + err.message, 'error');
+            });
+        }
+    });
+}
+
+function openClearMemoryModal() {
+    // Si hay más de un dispositivo, consultar cuál
+    const devices = <?= json_encode(array_map(function($d) { return ['id' => $d['id'], 'nombre' => $d['nombre']]; }, $dispositivos)) ?>;
+    if (devices.length === 1) {
+        confirmClearDeviceMemory(devices[0].id, devices[0].nombre);
+    } else {
+        let inputOptions = {};
+        devices.forEach(d => {
+            inputOptions[d.id] = d.nombre;
         });
+
+        Swal.fire({
+            title: 'Selecciona el Reloj a Limpiar',
+            input: 'select',
+            inputOptions: inputOptions,
+            inputPlaceholder: '-- Seleccionar dispositivo --',
+            showCancelButton: true,
+            confirmButtonText: 'Continuar',
+            cancelButtonText: 'Cancelar',
+            inputValidator: (value) => {
+                if (!value) return 'Debes seleccionar un reloj biométrico';
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const selectedDev = devices.find(d => d.id == result.value);
+                if (selectedDev) {
+                    confirmClearDeviceMemory(selectedDev.id, selectedDev.nombre);
+                }
+            }
+        });
+    }
 }
 </script>
 
 <?php require_once APP_ROOT . '/views/layout/footer.php'; ?>
+

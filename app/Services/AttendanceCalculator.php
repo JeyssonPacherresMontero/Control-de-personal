@@ -189,6 +189,7 @@ class AttendanceCalculator {
         $estado = 'PRESENTE';
         $observaciones = [];
 
+        $isToday = ($date === date('Y-m-d'));
         $scheduledEntryStr = $employee['hora_entrada'] ? "$date {$employee['hora_entrada']}" : null;
         $scheduledExitStr = $employee['hora_salida'] ? ($esNocturno ? "$nextDate {$employee['hora_salida']}" : "$date {$employee['hora_salida']}") : null;
         $tolerancia = (int)($employee['tolerancia_minutos'] ?? 10);
@@ -208,10 +209,25 @@ class AttendanceCalculator {
 
                 if ($dtEntryReal > $dtEntryLimitFalta) {
                     $estado = 'TARDANZA';
-                    $observaciones[] = "Tardanza excesiva (+{$minutosTardanza} min)";
+                    $observaciones[] = "Tardanza severa (+{$minutosTardanza} min)";
                 } else {
                     $estado = 'TARDANZA';
                     $observaciones[] = "Llegada con tardanza ({$minutosTardanza} min)";
+                }
+            }
+        }
+
+        // Evaluar Refrigerio Real vs Asignado
+        $minutosRefrigerioTomados = 0;
+        if ($breakOutPunch && $breakInPunch) {
+            $dtBreakOut = new DateTime($breakOutPunch);
+            $dtBreakIn = new DateTime($breakInPunch);
+            if ($dtBreakIn > $dtBreakOut) {
+                $minutosRefrigerioTomados = (int)floor(($dtBreakIn->getTimestamp() - $dtBreakOut->getTimestamp()) / 60);
+                $minutosRefProgramados = (int)($employee['minutos_refrigerio'] ?? 60);
+                if ($minutosRefProgramados > 0 && $minutosRefrigerioTomados > ($minutosRefProgramados + 5)) {
+                    $excesoRef = $minutosRefrigerioTomados - $minutosRefProgramados;
+                    $observaciones[] = "Exceso en refrigerio (+{$excesoRef} min)";
                 }
             }
         }
@@ -221,16 +237,20 @@ class AttendanceCalculator {
             $dtEntryReal = new DateTime($entryPunch);
             $dtExitReal = new DateTime($exitPunch);
 
-            // Minutos totales entre entrada y salida
+            // Minutos totales brutos entre entrada y salida
             $diffSeconds = $dtExitReal->getTimestamp() - $dtEntryReal->getTimestamp();
             $minutosBrutos = (int)floor($diffSeconds / 60);
 
-            // Descontar refrigerio si aplica
-            $minutosDesc = (int)($employee['minutos_refrigerio'] ?? 0);
-            if ($minutosBrutos > 240 && $minutosDesc > 0) { // Si trabajó más de 4 horas
-                $minutosTrabajados = max(0, $minutosBrutos - $minutosDesc);
+            // Descontar refrigerio: si tomó refrigerio real, descontamos el real; sino, el automático
+            if ($minutosRefrigerioTomados > 0) {
+                $minutosTrabajados = max(0, $minutosBrutos - $minutosRefrigerioTomados);
             } else {
-                $minutosTrabajados = $minutosBrutos;
+                $minutosDesc = (int)($employee['minutos_refrigerio'] ?? 0);
+                if ($minutosBrutos > 240 && $minutosDesc > 0) { // Jornada mayor a 4h
+                    $minutosTrabajados = max(0, $minutosBrutos - $minutosDesc);
+                } else {
+                    $minutosTrabajados = $minutosBrutos;
+                }
             }
 
             // Evaluar Horas Extras / Salida Temprana con respecto al turno oficial
@@ -240,28 +260,43 @@ class AttendanceCalculator {
                 if ($dtExitReal > $dtExitProg) {
                     // Sobretiempo laborado
                     $extraSec = $dtExitReal->getTimestamp() - $dtExitProg->getTimestamp();
-                    $minutosExtra = (int)floor($extraSec / 60);
-                    // Solo considerar horas extras si supera un umbral de 15 minutos
-                    if ($minutosExtra < 15) {
-                        $minutosExtra = 0;
+                    $minutosExtraCalc = (int)floor($extraSec / 60);
+                    // Filtro de ruido: Solo computar horas extras si supera un umbral de 15 minutos
+                    if ($minutosExtraCalc >= 15) {
+                        $minutosExtra = $minutosExtraCalc;
                     }
                 } elseif ($dtExitReal < $dtExitProg) {
                     // Se retiró antes de tiempo
                     $earlySec = $dtExitProg->getTimestamp() - $dtExitReal->getTimestamp();
                     $minutosSalidaTemprana = (int)floor($earlySec / 60);
-                    $observaciones[] = "Salida anticipada ({$minutosSalidaTemprana} min)";
+                    // Solo marcar si supera 5 minutos de anticipación
+                    if ($minutosSalidaTemprana >= 5) {
+                        $observaciones[] = "Salida anticipada ({$minutosSalidaTemprana} min)";
+                    }
                 }
             }
         } elseif ($entryPunch && !$exitPunch) {
-            // Solo marcó entrada y no marcó salida
-            // Si ya pasó la jornada (por ejemplo, pasaron más de 12 horas desde la entrada), se marca observación
+            // Solo marcó entrada y no tiene salida
             $dtEntryReal = new DateTime($entryPunch);
             $now = new DateTime();
-            $hoursPassed = ($now->getTimestamp() - $dtEntryReal->getTimestamp()) / 3600;
+            
+            if ($isToday) {
+                // Es el día de hoy: verificar si la jornada sigue en curso
+                $dtExitProg = $scheduledExitStr ? new DateTime($scheduledExitStr) : (clone $dtEntryReal)->modify('+9 hours');
+                $dtExitLimit = (clone $dtExitProg)->modify('+3 hours');
 
-            if ($hoursPassed > 10) {
+                if ($now <= $dtExitLimit) {
+                    // La persona está actualmente laborando en su turno
+                    $observaciones[] = "Jornada en curso (ingreso a las " . $dtEntryReal->format('H:i') . ")";
+                } else {
+                    // Ya pasó el horario de turno holgadamente y nunca marcó salida
+                    $estado = 'SALIDA_SIN_MARCAR';
+                    $observaciones[] = "No registró marcación de salida";
+                }
+            } else {
+                // Fecha pasada y no marcó salida
                 $estado = 'SALIDA_SIN_MARCAR';
-                $observaciones[] = 'No registró marcación de salida';
+                $observaciones[] = "No registró marcación de salida";
             }
         }
 

@@ -1,6 +1,24 @@
 <?php
+\App\Controllers\AuthController::checkAuth();
 $currentUser = \App\Controllers\AuthController::user();
+$userRole = $currentUser['rol'] ?? 'CONSULTA';
 $currentRoute = $_GET['route'] ?? 'dashboard';
+
+// Configuración de badges y títulos según rol
+$roleBadgeClass = match($userRole) {
+    'ADMIN' => 'badge-danger',
+    'RRHH' => 'badge-primary',
+    'SUPERVISOR' => 'badge-info',
+    default => 'badge-secondary'
+};
+
+$roleLabel = match($userRole) {
+    'ADMIN' => 'Administrador (TI)',
+    'RRHH' => 'Recursos Humanos',
+    'SUPERVISOR' => 'Supervisor de Área',
+    'CONSULTA' => 'Solo Consulta',
+    default => $userRole
+};
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -46,6 +64,52 @@ $currentRoute = $_GET['route'] ?? 'dashboard';
             font-weight: 600;
             border-radius: 4px;
         }
+
+        /* ESTILOS DE IMPRESIÓN / EXPORTACIÓN PDF */
+        @media print {
+            .main-sidebar, .main-header, .main-footer, .breadcrumb, .card-tools, .card-body form, .btn, .dataTables_length, .dataTables_filter, .dataTables_info, .dataTables_paginate, .alert, .preloader {
+                display: none !important;
+            }
+            body, .content-wrapper, .wrapper {
+                background: #ffffff !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            .content-wrapper {
+                margin-left: 0 !important;
+            }
+            .card {
+                border: none !important;
+                box-shadow: none !important;
+                margin-bottom: 0 !important;
+            }
+            .card-header {
+                border-bottom: 2px solid #333 !important;
+                padding: 5px 0 !important;
+            }
+            .card-body {
+                padding: 10px 0 !important;
+            }
+            .table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                font-size: 9pt !important;
+            }
+            .table th, .table td {
+                border: 1px solid #999 !important;
+                padding: 4px 6px !important;
+            }
+            .badge {
+                border: 1px solid #777 !important;
+                color: #000 !important;
+                background: transparent !important;
+                font-weight: bold !important;
+            }
+            @page {
+                size: landscape;
+                margin: 1cm;
+            }
+        }
     </style>
 </head>
 <body class="hold-transition sidebar-mini layout-fixed layout-navbar-fixed layout-footer-fixed">
@@ -65,7 +129,7 @@ $currentRoute = $_GET['route'] ?? 'dashboard';
                 <a class="nav-link" data-widget="pushmenu" href="#" role="button"><i class="fas fa-bars"></i></a>
             </li>
             <li class="nav-item d-none d-sm-inline-block">
-                <a href="?route=dashboard" class="nav-link"><i class="fa-solid fa-gauge-high mr-1"></i> Dashboard</a>
+                <a href="?route=dashboard" class="nav-link"><i class="fa-solid fa-gauge-high mr-1"></i> Panel Principal</a>
             </li>
             <li class="nav-item d-none d-sm-inline-block">
                 <a href="?route=asistencia" class="nav-link"><i class="fa-solid fa-calendar-check mr-1"></i> Asistencia</a>
@@ -74,12 +138,14 @@ $currentRoute = $_GET['route'] ?? 'dashboard';
 
         <!-- Right navbar links -->
         <ul class="navbar-nav ml-auto align-items-center">
-            <!-- Sync Button -->
-            <li class="nav-item mr-2">
-                <a href="?route=dispositivos&action=sincronizar" class="btn btn-sm btn-outline-primary" title="Sincronizar todos los relojes ZKTeco">
-                    <i class="fa-solid fa-arrows-rotate mr-1"></i> Sincronizar Relojes
-                </a>
-            </li>
+            <!-- Sync Button: Solo visible para ADMIN y RRHH -->
+            <?php if (in_array($userRole, ['ADMIN', 'RRHH'], true)): ?>
+                <li class="nav-item mr-2">
+                    <a href="javascript:void(0)" onclick="typeof openSyncModal === 'function' ? openSyncModal() : (typeof syncAllDevices === 'function' ? syncAllDevices('today', this) : window.location.href='?route=dispositivos')" class="btn btn-sm btn-outline-success font-weight-bold" title="Sincronización rápida de relojes ZKTeco">
+                        <i class="fa-solid fa-bolt mr-1"></i> Sincronizar Hoy
+                    </a>
+                </li>
+            <?php endif; ?>
 
             <!-- Date badge -->
             <li class="nav-item d-none d-md-inline-block mr-3">
@@ -93,6 +159,7 @@ $currentRoute = $_GET['route'] ?? 'dashboard';
                 <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">
                     <i class="fa-solid fa-circle-user fa-lg mr-1 text-primary"></i>
                     <span class="d-none d-md-inline font-weight-bold"><?= htmlspecialchars($currentUser['nombre'] ?? 'Usuario') ?></span>
+                    <span class="badge <?= $roleBadgeClass ?> ml-1" style="font-size: 75%;"><?= htmlspecialchars($userRole) ?></span>
                 </a>
                 <ul class="dropdown-menu dropdown-menu-lg dropdown-menu-right shadow border-0">
                     <!-- User image -->
@@ -100,7 +167,7 @@ $currentRoute = $_GET['route'] ?? 'dashboard';
                         <i class="fa-solid fa-user-shield fa-3x mb-2 text-white"></i>
                         <p>
                             <?= htmlspecialchars($currentUser['nombre'] ?? 'Usuario') ?>
-                            <small>Rol: <?= htmlspecialchars($currentUser['rol'] ?? 'RRHH') ?></small>
+                            <small class="d-block mt-1 font-weight-bold badge <?= $roleBadgeClass ?> text-white"><?= htmlspecialchars($roleLabel) ?></small>
                         </p>
                     </li>
                     <!-- Menu Footer-->
@@ -138,7 +205,8 @@ $currentRoute = $_GET['route'] ?? 'dashboard';
                     <i class="fa-solid fa-user-circle fa-2x text-light"></i>
                 </div>
                 <div class="info">
-                    <a href="#" class="d-block font-weight-bold"><?= htmlspecialchars($currentUser['nombre'] ?? 'Administrador') ?></a>
+                    <a href="#" class="d-block font-weight-bold text-truncate" style="max-width: 160px;"><?= htmlspecialchars($currentUser['nombre'] ?? 'Usuario') ?></a>
+                    <span class="badge <?= $roleBadgeClass ?> mr-1" style="font-size: 70%;"><?= htmlspecialchars($userRole) ?></span>
                     <span class="badge badge-success" style="font-size: 70%;"><i class="fa-solid fa-circle mr-1" style="font-size: 6px;"></i>En línea</span>
                 </div>
             </div>
@@ -147,12 +215,20 @@ $currentRoute = $_GET['route'] ?? 'dashboard';
             <nav class="mt-2">
                 <ul class="nav nav-pills nav-sidebar flex-column nav-child-indent" data-widget="treeview" role="menu" data-accordion="false">
                     
+                    <!-- MONITOREO & REPORTES: Visible para todos -->
                     <li class="nav-header">MONITOREO & REPORTES</li>
                     
                     <li class="nav-item">
                         <a href="?route=dashboard" class="nav-link <?= $currentRoute === 'dashboard' ? 'active' : '' ?>">
                             <i class="nav-icon fa-solid fa-chart-pie"></i>
-                            <p>Dashboard</p>
+                            <p>
+                                <?= match($userRole) {
+                                    'ADMIN' => 'Panel TI & Red',
+                                    'RRHH' => 'Panel de Control RRHH',
+                                    'SUPERVISOR' => 'Panel de Supervisión',
+                                    default => 'Panel Principal'
+                                } ?>
+                            </p>
                         </a>
                     </li>
                     
@@ -166,44 +242,53 @@ $currentRoute = $_GET['route'] ?? 'dashboard';
                     <li class="nav-item">
                         <a href="?route=marcaciones" class="nav-link <?= $currentRoute === 'marcaciones' ? 'active' : '' ?>">
                             <i class="nav-icon fa-solid fa-clock-rotate-left"></i>
-                            <p>Marcaciones Crudas</p>
+                            <p>Registro de Marcaciones</p>
                         </a>
                     </li>
 
-                    <li class="nav-header">GESTIÓN DE PERSONAL</li>
+                    <!-- GESTIÓN DE PERSONAL: Visible para ADMIN, RRHH y SUPERVISOR -->
+                    <?php if (in_array($userRole, ['ADMIN', 'RRHH', 'SUPERVISOR'], true)): ?>
+                        <li class="nav-header">GESTIÓN DE PERSONAL</li>
 
-                    <li class="nav-item">
-                        <a href="?route=empleados" class="nav-link <?= $currentRoute === 'empleados' ? 'active' : '' ?>">
-                            <i class="nav-icon fa-solid fa-users"></i>
-                            <p>Empleados</p>
-                        </a>
-                    </li>
+                        <li class="nav-item">
+                            <a href="?route=empleados" class="nav-link <?= $currentRoute === 'empleados' ? 'active' : '' ?>">
+                                <i class="nav-icon fa-solid fa-users"></i>
+                                <p>Directorio de Personal</p>
+                            </a>
+                        </li>
 
-                    <li class="nav-item">
-                        <a href="?route=turnos" class="nav-link <?= $currentRoute === 'turnos' ? 'active' : '' ?>">
-                            <i class="nav-icon fa-solid fa-business-time"></i>
-                            <p>Turnos y Horarios</p>
-                        </a>
-                    </li>
+                        <!-- Turnos y Horarios: Solo visible para ADMIN y RRHH -->
+                        <?php if (in_array($userRole, ['ADMIN', 'RRHH'], true)): ?>
+                            <li class="nav-item">
+                                <a href="?route=turnos" class="nav-link <?= $currentRoute === 'turnos' ? 'active' : '' ?>">
+                                    <i class="nav-icon fa-solid fa-business-time"></i>
+                                    <p>Turnos y Horarios</p>
+                                </a>
+                            </li>
+                        <?php endif; ?>
 
-                    <li class="nav-item">
-                        <a href="?route=justificaciones" class="nav-link <?= $currentRoute === 'justificaciones' ? 'active' : '' ?>">
-                            <i class="nav-icon fa-solid fa-file-signature"></i>
-                            <p>Justificaciones</p>
-                        </a>
-                    </li>
+                        <li class="nav-item">
+                            <a href="?route=justificaciones" class="nav-link <?= $currentRoute === 'justificaciones' ? 'active' : '' ?>">
+                                <i class="nav-icon fa-solid fa-file-signature"></i>
+                                <p>Justificaciones y Permisos</p>
+                            </a>
+                        </li>
+                    <?php endif; ?>
 
-                    <li class="nav-header">HARDWARE & RED</li>
+                    <!-- Hardware & Red (Relojes ZKTeco): Exclusivo para ADMIN -->
+                    <?php if ($userRole === 'ADMIN'): ?>
+                        <li class="nav-header">HARDWARE & RED</li>
 
-                    <li class="nav-item">
-                        <a href="?route=dispositivos" class="nav-link <?= $currentRoute === 'dispositivos' ? 'active' : '' ?>">
-                            <i class="nav-icon fa-solid fa-network-wired"></i>
-                            <p>
-                                Relojes ZKTeco
-                                <span class="badge badge-info right">Auto</span>
-                            </p>
-                        </a>
-                    </li>
+                        <li class="nav-item">
+                            <a href="?route=dispositivos" class="nav-link <?= $currentRoute === 'dispositivos' ? 'active' : '' ?>">
+                                <i class="nav-icon fa-solid fa-network-wired text-info"></i>
+                                <p>
+                                    Relojes Biométricos
+                                    <span class="badge badge-danger right">TI</span>
+                                </p>
+                            </a>
+                        </li>
+                    <?php endif; ?>
                 </ul>
             </nav>
             <!-- /.sidebar-menu -->
@@ -213,3 +298,14 @@ $currentRoute = $_GET['route'] ?? 'dashboard';
 
     <!-- CONTENT WRAPPER. Contains page content -->
     <div class="content-wrapper">
+        <?php if (isset($_GET['msg']) && $_GET['msg'] === 'acceso_denegado'): ?>
+            <div class="container-fluid pt-3">
+                <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+                    <i class="fa-solid fa-shield-halved mr-2"></i>
+                    <strong>Acceso Restringido:</strong> Tu rol actual (<strong><?= htmlspecialchars($roleLabel) ?></strong>) no tiene permisos para acceder a ese módulo o ejecutar esa acción.
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+            </div>
+        <?php endif; ?>

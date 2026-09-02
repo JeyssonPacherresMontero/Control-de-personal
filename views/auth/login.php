@@ -58,8 +58,39 @@
                 </div>
             </form>
 
-            <div class="mt-4 pt-3 border-top text-center text-muted small">
-                <span>Acceso por defecto: <code>admin</code> / <code>admin123</code></span>
+            <div class="mt-4 pt-3 border-top">
+                <div class="text-secondary small font-weight-bold mb-2 text-center">
+                    <i class="fa-solid fa-users-gear mr-1"></i> Cuentas de Demostración por Rol:
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-xs table-borderless small mb-0 text-muted">
+                        <tbody>
+                            <tr>
+                                <td><span class="badge badge-danger">ADMIN</span></td>
+                                <td><code>admin</code></td>
+                                <td class="text-right"><button type="button" class="btn btn-xs btn-outline-secondary py-0" onclick="setCreds('admin','admin123')">Usar</button></td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge badge-primary">RRHH</span></td>
+                                <td><code>rrhh</code></td>
+                                <td class="text-right"><button type="button" class="btn btn-xs btn-outline-secondary py-0" onclick="setCreds('rrhh','admin123')">Usar</button></td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge badge-info">SUPERVISOR</span></td>
+                                <td><code>supervisor</code></td>
+                                <td class="text-right"><button type="button" class="btn btn-xs btn-outline-secondary py-0" onclick="setCreds('supervisor','admin123')">Usar</button></td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge badge-secondary">CONSULTA</span></td>
+                                <td><code>consulta</code></td>
+                                <td class="text-right"><button type="button" class="btn btn-xs btn-outline-secondary py-0" onclick="setCreds('consulta','admin123')">Usar</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="text-center text-muted small mt-2">
+                    <small>Clave para todos: <code>admin123</code></small>
+                </div>
             </div>
         </div>
         <!-- /.card-body -->
@@ -67,6 +98,13 @@
     <!-- /.card -->
 </div>
 <!-- /.login-box -->
+
+<script>
+function setCreds(user, pass) {
+    document.querySelector('input[name="usuario"]').value = user;
+    document.querySelector('input[name="password"]').value = pass;
+}
+</script>
 
 <!-- jQuery -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>

@@ -52,15 +52,17 @@ ON DUPLICATE KEY UPDATE `codigo_reloj` = VALUES(`codigo_reloj`);
 
 -- 6. Insertar Dispositivo ZKTeco por Defecto
 INSERT INTO `dispositivos` (`id`, `nombre`, `ip`, `puerto`, `protocolo`, `clave_comunicacion`, `ubicacion`, `modelo`, `activo`, `estado_conexion`) VALUES
-(1, 'Reloj Principal - Entrada', '192.168.1.201', 4370, 'TCP', 0, 'Puerta Principal - Recepción', 'ZKTeco MB20 / K40 / iClock', 1, 'OFFLINE'),
-(2, 'Reloj Secundario - Almacén', '192.168.1.202', 4370, 'TCP', 0, 'Puerta Posterior Almacén', 'ZKTeco SilkBio-101TC', 1, 'OFFLINE')
-ON DUPLICATE KEY UPDATE `ip` = VALUES(`ip`);
+(1, 'Reloj Principal - Entrada', '192.168.1.201', 4370, 'TCP', 415703, 'Puerta Principal - Recepción', 'ZKTeco MB460', 1, 'OFFLINE'),
+(2, 'Reloj Secundario - Almacén', '192.168.1.202', 4370, 'TCP', 0, 'Puerta Posterior Almacén', 'ZKTeco SilkBio-101TC', 0, 'OFFLINE')
+ON DUPLICATE KEY UPDATE `ip` = VALUES(`ip`), `clave_comunicacion` = VALUES(`clave_comunicacion`), `modelo` = VALUES(`modelo`);
 
--- 7. Insertar Usuario Administrador por Defecto (Password: 'admin123' con BCRYPT)
+-- 7. Insertar Usuarios del Sistema por Defecto (Password: 'admin123' con BCRYPT)
 INSERT INTO `usuarios_sistema` (`id`, `usuario`, `password`, `nombre_completo`, `email`, `rol`, `activo`) VALUES
 (1, 'admin', '$2y$10$nfEJAy9pnSjPCfPWhoP1JeIEpIDtfU8TFawCuu/kp08eb0SlGkNoO', 'Administrador del Sistema', 'admin@empresa.com', 'ADMIN', 1),
-(2, 'rrhh', '$2y$10$nfEJAy9pnSjPCfPWhoP1JeIEpIDtfU8TFawCuu/kp08eb0SlGkNoO', 'Gestor de Recursos Humanos', 'rrhh@empresa.com', 'RRHH', 1)
-ON DUPLICATE KEY UPDATE `password` = VALUES(`password`), `activo` = VALUES(`activo`);
+(2, 'rrhh', '$2y$10$nfEJAy9pnSjPCfPWhoP1JeIEpIDtfU8TFawCuu/kp08eb0SlGkNoO', 'Gestor de Recursos Humanos', 'rrhh@empresa.com', 'RRHH', 1),
+(3, 'supervisor', '$2y$10$nfEJAy9pnSjPCfPWhoP1JeIEpIDtfU8TFawCuu/kp08eb0SlGkNoO', 'Supervisor de Operaciones', 'supervisor@empresa.com', 'SUPERVISOR', 1),
+(4, 'consulta', '$2y$10$nfEJAy9pnSjPCfPWhoP1JeIEpIDtfU8TFawCuu/kp08eb0SlGkNoO', 'Auditor de Asistencias', 'auditoria@empresa.com', 'CONSULTA', 1)
+ON DUPLICATE KEY UPDATE `password` = VALUES(`password`), `rol` = VALUES(`rol`), `activo` = VALUES(`activo`);
 
 -- Nota de Seguridad:
--- Para cambiar la contraseña del admin en PHP: password_hash('tu_nuevo_password', PASSWORD_BCRYPT)
+-- Para generar una nueva contraseña en PHP: password_hash('tu_clave', PASSWORD_BCRYPT)

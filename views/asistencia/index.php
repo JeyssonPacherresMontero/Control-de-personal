@@ -25,17 +25,28 @@
         <div class="card card-default card-outline shadow-sm mb-3">
             <div class="card-header">
                 <h3 class="card-title font-weight-bold"><i class="fa-solid fa-filter mr-1 text-secondary"></i> Filtros de Búsqueda</h3>
-                <div class="card-tools">
-                    <form method="POST" action="?route=asistencia&action=recalcular" class="d-inline">
-                        <input type="hidden" name="fecha_inicio" value="<?= htmlspecialchars($fechaInicio) ?>">
-                        <input type="hidden" name="fecha_fin" value="<?= htmlspecialchars($fechaFin) ?>">
-                        <button type="submit" class="btn btn-primary btn-sm shadow-sm" onclick="return confirm('¿Deseas recalcular la asistencia en este rango de fechas?')">
-                            <i class="fa-solid fa-calculator mr-1"></i> Recalcular Reglas
-                        </button>
-                    </form>
-                    <a href="?route=asistencia&fecha_inicio=<?= $fechaInicio ?>&fecha_fin=<?= $fechaFin ?>&departamento_id=<?= $deptoId ?>&estado=<?= $estado ?>&search=<?= urlencode($search ?? '') ?>&export=csv" class="btn btn-success btn-sm shadow-sm ml-1">
-                        <i class="fa-solid fa-file-excel mr-1"></i> Exportar CSV
+                <div class="card-tools d-flex align-items-center flex-wrap">
+                    <?php if (in_array($userRole, ['ADMIN', 'RRHH'], true)): ?>
+                        <form method="POST" action="?route=asistencia&action=recalcular" class="d-inline mr-1">
+                            <input type="hidden" name="fecha_inicio" value="<?= htmlspecialchars($fechaInicio) ?>">
+                            <input type="hidden" name="fecha_fin" value="<?= htmlspecialchars($fechaFin) ?>">
+                            <button type="submit" class="btn btn-outline-primary btn-sm shadow-sm" onclick="return confirm('¿Deseas recalcular la asistencia en este rango de fechas?')">
+                                <i class="fa-solid fa-calculator mr-1"></i> Recalcular Asistencias
+                            </button>
+                        </form>
+                    <?php endif; ?>
+                    
+                    <a href="?route=asistencia&fecha_inicio=<?= $fechaInicio ?>&fecha_fin=<?= $fechaFin ?>&departamento_id=<?= $deptoId ?>&estado=<?= $estado ?>&search=<?= urlencode($search ?? '') ?>&export=excel" class="btn btn-success btn-sm shadow-sm mr-1" title="Descargar reporte en formato Excel con diseño de tablas y colores">
+                        <i class="fa-solid fa-file-excel mr-1"></i> Exportar a Excel
                     </a>
+
+                    <a href="?route=asistencia&fecha_inicio=<?= $fechaInicio ?>&fecha_fin=<?= $fechaFin ?>&departamento_id=<?= $deptoId ?>&estado=<?= $estado ?>&search=<?= urlencode($search ?? '') ?>&export=csv" class="btn btn-outline-secondary btn-sm shadow-sm mr-1" title="Descargar archivo CSV compatible con Excel">
+                        <i class="fa-solid fa-file-csv mr-1"></i> CSV
+                    </a>
+
+                    <button type="button" class="btn btn-outline-dark btn-sm shadow-sm" onclick="window.print()" title="Imprimir reporte o Guardar como PDF">
+                        <i class="fa-solid fa-print mr-1"></i> Imprimir / PDF
+                    </button>
                 </div>
             </div>
             <div class="card-body py-3">
@@ -65,7 +76,7 @@
                     <div class="col-md-2 mb-2">
                         <label class="small font-weight-bold text-secondary mb-1">Estado</label>
                         <select name="estado" class="form-control form-control-sm">
-                            <option value="">-- Todos --</option>
+                            <option value="">-- Todos los Estados --</option>
                             <option value="PRESENTE" <?= $estado === 'PRESENTE' ? 'selected' : '' ?>>Presente</option>
                             <option value="TARDANZA" <?= $estado === 'TARDANZA' ? 'selected' : '' ?>>Tardanza</option>
                             <option value="FALTA" <?= $estado === 'FALTA' ? 'selected' : '' ?>>Falta</option>
@@ -95,13 +106,15 @@
                             <th>Fecha</th>
                             <th>Empleado</th>
                             <th>Turno</th>
-                            <th>Entrada Prog / Real</th>
-                            <th>Salida Prog / Real</th>
+                            <th>Entrada (Prog. / Real)</th>
+                            <th>Salida (Prog. / Real)</th>
                             <th class="text-center">Tardanza</th>
-                            <th class="text-center">Trabajado</th>
-                            <th class="text-center">Extra</th>
+                            <th class="text-center">Tiempo Trabajado</th>
+                            <th class="text-center">Horas Extras</th>
                             <th>Estado</th>
-                            <th class="text-center">Acciones</th>
+                            <?php if (in_array($userRole, ['ADMIN', 'RRHH'], true)): ?>
+                                <th class="text-center">Acciones</th>
+                            <?php endif; ?>
                         </tr>
                     </thead>
                     <tbody>
@@ -110,13 +123,13 @@
                                 <td class="font-weight-bold text-dark"><?= $a['fecha'] ?></td>
                                 <td>
                                     <div class="font-weight-bold text-dark"><?= htmlspecialchars($a['apellidos'] . ' ' . $a['nombres']) ?></div>
-                                    <small class="text-muted">DNI: <?= htmlspecialchars($a['dni']) ?> | ZK: <?= htmlspecialchars($a['codigo_reloj']) ?></small>
+                                    <small class="text-muted">DNI: <?= htmlspecialchars($a['dni']) ?> | ID Reloj: <?= htmlspecialchars($a['codigo_reloj']) ?></small>
                                 </td>
                                 <td>
                                     <span class="badge badge-light border"><?= htmlspecialchars($a['turno_nombre'] ?? 'Sin Turno') ?></span>
                                 </td>
                                 <td>
-                                    <div><small class="text-muted">Prog:</small> <?= $a['hora_entrada_programada'] ?? '--:--' ?></div>
+                                    <div><small class="text-muted">Prog.:</small> <?= $a['hora_entrada_programada'] ?? '--:--' ?></div>
                                     <div>
                                         <small class="text-muted">Real:</small> 
                                         <span class="font-weight-bold <?= $a['minutos_tardanza'] > 0 ? 'text-danger' : 'text-success' ?>">
@@ -125,7 +138,7 @@
                                     </div>
                                 </td>
                                 <td>
-                                    <div><small class="text-muted">Prog:</small> <?= $a['hora_salida_programada'] ?? '--:--' ?></div>
+                                    <div><small class="text-muted">Prog.:</small> <?= $a['hora_salida_programada'] ?? '--:--' ?></div>
                                     <div>
                                         <small class="text-muted">Real:</small> 
                                         <span class="font-weight-bold text-dark">
@@ -157,24 +170,42 @@
                                 <td>
                                     <?php
                                         $est = $a['estado'];
-                                        if ($est === 'PRESENTE') echo '<span class="badge badge-success px-2 py-1"><i class="fa-solid fa-check mr-1"></i>Presente</span>';
-                                        elseif ($est === 'TARDANZA') echo '<span class="badge badge-warning text-white px-2 py-1"><i class="fa-solid fa-clock mr-1"></i>Tardanza</span>';
-                                        elseif ($est === 'FALTA' || $est === 'FALTA_INJUSTIFICADA') echo '<span class="badge badge-danger px-2 py-1"><i class="fa-solid fa-xmark mr-1"></i>Falta</span>';
-                                        elseif ($est === 'JUSTIFICADO' || $est === 'PERMISO' || $est === 'VACACIONES') echo '<span class="badge badge-primary px-2 py-1"><i class="fa-solid fa-shield mr-1"></i>' . $est . '</span>';
-                                        elseif ($est === 'SALIDA_SIN_MARCAR') echo '<span class="badge badge-secondary px-2 py-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Sin Salida</span>';
-                                        else echo '<span class="badge badge-light border px-2 py-1">' . $est . '</span>';
+                                        $obs = $a['observaciones'] ?? '';
+                                        if ($est === 'PRESENTE' && str_contains($obs, 'Jornada en curso')) {
+                                            echo '<span class="badge badge-success px-2 py-1"><i class="fa-solid fa-user-clock mr-1"></i>En Jornada</span>';
+                                        } elseif ($est === 'PRESENTE') {
+                                            echo '<span class="badge badge-success px-2 py-1"><i class="fa-solid fa-check mr-1"></i>Presente</span>';
+                                        } elseif ($est === 'TARDANZA') {
+                                            echo '<span class="badge badge-warning text-white px-2 py-1"><i class="fa-solid fa-clock mr-1"></i>Tardanza</span>';
+                                        } elseif ($est === 'FALTA' || $est === 'FALTA_INJUSTIFICADA') {
+                                            echo '<span class="badge badge-danger px-2 py-1"><i class="fa-solid fa-xmark mr-1"></i>Falta</span>';
+                                        } elseif ($est === 'JUSTIFICADO') {
+                                            echo '<span class="badge badge-primary px-2 py-1"><i class="fa-solid fa-shield mr-1"></i>Justificado</span>';
+                                        } elseif ($est === 'PERMISO') {
+                                            echo '<span class="badge badge-primary px-2 py-1"><i class="fa-solid fa-id-badge mr-1"></i>Permiso</span>';
+                                        } elseif ($est === 'VACACIONES') {
+                                            echo '<span class="badge badge-info px-2 py-1"><i class="fa-solid fa-umbrella-beach mr-1"></i>Vacaciones</span>';
+                                        } elseif ($est === 'DESCANSO') {
+                                            echo '<span class="badge badge-secondary px-2 py-1"><i class="fa-solid fa-bed mr-1"></i>Descanso</span>';
+                                        } elseif ($est === 'SALIDA_SIN_MARCAR') {
+                                            echo '<span class="badge badge-secondary px-2 py-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Sin Salida</span>';
+                                        } else {
+                                            echo '<span class="badge badge-light border px-2 py-1">' . htmlspecialchars($est) . '</span>';
+                                        }
                                     ?>
                                     <?php if (!empty($a['observaciones'])): ?>
                                         <div class="small text-muted mt-1" title="<?= htmlspecialchars($a['observaciones']) ?>">
-                                            <i class="far fa-comment-dots mr-1"></i><?= htmlspecialchars(mb_strimwidth($a['observaciones'], 0, 20, '...')) ?>
+                                            <i class="far fa-comment-dots mr-1"></i><?= htmlspecialchars(mb_strimwidth($a['observaciones'], 0, 24, '...')) ?>
                                         </div>
                                     <?php endif; ?>
                                 </td>
-                                <td class="text-center">
-                                    <button class="btn btn-xs btn-default border" onclick="openEditModal(<?= htmlspecialchars(json_encode($a)) ?>)" title="Ajuste manual">
-                                        <i class="fa-solid fa-pen-to-square text-primary"></i>
-                                    </button>
-                                </td>
+                                <?php if (in_array($userRole, ['ADMIN', 'RRHH'], true)): ?>
+                                    <td class="text-center">
+                                        <button class="btn btn-xs btn-default border" onclick="openEditModal(<?= htmlspecialchars(json_encode($a)) ?>)" title="Ajustar asistencia manualmente">
+                                            <i class="fa-solid fa-pen-to-square text-primary"></i>
+                                        </button>
+                                    </td>
+                                <?php endif; ?>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -185,6 +216,7 @@
     </div>
 </section>
 
+<?php if (in_array($userRole, ['ADMIN', 'RRHH'], true)): ?>
 <!-- MODAL PARA EDICIÓN MANUAL DE ASISTENCIA (AdminLTE Modal) -->
 <div class="modal fade" id="modalEditarAsistencia" tabindex="-1">
     <div class="modal-dialog">
@@ -204,35 +236,35 @@
                 <div class="form-group">
                     <label class="small font-weight-bold text-secondary">Estado de Asistencia</label>
                     <select name="estado" id="edit_estado" class="form-control form-control-sm" required>
-                        <option value="PRESENTE">PRESENTE</option>
-                        <option value="TARDANZA">TARDANZA</option>
-                        <option value="FALTA">FALTA</option>
-                        <option value="JUSTIFICADO">JUSTIFICADO</option>
-                        <option value="PERMISO">PERMISO</option>
-                        <option value="VACACIONES">VACACIONES</option>
-                        <option value="DESCANSO">DESCANSO</option>
-                        <option value="SALIDA_SIN_MARCAR">SALIDA_SIN_MARCAR</option>
+                        <option value="PRESENTE">Presente</option>
+                        <option value="TARDANZA">Tardanza</option>
+                        <option value="FALTA">Falta / Inasistencia</option>
+                        <option value="JUSTIFICADO">Justificado</option>
+                        <option value="PERMISO">Permiso</option>
+                        <option value="VACACIONES">Vacaciones</option>
+                        <option value="DESCANSO">Descanso / Feriado</option>
+                        <option value="SALIDA_SIN_MARCAR">Sin Salida Registrada</option>
                     </select>
                 </div>
 
                 <div class="row">
                     <div class="col-6">
                         <div class="form-group">
-                            <label class="small font-weight-bold text-secondary">Minutos Tardanza</label>
+                            <label class="small font-weight-bold text-secondary">Minutos de Tardanza</label>
                             <input type="number" name="minutos_tardanza" id="edit_tardanza" class="form-control form-control-sm" min="0">
                         </div>
                     </div>
                     <div class="col-6">
                         <div class="form-group">
-                            <label class="small font-weight-bold text-secondary">Minutos Extra</label>
+                            <label class="small font-weight-bold text-secondary">Minutos de Horas Extras</label>
                             <input type="number" name="minutos_extra" id="edit_extra" class="form-control form-control-sm" min="0">
                         </div>
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label class="small font-weight-bold text-secondary">Observaciones / Motivo de Ajuste</label>
-                    <textarea name="observaciones" id="edit_obs" class="form-control form-control-sm" rows="3" placeholder="Motivo de ajuste manual por RRHH..."></textarea>
+                    <label class="small font-weight-bold text-secondary">Observaciones / Motivo del Ajuste</label>
+                    <textarea name="observaciones" id="edit_obs" class="form-control form-control-sm" rows="3" placeholder="Indicar el sustento o motivo del ajuste manual realizado por RRHH..."></textarea>
                 </div>
             </div>
             <div class="modal-footer justify-content-between">
@@ -255,5 +287,6 @@ function openEditModal(record) {
     $('#modalEditarAsistencia').modal('show');
 }
 </script>
+<?php endif; ?>
 
 <?php require_once APP_ROOT . '/views/layout/footer.php'; ?>

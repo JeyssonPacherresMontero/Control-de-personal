@@ -53,19 +53,19 @@
                                     <span class="font-weight-bold fs-6 text-primary"><?= substr($t['hora_salida'], 0, 5) ?></span>
                                 </li>
                                 <li class="list-group-item d-flex justify-content-between py-1">
-                                    <b class="text-secondary"><i class="fa-solid fa-stopwatch text-warning mr-1"></i> Tolerancia de Gracia:</b>
-                                    <span class="badge badge-warning text-white font-weight-bold"><?= $t['tolerancia_minutos'] ?> min</span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between py-1">
-                                    <b class="text-secondary"><i class="fa-solid fa-utensils text-secondary mr-1"></i> Refrigerio:</b>
-                                    <span class="font-weight-bold"><?= $t['minutos_refrigerio'] ?> min (<?= $t['hora_inicio_refrigerio'] ? substr($t['hora_inicio_refrigerio'], 0, 5) : 'Flexible' ?>)</span>
-                                </li>
+                                     <b class="text-secondary"><i class="fa-solid fa-stopwatch text-warning mr-1"></i> Tolerancia de Entrada:</b>
+                                     <span class="badge badge-warning text-white font-weight-bold"><?= $t['tolerancia_minutos'] ?> min</span>
+                                 </li>
+                                 <li class="list-group-item d-flex justify-content-between py-1">
+                                     <b class="text-secondary"><i class="fa-solid fa-utensils text-secondary mr-1"></i> Refrigerio:</b>
+                                     <span class="font-weight-bold"><?= $t['minutos_refrigerio'] ?> min (<?= $t['hora_inicio_refrigerio'] ? substr($t['hora_inicio_refrigerio'], 0, 5) : 'Flexible' ?>)</span>
+                                 </li>
                             </ul>
 
                             <div class="d-flex justify-content-between align-items-center pt-2 border-top">
                                 <span class="small text-muted"><i class="fa-solid fa-users mr-1"></i> <?= $t['total_empleados'] ?> empleados</span>
                                 <button class="btn btn-outline-secondary btn-sm" onclick="openEditTurnoModal(<?= htmlspecialchars(json_encode($t)) ?>)">
-                                    <i class="fa-solid fa-pen mr-1"></i> Editar
+                                     <i class="fa-solid fa-pen mr-1"></i> Editar
                                 </button>
                             </div>
                         </div>
@@ -111,13 +111,13 @@
                 <div class="row">
                     <div class="col-6">
                         <div class="form-group">
-                            <label class="small font-weight-bold text-secondary">Tolerancia Tardanza (Min)</label>
+                            <label class="small font-weight-bold text-secondary">Tolerancia para Tardanza (minutos)</label>
                             <input type="number" name="tolerancia_minutos" id="tur_tolerancia" class="form-control form-control-sm" value="10" min="0" required>
                         </div>
                     </div>
                     <div class="col-6">
                         <div class="form-group">
-                            <label class="small font-weight-bold text-secondary">Límite para Falta (Min)</label>
+                            <label class="small font-weight-bold text-secondary">Límite para Considerar Falta (minutos)</label>
                             <input type="number" name="tolerancia_falta_minutos" id="tur_tolfalta" class="form-control form-control-sm" value="60" min="0" required>
                         </div>
                     </div>
@@ -126,20 +126,20 @@
                 <div class="row">
                     <div class="col-6">
                         <div class="form-group">
-                            <label class="small font-weight-bold text-secondary">Inicio Refrigerio</label>
+                            <label class="small font-weight-bold text-secondary">Inicio de Refrigerio</label>
                             <input type="time" name="hora_inicio_refrigerio" id="tur_ref_ini" class="form-control form-control-sm">
                         </div>
                     </div>
                     <div class="col-6">
                         <div class="form-group">
-                            <label class="small font-weight-bold text-secondary">Fin Refrigerio</label>
+                            <label class="small font-weight-bold text-secondary">Fin de Refrigerio</label>
                             <input type="time" name="hora_fin_refrigerio" id="tur_ref_fin" class="form-control form-control-sm">
                         </div>
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label class="small font-weight-bold text-secondary">Minutos de Refrigerio a descontar</label>
+                    <label class="small font-weight-bold text-secondary">Tiempo de Refrigerio a Descontar (minutos)</label>
                     <input type="number" name="minutos_refrigerio" id="tur_ref_min" class="form-control form-control-sm" value="60" min="0">
                 </div>
 

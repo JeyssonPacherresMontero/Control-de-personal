@@ -23,9 +23,11 @@
 
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h5 class="text-secondary font-weight-bold mb-0">Solicitudes y Registros</h5>
-            <button class="btn btn-primary btn-sm shadow-sm" data-toggle="modal" data-target="#modalJustificacion">
-                <i class="fa-solid fa-plus mr-1"></i> Registrar Justificación
-            </button>
+            <?php if (in_array($userRole, ['ADMIN', 'RRHH', 'SUPERVISOR'], true)): ?>
+                <button class="btn btn-primary btn-sm shadow-sm" data-toggle="modal" data-target="#modalJustificacion">
+                    <i class="fa-solid fa-plus mr-1"></i> Registrar Justificación
+                </button>
+            <?php endif; ?>
         </div>
 
         <!-- MAIN TABLE CARD -->
@@ -41,7 +43,9 @@
                             <th>Motivo / Sustento</th>
                             <th>Estado</th>
                             <th>Aprobado Por</th>
-                            <th class="text-center">Acciones</th>
+                            <?php if (in_array($userRole, ['ADMIN', 'RRHH'], true)): ?>
+                                <th class="text-center">Acciones</th>
+                            <?php endif; ?>
                         </tr>
                     </thead>
                     <tbody>
@@ -53,8 +57,19 @@
                                     <small class="text-muted"><?= htmlspecialchars($j['departamento_nombre'] ?? 'Sin Área') ?> | DNI: <?= htmlspecialchars($j['dni']) ?></small>
                                 </td>
                                 <td>
-                                    <span class="badge badge-light border font-weight-bold"><?= $j['tipo'] ?></span>
-                                </td>
+                                     <?php
+                                         $tipoLabel = match($j['tipo']) {
+                                             'TARDANZA' => 'Tardanza Justificada',
+                                             'FALTA' => 'Inasistencia Justificada',
+                                             'PERMISO_MEDICO' => 'Descanso / Cita Médica',
+                                             'COMISION_SERVICIO' => 'Comisión de Servicio',
+                                             'VACACIONES' => 'Vacaciones',
+                                             'LICENCIA_MATERNIDAD_PATERNIDAD' => 'Licencia Maternidad/Paternidad',
+                                             default => htmlspecialchars($j['tipo'])
+                                         };
+                                     ?>
+                                     <span class="badge badge-light border font-weight-bold"><?= $tipoLabel ?></span>
+                                 </td>
                                 <td>
                                     <span class="font-weight-bold text-dark"><?= $j['fecha_inicio'] ?></span> 
                                     <?php if ($j['fecha_inicio'] !== $j['fecha_fin']): ?>
@@ -77,24 +92,26 @@
                                 <td>
                                     <small class="text-muted"><?= htmlspecialchars($j['aprobado_por'] ?? 'Sistema') ?></small>
                                 </td>
-                                <td class="text-center">
-                                    <?php if ($j['estado'] === 'PENDIENTE'): ?>
-                                        <div class="btn-group btn-group-sm">
-                                            <form method="POST" action="?route=justificaciones&action=resolver" class="d-inline">
-                                                <input type="hidden" name="id" value="<?= $j['id'] ?>">
-                                                <input type="hidden" name="estado" value="APROBADO">
-                                                <button type="submit" class="btn btn-outline-success btn-xs" title="Aprobar"><i class="fa-solid fa-check"></i></button>
-                                            </form>
-                                            <form method="POST" action="?route=justificaciones&action=resolver" class="d-inline ml-1">
-                                                <input type="hidden" name="id" value="<?= $j['id'] ?>">
-                                                <input type="hidden" name="estado" value="RECHAZADO">
-                                                <button type="submit" class="btn btn-outline-danger btn-xs" title="Rechazar"><i class="fa-solid fa-xmark"></i></button>
-                                            </form>
-                                        </div>
-                                    <?php else: ?>
-                                        <span class="text-muted small">-</span>
-                                    <?php endif; ?>
-                                </td>
+                                <?php if (in_array($userRole, ['ADMIN', 'RRHH'], true)): ?>
+                                    <td class="text-center">
+                                        <?php if ($j['estado'] === 'PENDIENTE'): ?>
+                                            <div class="btn-group btn-group-sm">
+                                                <form method="POST" action="?route=justificaciones&action=resolver" class="d-inline">
+                                                    <input type="hidden" name="id" value="<?= $j['id'] ?>">
+                                                    <input type="hidden" name="estado" value="APROBADO">
+                                                    <button type="submit" class="btn btn-outline-success btn-xs" title="Aprobar"><i class="fa-solid fa-check"></i></button>
+                                                </form>
+                                                <form method="POST" action="?route=justificaciones&action=resolver" class="d-inline ml-1">
+                                                    <input type="hidden" name="id" value="<?= $j['id'] ?>">
+                                                    <input type="hidden" name="estado" value="RECHAZADO">
+                                                    <button type="submit" class="btn btn-outline-danger btn-xs" title="Rechazar"><i class="fa-solid fa-xmark"></i></button>
+                                                </form>
+                                            </div>
+                                        <?php else: ?>
+                                            <span class="text-muted small">-</span>
+                                        <?php endif; ?>
+                                    </td>
+                                <?php endif; ?>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -105,6 +122,7 @@
     </div>
 </section>
 
+<?php if (in_array($userRole, ['ADMIN', 'RRHH', 'SUPERVISOR'], true)): ?>
 <!-- MODAL REGISTRAR JUSTIFICACIÓN -->
 <div class="modal fade" id="modalJustificacion" tabindex="-1">
     <div class="modal-dialog">
@@ -164,5 +182,6 @@
         </form>
     </div>
 </div>
+<?php endif; ?>
 
 <?php require_once APP_ROOT . '/views/layout/footer.php'; ?>

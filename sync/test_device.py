@@ -6,6 +6,14 @@ Uso: python sync/test_device.py 192.168.1.201 4370
 """
 
 import sys
+
+if hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
+
 from zk_service import ZKDeviceService
 
 def main():
@@ -24,7 +32,7 @@ def main():
     print(f"IP: {ip} | Puerto: {port} | Clave: {password} | UDP: {force_udp}")
     print(f"=======================================================\n")
 
-    service = ZKDeviceService(ip=ip, port=port, timeout=8, password=password, force_udp=force_udp)
+    service = ZKDeviceService(ip=ip, port=port, timeout=5, password=password, force_udp=force_udp)
     result = service.test_connection()
 
     if result['success']:

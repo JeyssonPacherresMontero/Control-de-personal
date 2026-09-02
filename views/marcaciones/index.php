@@ -5,7 +5,7 @@
     <div class="container-fluid">
         <div class="row mb-2 align-items-center">
             <div class="col-sm-6">
-                <h1 class="m-0 font-weight-bold"><i class="fa-solid fa-clock-rotate-left mr-2 text-primary"></i> Marcaciones Crudas (Raw Logs)</h1>
+                <h1 class="m-0 font-weight-bold"><i class="fa-solid fa-clock-rotate-left mr-2 text-primary"></i> Registro de Marcaciones de Relojes Biométricos</h1>
             </div>
             <div class="col-sm-6">
                 <ol class="breadcrumb float-sm-right">
@@ -25,9 +25,20 @@
         <div class="card card-default card-outline shadow-sm mb-3">
             <div class="card-header">
                 <h3 class="card-title font-weight-bold"><i class="fa-solid fa-filter mr-1 text-secondary"></i> Filtros de Auditoría</h3>
-                <div class="card-tools">
-                    <button class="btn btn-primary btn-sm shadow-sm" data-toggle="modal" data-target="#modalNuevaMarcacion">
-                        <i class="fa-solid fa-plus mr-1"></i> Registrar Marcación Manual
+                <div class="card-tools d-flex align-items-center flex-wrap">
+                    <?php if (in_array($userRole, ['ADMIN', 'RRHH'], true)): ?>
+                        <button class="btn btn-primary btn-sm shadow-sm mr-1" data-toggle="modal" data-target="#modalNuevaMarcacion">
+                            <i class="fa-solid fa-plus mr-1"></i> Registrar Marcación
+                        </button>
+                    <?php endif; ?>
+                    <a href="?route=marcaciones&fecha=<?= $fecha ?>&dispositivo_id=<?= $dispositivoId ?>&search=<?= urlencode($search ?? '') ?>&export=excel" class="btn btn-success btn-sm shadow-sm mr-1" title="Exportar marcaciones a Excel">
+                        <i class="fa-solid fa-file-excel mr-1"></i> Excel
+                    </a>
+                    <a href="?route=marcaciones&fecha=<?= $fecha ?>&dispositivo_id=<?= $dispositivoId ?>&search=<?= urlencode($search ?? '') ?>&export=csv" class="btn btn-outline-secondary btn-sm shadow-sm mr-1" title="Exportar a CSV">
+                        <i class="fa-solid fa-file-csv mr-1"></i> CSV
+                    </a>
+                    <button type="button" class="btn btn-outline-dark btn-sm shadow-sm" onclick="window.print()" title="Imprimir o PDF">
+                        <i class="fa-solid fa-print"></i>
                     </button>
                 </div>
             </div>
@@ -51,7 +62,7 @@
                     </div>
 
                     <div class="col-md-4 mb-2">
-                        <label class="small font-weight-bold text-secondary mb-1">Buscar Empleado / ID ZK</label>
+                        <label class="small font-weight-bold text-secondary mb-1">Buscar Empleado / ID Reloj</label>
                         <input type="text" name="search" class="form-control form-control-sm" placeholder="Nombre, DNI o ID..." value="<?= htmlspecialchars($search ?? '') ?>">
                     </div>
 
@@ -68,20 +79,20 @@
                 <table class="table table-bordered table-hover datatable text-nowrap table-sm">
                     <thead class="thead-light">
                         <tr>
-                            <th>ID Log</th>
+                            <th>N° Registro</th>
                             <th>Fecha y Hora</th>
-                            <th>ID Reloj ZK</th>
+                            <th>ID en Reloj</th>
                             <th>Empleado Identificado</th>
-                            <th>Dispositivo Origen</th>
-                            <th>Tipo Evento</th>
-                            <th>Modo Verificación</th>
-                            <th class="text-center">Estado Cálculo</th>
+                            <th>Reloj Biométrico</th>
+                            <th>Tipo de Marcación</th>
+                            <th>Método de Verificación</th>
+                            <th class="text-center">Estado de Procesamiento</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($marcaciones as $m): ?>
                             <tr>
-                                <td class="text-muted">#<?= $m['id'] ?></td>
+                                <td class="text-muted font-monospace">#<?= $m['id'] ?></td>
                                 <td class="font-weight-bold text-dark"><?= $m['fecha_hora'] ?></td>
                                 <td><span class="badge badge-light border">ID: <?= htmlspecialchars($m['codigo_reloj']) ?></span></td>
                                 <td>
@@ -99,13 +110,30 @@
                                 <td>
                                     <?php
                                         $t = strtolower($m['tipo']);
-                                        if ($t === 'entrada') echo '<span class="badge badge-success px-2 py-1">Entrada</span>';
-                                        elseif ($t === 'salida') echo '<span class="badge badge-primary px-2 py-1">Salida</span>';
-                                        elseif (str_contains($t, 'refrigerio')) echo '<span class="badge badge-info px-2 py-1">Refrigerio</span>';
+                                        if ($t === 'entrada') echo '<span class="badge badge-success px-2 py-1"><i class="fa-solid fa-arrow-right-to-bracket mr-1"></i>Entrada</span>';
+                                        elseif ($t === 'salida') echo '<span class="badge badge-primary px-2 py-1"><i class="fa-solid fa-arrow-right-from-bracket mr-1"></i>Salida</span>';
+                                        elseif (str_contains($t, 'refrigerio')) echo '<span class="badge badge-info px-2 py-1"><i class="fa-solid fa-utensils mr-1"></i>Refrigerio</span>';
                                         else echo '<span class="badge badge-secondary px-2 py-1">Marcación</span>';
                                     ?>
                                 </td>
-                                <td><i class="fa-solid fa-fingerprint text-muted mr-1"></i><?= htmlspecialchars($m['tipo_verificacion']) ?></td>
+                                <td>
+                                    <?php
+                                        $verif = strtolower($m['tipo_verificacion'] ?? '');
+                                        if (str_contains($verif, 'huella') || $verif === 'fingerprint') {
+                                            echo '<i class="fa-solid fa-fingerprint text-primary mr-1"></i> Huella Dactilar';
+                                        } elseif (str_contains($verif, 'facial') || str_contains($verif, 'face')) {
+                                            echo '<i class="fa-solid fa-camera text-info mr-1"></i> Rostro / Facial';
+                                        } elseif (str_contains($verif, 'tarjeta') || str_contains($verif, 'card') || str_contains($verif, 'rfid')) {
+                                            echo '<i class="fa-solid fa-id-card text-success mr-1"></i> Tarjeta RFID';
+                                        } elseif (str_contains($verif, 'manual')) {
+                                            echo '<i class="fa-solid fa-keyboard text-secondary mr-1"></i> Registro Manual RRHH';
+                                        } elseif (str_contains($verif, 'clave') || str_contains($verif, 'pin') || str_contains($verif, 'password')) {
+                                            echo '<i class="fa-solid fa-key text-warning mr-1"></i> Contraseña / PIN';
+                                        } else {
+                                            echo '<i class="fa-solid fa-check text-muted mr-1"></i> ' . htmlspecialchars($m['tipo_verificacion'] ?: 'Biométrico');
+                                        }
+                                    ?>
+                                </td>
                                 <td class="text-center">
                                     <?php if ($m['procesado']): ?>
                                         <span class="badge badge-success px-2 py-1"><i class="fa-solid fa-circle-check mr-1"></i> Procesado</span>
@@ -123,6 +151,7 @@
     </div>
 </section>
 
+<?php if (in_array($userRole, ['ADMIN', 'RRHH'], true)): ?>
 <!-- MODAL NUEVA MARCACION MANUAL -->
 <div class="modal fade" id="modalNuevaMarcacion" tabindex="-1">
     <div class="modal-dialog">
@@ -152,8 +181,8 @@
                     <select name="tipo" class="form-control form-control-sm">
                         <option value="entrada">Entrada</option>
                         <option value="salida">Salida</option>
-                        <option value="refrigerio_salida">Salida Refrigerio</option>
-                        <option value="refrigerio_entrada">Entrada Refrigerio</option>
+                        <option value="refrigerio_salida">Salida a Refrigerio</option>
+                        <option value="refrigerio_entrada">Regreso de Refrigerio</option>
                     </select>
                 </div>
 
@@ -173,5 +202,6 @@
         </form>
     </div>
 </div>
+<?php endif; ?>
 
 <?php require_once APP_ROOT . '/views/layout/footer.php'; ?>

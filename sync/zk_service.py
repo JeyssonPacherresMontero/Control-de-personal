@@ -32,7 +32,7 @@ class ZKDeviceService:
                 timeout=self.timeout,
                 password=self.password,
                 force_udp=self.force_udp,
-                ommit_ping=False
+                ommit_ping=True
             )
             self.conn = self.zk.connect()
             logger.info(f"Conexión exitosa con dispositivo {self.ip}:{self.port}")
@@ -69,6 +69,15 @@ class ZKDeviceService:
             serial_number = "Desconocido"
             platform = "Desconocido"
             device_name = "ZKTeco Device"
+            user_count = 0
+            attendance_count = 0
+
+            try:
+                self.conn.read_sizes()
+                user_count = getattr(self.conn, 'users', 0)
+                attendance_count = getattr(self.conn, 'records', 0)
+            except Exception:
+                pass
             
             try:
                 firmware = self.conn.get_firmware_version()
@@ -90,17 +99,9 @@ class ZKDeviceService:
             except Exception:
                 pass
 
-            user_count = 0
-            attendance_count = 0
+            device_time = "N/A"
             try:
-                users = self.conn.get_users()
-                user_count = len(users) if users else 0
-            except Exception:
-                pass
-
-            try:
-                attendances = self.conn.get_attendance()
-                attendance_count = len(attendances) if attendances else 0
+                device_time = str(self.conn.get_time())
             except Exception:
                 pass
 
@@ -114,7 +115,7 @@ class ZKDeviceService:
                 "device_name": device_name,
                 "user_count": user_count,
                 "attendance_count": attendance_count,
-                "device_time": str(self.conn.get_time()) if hasattr(self.conn, 'get_time') else "N/A"
+                "device_time": device_time
             }
         except Exception as e:
             return {

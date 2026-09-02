@@ -40,7 +40,21 @@
                 "autoWidth": false,
                 "pageLength": 25,
                 "language": {
-                    "url": "https://cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json"
+                    "emptyTable": "No hay registros disponibles",
+                    "info": "Mostrando _START_ a _END_ de _TOTAL_ registros",
+                    "infoEmpty": "Mostrando 0 a 0 de 0 registros",
+                    "infoFiltered": "(filtrado de _MAX_ registros en total)",
+                    "lengthMenu": "Mostrar _MENU_ registros",
+                    "loadingRecords": "Cargando...",
+                    "processing": "Procesando...",
+                    "search": "Buscar:",
+                    "zeroRecords": "No se encontraron coincidencias",
+                    "paginate": {
+                        "first": "Primero",
+                        "last": "Último",
+                        "next": "Siguiente",
+                        "previous": "Anterior"
+                    }
                 }
             });
         }

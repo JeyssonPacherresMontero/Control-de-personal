@@ -25,11 +25,13 @@
         <div class="card card-default card-outline shadow-sm mb-3">
             <div class="card-header">
                 <h3 class="card-title font-weight-bold"><i class="fa-solid fa-filter mr-1 text-secondary"></i> Filtros de Personal</h3>
-                <div class="card-tools">
-                    <button class="btn btn-primary btn-sm shadow-sm" onclick="openNewEmpleadoModal()">
-                        <i class="fa-solid fa-user-plus mr-1"></i> Registrar Empleado
-                    </button>
-                </div>
+                <?php if (in_array($userRole, ['ADMIN', 'RRHH'], true)): ?>
+                    <div class="card-tools">
+                        <button class="btn btn-primary btn-sm shadow-sm" onclick="openNewEmpleadoModal()">
+                            <i class="fa-solid fa-user-plus mr-1"></i> Registrar Empleado
+                        </button>
+                    </div>
+                <?php endif; ?>
             </div>
             <div class="card-body py-3">
                 <form method="GET" action="" class="row align-items-end">
@@ -63,14 +65,16 @@
                 <table class="table table-bordered table-hover datatable text-nowrap table-sm">
                     <thead class="thead-light">
                         <tr>
-                            <th>ID Reloj ZK</th>
-                            <th>DNI</th>
+                            <th>ID en Reloj Biométrico</th>
+                            <th>DNI / Documento</th>
                             <th>Apellidos y Nombres</th>
                             <th>Departamento / Cargo</th>
                             <th>Turno Asignado</th>
                             <th>Contacto</th>
                             <th>Estado</th>
-                            <th class="text-center">Acciones</th>
+                            <?php if (in_array($userRole, ['ADMIN', 'RRHH'], true)): ?>
+                                <th class="text-center">Acciones</th>
+                            <?php endif; ?>
                         </tr>
                     </thead>
                     <tbody>
@@ -84,7 +88,7 @@
                                 <td class="font-monospace font-weight-bold"><?= htmlspecialchars($e['dni']) ?></td>
                                 <td>
                                     <div class="font-weight-bold text-dark"><?= htmlspecialchars($e['apellidos'] . ' ' . $e['nombres']) ?></div>
-                                    <small class="text-muted">Ingreso: <?= $e['fecha_ingreso'] ?? 'N/A' ?></small>
+                                    <small class="text-muted">Ingreso: <?= !empty($e['fecha_ingreso']) ? $e['fecha_ingreso'] : 'No registrado' ?></small>
                                 </td>
                                 <td>
                                     <div class="text-dark font-weight-bold"><?= htmlspecialchars($e['departamento_nombre'] ?? 'Sin Departamento') ?></div>
@@ -106,11 +110,13 @@
                                         <span class="badge badge-secondary px-2 py-1">Inactivo</span>
                                     <?php endif; ?>
                                 </td>
-                                <td class="text-center">
-                                    <button class="btn btn-xs btn-default border" onclick="openEditEmpleadoModal(<?= htmlspecialchars(json_encode($e)) ?>)" title="Editar">
-                                        <i class="fa-solid fa-pen text-primary"></i>
-                                    </button>
-                                </td>
+                                <?php if (in_array($userRole, ['ADMIN', 'RRHH'], true)): ?>
+                                    <td class="text-center">
+                                        <button class="btn btn-xs btn-default border" onclick="openEditEmpleadoModal(<?= htmlspecialchars(json_encode($e)) ?>)" title="Editar">
+                                            <i class="fa-solid fa-pen text-primary"></i>
+                                        </button>
+                                    </td>
+                                <?php endif; ?>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -121,6 +127,7 @@
     </div>
 </section>
 
+<?php if (in_array($userRole, ['ADMIN', 'RRHH'], true)): ?>
 <!-- MODAL CREAR / EDITAR EMPLEADO -->
 <div class="modal fade" id="modalEmpleado" tabindex="-1">
     <div class="modal-dialog modal-lg">
@@ -135,15 +142,15 @@
                 <div class="row">
                     <div class="col-md-6">
                         <div class="form-group">
-                            <label class="small font-weight-bold text-secondary">Código / ID en Reloj ZKTeco <span class="text-danger">*</span></label>
-                            <input type="text" name="codigo_reloj" id="emp_codigo_reloj" class="form-control form-control-sm font-monospace" placeholder="Ej: 1, 101, 1005" required>
-                            <small class="text-muted">Debe ser el User ID en el menú del biométrico.</small>
+                            <label class="small font-weight-bold text-secondary">ID de Usuario en Reloj ZKTeco <span class="text-danger">*</span></label>
+                            <input type="text" name="codigo_reloj" id="emp_codigo_reloj" class="form-control form-control-sm font-monospace" placeholder="Ej: 1, 2, 101..." required>
+                            <small class="text-muted">Debe coincidir con el ID o número de usuario registrado en el reloj</small>
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="form-group">
-                            <label class="small font-weight-bold text-secondary">DNI / Documento <span class="text-danger">*</span></label>
-                            <input type="text" name="dni" id="emp_dni" class="form-control form-control-sm font-monospace" placeholder="70112233" required>
+                            <label class="small font-weight-bold text-secondary">Número de DNI / Documento <span class="text-danger">*</span></label>
+                            <input type="text" name="dni" id="emp_dni" class="form-control form-control-sm font-monospace" placeholder="8 dígitos" required>
                         </div>
                     </div>
                 </div>
@@ -167,13 +174,13 @@
                     <div class="col-md-6">
                         <div class="form-group">
                             <label class="small font-weight-bold text-secondary">Correo Electrónico</label>
-                            <input type="email" name="email" id="emp_email" class="form-control form-control-sm" placeholder="empleado@empresa.com">
+                            <input type="email" name="email" id="emp_email" class="form-control form-control-sm" placeholder="usuario@empresa.com">
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="form-group">
                             <label class="small font-weight-bold text-secondary">Teléfono / Celular</label>
-                            <input type="text" name="telefono" id="emp_telefono" class="form-control form-control-sm" placeholder="987654321">
+                            <input type="text" name="telefono" id="emp_telefono" class="form-control form-control-sm" placeholder="+51 987 654 321">
                         </div>
                     </div>
                 </div>
@@ -181,9 +188,9 @@
                 <div class="row">
                     <div class="col-md-4">
                         <div class="form-group">
-                            <label class="small font-weight-bold text-secondary">Departamento</label>
+                            <label class="small font-weight-bold text-secondary">Departamento / Área</label>
                             <select name="departamento_id" id="emp_departamento_id" class="form-control form-control-sm">
-                                <option value="">-- Seleccionar --</option>
+                                <option value="">-- Sin Asignar --</option>
                                 <?php foreach ($departamentos as $d): ?>
                                     <option value="<?= $d['id'] ?>"><?= htmlspecialchars($d['nombre']) ?></option>
                                 <?php endforeach; ?>
@@ -192,9 +199,9 @@
                     </div>
                     <div class="col-md-4">
                         <div class="form-group">
-                            <label class="small font-weight-bold text-secondary">Cargo</label>
+                            <label class="small font-weight-bold text-secondary">Cargo / Puesto</label>
                             <select name="cargo_id" id="emp_cargo_id" class="form-control form-control-sm">
-                                <option value="">-- Seleccionar --</option>
+                                <option value="">-- Sin Asignar --</option>
                                 <?php foreach ($cargos as $c): ?>
                                     <option value="<?= $c['id'] ?>"><?= htmlspecialchars($c['nombre']) ?></option>
                                 <?php endforeach; ?>
@@ -203,7 +210,7 @@
                     </div>
                     <div class="col-md-4">
                         <div class="form-group">
-                            <label class="small font-weight-bold text-secondary">Turno Asignado <span class="text-danger">*</span></label>
+                            <label class="small font-weight-bold text-secondary">Turno Laboral Asignado <span class="text-danger">*</span></label>
                             <select name="turno_id" id="emp_turno_id" class="form-control form-control-sm" required>
                                 <?php foreach ($turnos as $t): ?>
                                     <option value="<?= $t['id'] ?>"><?= htmlspecialchars($t['nombre']) ?></option>
@@ -220,10 +227,10 @@
                             <input type="date" name="fecha_ingreso" id="emp_fecha_ingreso" class="form-control form-control-sm" value="<?= date('Y-m-d') ?>">
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <div class="form-group custom-control custom-checkbox mt-4 pt-2">
-                            <input class="custom-control-input" type="checkbox" name="activo" id="emp_activo" value="1" checked>
-                            <label class="custom-control-label small font-weight-bold" for="emp_activo">Empleado Activo</label>
+                    <div class="col-md-6 d-flex align-items-center">
+                        <div class="custom-control custom-switch mt-3">
+                            <input type="checkbox" class="custom-control-input" id="emp_activo" name="activo" value="1" checked>
+                            <label class="custom-control-label font-weight-bold text-secondary" for="emp_activo">Empleado Activo</label>
                         </div>
                     </div>
                 </div>
@@ -271,5 +278,6 @@ function openEditEmpleadoModal(e) {
     $('#modalEmpleado').modal('show');
 }
 </script>
+<?php endif; ?>
 
 <?php require_once APP_ROOT . '/views/layout/footer.php'; ?>

@@ -48,8 +48,10 @@ switch ($route) {
     case 'asistencia':
         $controller = new AsistenciaController();
         if ($action === 'recalcular') {
+            AuthController::requireRole(['ADMIN', 'RRHH'], 'asistencia');
             $controller->recalcular();
         } elseif ($action === 'editar') {
+            AuthController::requireRole(['ADMIN', 'RRHH'], 'asistencia');
             $controller->editar();
         } else {
             $controller->index();
@@ -59,6 +61,7 @@ switch ($route) {
     case 'marcaciones':
         $controller = new MarcacionesController();
         if ($action === 'guardar_manual') {
+            AuthController::requireRole(['ADMIN', 'RRHH'], 'marcaciones');
             $controller->guardarManual();
         } else {
             $controller->index();
@@ -67,24 +70,36 @@ switch ($route) {
 
     case 'dispositivos':
         $controller = new DispositivosController();
-        if ($action === 'guardar') {
-            $controller->guardar();
-        } elseif ($action === 'eliminar') {
-            $controller->eliminar();
-        } elseif ($action === 'sincronizar') {
+        if ($action === 'sincronizar') {
+            AuthController::requireRole(['ADMIN', 'RRHH'], 'dashboard');
             $controller->sincronizar();
-        } elseif ($action === 'test') {
-            $controller->testConexion();
+        } elseif ($action === 'sync_status' || $action === 'status') {
+            AuthController::requireRole(['ADMIN', 'RRHH'], 'dashboard');
+            $controller->syncStatus();
         } else {
-            $controller->index();
+            // Toda la administración de hardware y vistas de dispositivos es exclusiva de ADMIN
+            AuthController::requireRole('ADMIN', 'dashboard');
+            if ($action === 'guardar') {
+                $controller->guardar();
+            } elseif ($action === 'eliminar') {
+                $controller->eliminar();
+            } elseif ($action === 'limpiar_memoria') {
+                $controller->limpiarMemoria();
+            } elseif ($action === 'test') {
+                $controller->testConexion();
+            } else {
+                $controller->index();
+            }
         }
         break;
 
     case 'empleados':
         $controller = new EmpleadosController();
         if ($action === 'guardar') {
+            AuthController::requireRole(['ADMIN', 'RRHH'], 'empleados');
             $controller->guardar();
         } elseif ($action === 'eliminar') {
+            AuthController::requireRole(['ADMIN', 'RRHH'], 'empleados');
             $controller->eliminar();
         } else {
             $controller->index();
@@ -92,6 +107,8 @@ switch ($route) {
         break;
 
     case 'turnos':
+        // Turnos y horarios solo son accesibles para ADMIN y RRHH
+        AuthController::requireRole(['ADMIN', 'RRHH'], 'dashboard');
         $controller = new TurnosController();
         if ($action === 'guardar') {
             $controller->guardar();
@@ -105,8 +122,10 @@ switch ($route) {
     case 'justificaciones':
         $controller = new JustificacionesController();
         if ($action === 'guardar') {
+            AuthController::requireRole(['ADMIN', 'RRHH', 'SUPERVISOR'], 'justificaciones');
             $controller->guardar();
         } elseif ($action === 'resolver') {
+            AuthController::requireRole(['ADMIN', 'RRHH'], 'justificaciones');
             $controller->resolver();
         } else {
             $controller->index();
