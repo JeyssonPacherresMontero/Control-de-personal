@@ -2,13 +2,13 @@
     <!-- /.content-wrapper -->
 
     <!-- Main Footer -->
-    <footer class="main-footer text-center">
-    <strong>
-        Copyright &copy; <?= date('Y') ?>
-        <a href="#"><?= htmlspecialchars(APP_NAME) ?></a>.
-    </strong>
-    <span><b>Versión 1.0</b></span>
-</footer>
+    <footer class="main-footer text-center small text-muted">
+        <strong>
+            Copyright &copy; <?= date('Y') ?>
+            <a href="?route=dashboard" class="text-primary font-weight-bold">JUSHSAL</a> - Junta de Usuarios del Sector Hidráulico Menor San Lorenzo.
+        </strong>
+        <span class="d-none d-sm-inline-block ml-2">| Sistema de Control de Personal y Asistencia v1.0</span>
+    </footer>
 </div>
 <!-- ./wrapper -->
 

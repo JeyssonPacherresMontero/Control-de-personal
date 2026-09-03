@@ -3,6 +3,9 @@ namespace App\Controllers;
 
 use App\Database;
 use App\Services\AttendanceCalculator;
+use App\Services\EventStore;
+
+require_once __DIR__ . '/../Services/EventStore.php';
 
 class MarcacionesController {
     public function index(): void {
@@ -82,7 +85,7 @@ class MarcacionesController {
         echo '<body>';
 
         echo '<table style="width:100%; margin-bottom: 12px;">';
-        echo '<tr><td colspan="8" class="title">' . htmlspecialchars(APP_NAME) . ' - REGISTRO DE MARCACIONES DE RELOJES BIOMÉTRICOS</td></tr>';
+        echo '<tr><td colspan="8" class="title">JUNTA DE USUARIOS DEL SECTOR HIDRÁULICO MENOR SAN LORENZO (JUSHSAL)<br><span style="font-size:11pt; font-weight:600; color:#475569;">REGISTRO DE MARCACIONES DE RELOJES BIOMÉTRICOS</span></td></tr>';
         echo '<tr><td colspan="8" class="subtitle">Fecha: <b>' . htmlspecialchars($fecha) . '</b> | Total registros: <b>' . count($data) . '</b> | Generado: ' . date('d/m/Y H:i:s') . '</td></tr>';
         echo '</table>';
 
@@ -185,13 +188,41 @@ class MarcacionesController {
             $emp = Database::queryOne("SELECT codigo_reloj FROM empleados WHERE id = ?", [$idEmpleado]);
             $codigoReloj = $emp ? $emp['codigo_reloj'] : (string)$idEmpleado;
 
-            // Inserción de marcación manual
+            // Inserción de marcación manual (Proyección Read Model)
             Database::execute("
                 INSERT INTO marcaciones 
                 (id_empleado, codigo_reloj, id_dispositivo, fecha_hora, tipo, tipo_verificacion, procesado)
                 VALUES (?, ?, ?, ?, ?, 'MANUAL_RRHH', 0)
                 ON DUPLICATE KEY UPDATE tipo = VALUES(tipo)
             ", [$idEmpleado, $codigoReloj, $idDispositivo, $fechaHora, $tipo]);
+
+            // Obtener dispositivo
+            $disp = Database::queryOne("SELECT nombre, ip FROM dispositivos WHERE id = ?", [$idDispositivo]);
+            $currentUser = AuthController::user();
+            $usuario = $currentUser['usuario'] ?? 'RRHH';
+
+            // Event Sourcing: Registrar evento inmutable
+            try {
+                EventStore::recordEvent(
+                    'MARCACION',
+                    "emp_{$idEmpleado}_" . str_replace([' ', ':'], ['_', '-'], $fechaHora),
+                    'MARCACION_MANUAL_REGISTRADA',
+                    [
+                        'id_empleado'         => $idEmpleado,
+                        'codigo_reloj'        => $codigoReloj,
+                        'id_dispositivo'      => $idDispositivo,
+                        'dispositivo_nombre'  => $disp['nombre'] ?? 'Manual',
+                        'dispositivo_ip'      => $disp['ip'] ?? '127.0.0.1',
+                        'fecha_hora'          => $fechaHora,
+                        'tipo'                => $tipo,
+                        'tipo_verificacion'   => 'MANUAL_RRHH',
+                        'motivo'              => 'Marcación manual registrada en panel web por ' . $usuario
+                    ],
+                    $usuario
+                );
+            } catch (\Exception $e) {
+                // Silencioso
+            }
 
             // Recalcular asistencia para esa fecha
             $dateOnly = substr($fechaHora, 0, 10);

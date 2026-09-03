@@ -23,6 +23,30 @@ class ZKDeviceService:
         self.zk = None
         self.conn = None
 
+    @staticmethod
+    def parse_verification_type(status_code):
+        """
+        Interpreta el modo de verificación del biométrico ZKTeco:
+        1: Huella Dactilar
+        2: Clave / PIN
+        3: Tarjeta RFID
+        4, 15, 20, 25: Reconocimiento Facial (Face ID)
+        """
+        try:
+            st = int(status_code)
+        except (ValueError, TypeError):
+            return "huella"
+
+        if st in (4, 15, 20, 25):
+            return "facial"
+        elif st in (1, 5, 9):
+            return "huella"
+        elif st in (3, 6, 7):
+            return "tarjeta"
+        elif st in (0, 2, 8):
+            return "clave"
+        return "huella"
+
     def connect(self):
         """Establece la conexión con el biométrico"""
         try:
@@ -157,13 +181,17 @@ class ZKDeviceService:
                 elif punch_code == 3:
                     tipo_punch = "refrigerio_entrada"
 
+                raw_status = getattr(att, 'status', 1)
+                tipo_verif = self.parse_verification_type(raw_status)
+
                 records.append({
                     "uid": getattr(att, 'uid', None),
                     "user_id": str(getattr(att, 'user_id', '')).strip(),
                     "timestamp": att.timestamp,
                     "punch": punch_code,
                     "tipo": tipo_punch,
-                    "status": getattr(att, 'status', 0)
+                    "status": raw_status,
+                    "tipo_verificacion": tipo_verif
                 })
 
             return records

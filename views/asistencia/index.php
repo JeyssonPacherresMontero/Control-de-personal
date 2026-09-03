@@ -201,6 +201,9 @@
                                 </td>
                                 <?php if (in_array($userRole, ['ADMIN', 'RRHH'], true)): ?>
                                     <td class="text-center">
+                                        <button class="btn btn-xs btn-outline-info mr-1" onclick="openTimelineModal(<?= $a['id_empleado'] ?>, '<?= $a['fecha'] ?>', '<?= htmlspecialchars(addslashes($a['apellidos'] . ' ' . $a['nombres'])) ?>')" title="Ver Trazabilidad y Auditoría de Eventos (Event Sourcing)">
+                                            <i class="fa-solid fa-timeline"></i> Eventos
+                                        </button>
                                         <button class="btn btn-xs btn-default border" onclick="openEditModal(<?= htmlspecialchars(json_encode($a)) ?>)" title="Ajustar asistencia manualmente">
                                             <i class="fa-solid fa-pen-to-square text-primary"></i>
                                         </button>
@@ -275,7 +278,147 @@
     </div>
 </div>
 
+<!-- MODAL EVENT SOURCING: LÍNEA DE TIEMPO DE AUDITORÍA Y TRAZABILIDAD -->
+<div class="modal fade" id="modalTimelineEventos" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title font-weight-bold">
+                    <i class="fa-solid fa-timeline text-info mr-2"></i> Trazabilidad y Event Sourcing
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body p-4 bg-light">
+                <!-- CABECERA DE METADATOS -->
+                <div class="d-flex justify-content-between align-items-center bg-white p-3 rounded shadow-sm mb-4 border">
+                    <div>
+                        <h6 class="font-weight-bold mb-1 text-primary" id="timelineEmpleadoNombre">Cargando empleado...</h6>
+                        <small class="text-muted"><i class="fa-solid fa-id-card mr-1"></i> DNI: <span id="timelineEmpleadoDni">--</span> | ID Reloj: <span id="timelineEmpleadoReloj">--</span></small>
+                    </div>
+                    <div class="text-right">
+                        <span class="badge badge-light border px-2 py-1 font-weight-bold text-secondary" id="timelineFecha">--</span>
+                        <div class="small text-muted mt-1" id="timelineTotalEventos">-- eventos registrados</div>
+                    </div>
+                </div>
+
+                <!-- CONTENEDOR DE LA LÍNEA DE TIEMPO -->
+                <div id="timelineLoading" class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <div class="small text-muted mt-2 font-weight-bold">Recuperando flujo de eventos inmutables desde el Event Store...</div>
+                </div>
+
+                <div id="timelineContent" class="timeline" style="display: none;">
+                    <!-- Los eventos se inyectan dinámicamente vía JavaScript -->
+                </div>
+
+                <div id="timelineEmpty" class="alert alert-secondary text-center py-4" style="display: none;">
+                    <i class="fa-solid fa-inbox fa-2x mb-2 text-muted"></i>
+                    <div>No se encontraron eventos registrados para este día.</div>
+                </div>
+            </div>
+            <div class="modal-footer justify-content-between bg-white">
+                <span class="small text-muted"><i class="fa-solid fa-shield-halved mr-1"></i> Log inmutable respaldado por arquitectura Event Sourcing</span>
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
+function openTimelineModal(empId, fecha, nombreEmp) {
+    document.getElementById('timelineEmpleadoNombre').innerText = nombreEmp;
+    document.getElementById('timelineFecha').innerText = fecha;
+    document.getElementById('timelineEmpleadoDni').innerText = '...';
+    document.getElementById('timelineEmpleadoReloj').innerText = '...';
+    document.getElementById('timelineTotalEventos').innerText = 'Cargando...';
+    
+    document.getElementById('timelineLoading').style.display = 'block';
+    document.getElementById('timelineContent').style.display = 'none';
+    document.getElementById('timelineEmpty').style.display = 'none';
+
+    $('#modalTimelineEventos').modal('show');
+
+    fetch(`?route=asistencia&action=historial_eventos&id_empleado=${empId}&fecha=${fecha}`)
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('timelineLoading').style.display = 'none';
+
+            if (!data.success || !data.events || data.events.length === 0) {
+                document.getElementById('timelineEmpty').style.display = 'block';
+                document.getElementById('timelineTotalEventos').innerText = '0 eventos';
+                return;
+            }
+
+            if (data.empleado) {
+                document.getElementById('timelineEmpleadoNombre').innerText = `${data.empleado.apellidos} ${data.empleado.nombres}`;
+                document.getElementById('timelineEmpleadoDni').innerText = data.empleado.dni || '--';
+                document.getElementById('timelineEmpleadoReloj').innerText = data.empleado.codigo_reloj || '--';
+            }
+
+            document.getElementById('timelineTotalEventos').innerText = `${data.total} evento(s) inmutable(s)`;
+
+            const container = document.getElementById('timelineContent');
+            container.innerHTML = '';
+
+            let timelineHtml = `
+                <div class="time-label">
+                    <span class="bg-primary text-white font-weight-bold px-3 py-1 rounded shadow-sm">${data.fecha}</span>
+                </div>
+            `;
+
+            data.events.forEach((ev, idx) => {
+                const disp = ev.display || {};
+                const hora = ev.created_at ? ev.created_at.substr(11, 8) : '--:--';
+                const version = ev.version ? `<span class="badge badge-light border ml-1">v${ev.version}</span>` : '';
+                
+                let detailsHtml = '';
+                if (disp.details && Object.keys(disp.details).length > 0) {
+                    detailsHtml = '<div class="row mt-2 pt-2 border-top small text-muted">';
+                    for (const [k, v] of Object.entries(disp.details)) {
+                        detailsHtml += `<div class="col-sm-6 mb-1"><strong>${k}:</strong> <span class="text-dark">${v}</span></div>`;
+                    }
+                    detailsHtml += '</div>';
+                }
+
+                timelineHtml += `
+                    <div>
+                        <i class="fa-solid ${disp.icon || 'fa-circle'} bg-info"></i>
+                        <div class="timeline-item shadow-sm">
+                            <span class="time font-weight-bold text-secondary"><i class="fas fa-clock mr-1"></i>${hora} ${version}</span>
+                            <h3 class="timeline-header">
+                                <span class="badge ${disp.badgeClass || 'badge-secondary'} mr-2">${ev.event_type}</span>
+                                <strong>${disp.title || ev.event_type}</strong>
+                            </h3>
+                            <div class="timeline-body">
+                                <p class="mb-0 text-dark">${disp.description || ''}</p>
+                                ${detailsHtml}
+                            </div>
+                            <div class="timeline-footer py-1 px-3 bg-light d-flex justify-content-between align-items-center">
+                                <small class="text-muted"><i class="fa-solid fa-user-shield mr-1"></i> Originado por: <strong>${ev.created_by || 'SYSTEM'}</strong></small>
+                                <small class="text-muted"><i class="fa-solid fa-network-wired mr-1"></i> IP: ${ev.ip_address || '127.0.0.1'}</small>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            timelineHtml += `
+                <div>
+                    <i class="fas fa-clock bg-gray"></i>
+                </div>
+            `;
+
+            container.innerHTML = timelineHtml;
+            container.style.display = 'block';
+        })
+        .catch(err => {
+            console.error(err);
+            document.getElementById('timelineLoading').style.display = 'none';
+            document.getElementById('timelineEmpty').innerText = 'Error al cargar los eventos de auditoría.';
+            document.getElementById('timelineEmpty').style.display = 'block';
+        });
+}
+
 function openEditModal(record) {
     document.getElementById('edit_id').value = record.id;
     document.getElementById('edit_empleado').value = `${record.apellidos} ${record.nombres} (${record.fecha})`;

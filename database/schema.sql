@@ -213,4 +213,21 @@ CREATE TABLE IF NOT EXISTS `usuarios_sistema` (
     `creado_en` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- 13. TABLA: EVENT STORE (EVENT SOURCING PARA MARCACIONES Y ASISTENCIA)
+-- Registro inmutable y de solo anexado (Append-Only) para trazabilidad total
+CREATE TABLE IF NOT EXISTS `eventos_asistencia` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `aggregate_type` ENUM('MARCACION', 'ASISTENCIA_DIARIA') NOT NULL COMMENT 'Tipo de agregado al que pertenece el evento',
+    `aggregate_id` VARCHAR(64) NOT NULL COMMENT 'Identificador único del stream (ej: emp_5_2026-09-02 o punch_104)',
+    `event_type` VARCHAR(80) NOT NULL COMMENT 'Tipo de evento: MARCACION_CAPTURADA_DISPOSITIVO, ASISTENCIA_CALCULADA, ASISTENCIA_MODIFICADA_MANUAL, etc.',
+    `event_data` JSON NOT NULL COMMENT 'Carga útil (Payload estructurado con snapshot, diffs y metadatos)',
+    `version` INT NOT NULL DEFAULT 1 COMMENT 'Versión secuencial del stream para concurrencia optimista',
+    `created_by` VARCHAR(100) NOT NULL DEFAULT 'SYSTEM' COMMENT 'Usuario que originó el evento o subsistema',
+    `ip_address` VARCHAR(45) NULL COMMENT 'IP de origen del cliente o dispositivo biométrico',
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX `idx_events_aggregate` (`aggregate_type`, `aggregate_id`),
+    INDEX `idx_events_type` (`event_type`),
+    INDEX `idx_events_created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 SET FOREIGN_KEY_CHECKS = 1;

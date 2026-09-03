@@ -53,6 +53,8 @@ switch ($route) {
         } elseif ($action === 'editar') {
             AuthController::requireRole(['ADMIN', 'RRHH'], 'asistencia');
             $controller->editar();
+        } elseif ($action === 'historial_eventos') {
+            $controller->historialEventos();
         } else {
             $controller->index();
         }

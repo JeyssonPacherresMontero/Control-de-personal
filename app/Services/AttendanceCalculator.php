@@ -2,11 +2,13 @@
 namespace App\Services;
 
 use App\Database;
+use App\Services\EventStore;
 use DateTime;
 use DateInterval;
 use Exception;
 
 require_once __DIR__ . '/../Database.php';
+require_once __DIR__ . '/EventStore.php';
 
 class AttendanceCalculator {
     private int $debounceMinutes;
@@ -322,7 +324,8 @@ class AttendanceCalculator {
             $minutosExtra,
             $minutosSalidaTemprana,
             $estado,
-            implode(' | ', $observaciones)
+            implode(' | ', $observaciones),
+            $tolerancia
         );
 
         // 9. Marcar marcaciones crudas como procesadas
@@ -359,7 +362,8 @@ class AttendanceCalculator {
     }
 
     /**
-     * Inserta o actualiza el registro consolidado en la tabla asistencia_diaria
+     * Inserta o actualiza el registro consolidado en la tabla asistencia_diaria (Proyección Read Model)
+     * y emite el evento ASISTENCIA_CALCULADA en el Event Store para auditoría total.
      */
     private function saveAttendanceRecord(
         int $empId,
@@ -376,7 +380,8 @@ class AttendanceCalculator {
         int $minutosExtra,
         int $minutosSalidaTemprana,
         string $estado,
-        string $observaciones
+        string $observaciones,
+        int $toleranciaAplicada = 10
     ): void {
         $sql = "
             INSERT INTO asistencia_diaria (
@@ -428,5 +433,33 @@ class AttendanceCalculator {
             ':estado'    => $estado,
             ':obs'       => $observaciones ?: null
         ]);
+
+        // Registrar evento inmutable en EventStore
+        try {
+            EventStore::recordEvent(
+                'ASISTENCIA_DIARIA',
+                "emp_{$empId}_{$fecha}",
+                'ASISTENCIA_CALCULADA',
+                [
+                    'id_empleado'               => $empId,
+                    'id_turno'                  => $turnoId,
+                    'fecha'                     => $fecha,
+                    'hora_entrada_programada'   => $horaEntradaProg,
+                    'hora_salida_programada'    => $horaSalidaProg,
+                    'hora_entrada_real'         => $horaEntradaReal,
+                    'hora_salida_real'          => $horaSalidaReal,
+                    'tolerancia_aplicada'       => $toleranciaAplicada,
+                    'minutos_tardanza'          => $minutosTardanza,
+                    'minutos_trabajados'        => $minutosTrabajados,
+                    'minutos_extra'             => $minutosExtra,
+                    'minutos_salida_temprana'   => $minutosSalidaTemprana,
+                    'estado'                    => $estado,
+                    'observaciones'             => $observaciones
+                ],
+                'MOTOR_CALCULO_ASISTENCIA'
+            );
+        } catch (Exception $e) {
+            // Silencioso para no romper flujo si la tabla de eventos se está migrando
+        }
     }
 }

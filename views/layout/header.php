@@ -26,6 +26,9 @@ $roleLabel = match($userRole) {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= htmlspecialchars(APP_NAME) ?> | Panel de Control</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="<?= jushsal_logo_data_uri('favicon') ?: asset('img/favicon.png') ?>">
+    <link rel="apple-touch-icon" href="<?= jushsal_logo_data_uri('icon') ?: asset('img/logo_icon.png') ?>">
 
     <!-- Google Font: Source Sans Pro -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
@@ -42,14 +45,42 @@ $roleLabel = match($userRole) {
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
 
     <style>
-        .brand-link .brand-image {
-            float: left;
-            line-height: .8;
-            margin-left: .8rem;
-            margin-right: .5rem;
-            margin-top: -3px;
-            max-height: 33px;
-            width: auto;
+        .brand-link {
+            padding: 0.8rem 0.8rem !important;
+            display: flex !important;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1) !important;
+        }
+        .brand-link .brand-image-logo {
+            width: 36px;
+            height: 36px;
+            object-fit: contain;
+            background: #ffffff;
+            border-radius: 8px;
+            padding: 2px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.25);
+            margin-right: 0.75rem;
+            flex-shrink: 0;
+        }
+        .brand-text-container {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.1;
+        }
+        .brand-main-title {
+            font-size: 1.05rem;
+            font-weight: 800;
+            letter-spacing: 0.8px;
+            color: #ffffff;
+        }
+        .brand-sub-title {
+            font-size: 0.65rem;
+            color: #94a3b8;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 140px;
         }
         .table td, .table th {
             vertical-align: middle !important;
@@ -116,9 +147,10 @@ $roleLabel = match($userRole) {
 <div class="wrapper">
 
     <!-- Preloader opcional -->
-    <div class="preloader flex-column justify-content-center align-items-center">
-        <i class="fa-solid fa-fingerprint fa-3x text-primary animation__wobble"></i>
-        <span class="mt-2 font-weight-bold text-secondary">Cargando Control de Asistencia...</span>
+    <div class="preloader flex-column justify-content-center align-items-center bg-light">
+        <img class="animation__shake mb-3" src="<?= jushsal_logo_data_uri('icon') ?: asset('img/logo_icon.png') ?>" alt="JUSHSAL" height="80" width="80" style="object-fit: contain;">
+        <span class="font-weight-bold text-dark h5 mb-0">JUSHSAL</span>
+        <span class="text-muted small">Junta de Usuarios San Lorenzo &bull; Control de Asistencia</span>
     </div>
 
     <!-- NAVBAR -->
@@ -164,7 +196,7 @@ $roleLabel = match($userRole) {
                 <ul class="dropdown-menu dropdown-menu-lg dropdown-menu-right shadow border-0">
                     <!-- User image -->
                     <li class="user-header bg-primary">
-                        <i class="fa-solid fa-user-shield fa-3x mb-2 text-white"></i>
+                        <img src="<?= jushsal_logo_data_uri('icon') ?: asset('img/logo_icon.png') ?>" class="img-circle elevation-2 bg-white p-1 mb-2" alt="User Image" style="width: 60px; height: 60px; object-fit: contain;">
                         <p>
                             <?= htmlspecialchars($currentUser['nombre'] ?? 'Usuario') ?>
                             <small class="d-block mt-1 font-weight-bold badge <?= $roleBadgeClass ?> text-white"><?= htmlspecialchars($roleLabel) ?></small>
@@ -172,7 +204,7 @@ $roleLabel = match($userRole) {
                     </li>
                     <!-- Menu Footer-->
                     <li class="user-footer d-flex justify-content-between">
-                        <span class="text-muted small align-self-center"><i class="fa-solid fa-shield-halved mr-1"></i> ZK-Control</span>
+                        <span class="text-muted small align-self-center"><i class="fa-solid fa-building-user mr-1 text-primary"></i> JUSHSAL</span>
                         <a href="?route=logout" class="btn btn-default btn-flat text-danger">
                             <i class="fa-solid fa-right-from-bracket mr-1"></i> Salir
                         </a>
@@ -192,9 +224,12 @@ $roleLabel = match($userRole) {
     <!-- MAIN SIDEBAR CONTAINER -->
     <aside class="main-sidebar sidebar-dark-primary elevation-4">
         <!-- Brand Logo -->
-        <a href="?route=dashboard" class="brand-link">
-            <i class="fa-solid fa-fingerprint brand-image text-primary fa-2x mt-0"></i>
-            <span class="brand-text font-weight-bold">ZK-Control</span>
+        <a href="?route=dashboard" class="brand-link" title="Junta de Usuarios San Lorenzo">
+            <img src="<?= jushsal_logo_data_uri('icon') ?: asset('img/logo_icon.png') ?>" alt="JUSHSAL Logo" class="brand-image-logo">
+            <div class="brand-text-container">
+                <span class="brand-main-title">JUSHSAL</span>
+                <span class="brand-sub-title">San Lorenzo &bull; Personal</span>
+            </div>
         </a>
 
         <!-- Sidebar -->

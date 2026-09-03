@@ -3,6 +3,27 @@
 <!-- Content Header (Page header) -->
 <div class="content-header pb-2">
     <div class="container-fluid">
+        <!-- Banner Institucional JUSHSAL -->
+        <div class="card bg-white shadow-sm border-0 mb-3" style="border-left: 4px solid #0284c7 !important; border-radius: 8px;">
+            <div class="card-body py-2 px-3 d-flex align-items-center justify-content-between flex-wrap">
+                <div class="d-flex align-items-center">
+                    <img src="<?= jushsal_logo_data_uri('icon') ?: asset('img/logo_icon.png') ?>" alt="JUSHSAL" class="mr-3" style="width: 44px; height: 44px; object-fit: contain;">
+                    <div>
+                        <div class="font-weight-bold text-dark" style="font-size: 1.05rem; letter-spacing: 0.5px;">
+                            JUSHSAL <span class="font-weight-normal text-muted small d-none d-md-inline">&bull; Junta de Usuarios del Sector Hidráulico Menor San Lorenzo</span>
+                        </div>
+                        <small class="text-secondary">
+                            Sistema Integral de Control de Personal y Asistencia Biométrico
+                        </small>
+                    </div>
+                </div>
+                <div class="d-none d-lg-flex align-items-center text-muted small">
+                    <span class="badge badge-light border px-2 py-1 mr-2"><i class="fa-solid fa-droplet text-info mr-1"></i> Sector Hidráulico San Lorenzo</span>
+                    <span class="badge badge-light border px-2 py-1"><i class="fa-regular fa-clock mr-1 text-primary"></i> <?= date('d/m/Y') ?></span>
+                </div>
+            </div>
+        </div>
+
         <div class="row mb-2 align-items-center">
             <div class="col-md-7 col-sm-12 mb-2 mb-md-0">
                 <h1 class="m-0 font-weight-bold text-dark">
@@ -284,7 +305,18 @@
                                                 </td>
                                                 <td>
                                                     <span class="text-muted small">
-                                                        <i class="fa-solid fa-fingerprint mr-1 text-primary"></i>
+                                                        <?php
+                                                            $v = strtolower($m['tipo_verificacion'] ?? '');
+                                                            if (str_contains($v, 'facial') || str_contains($v, 'face')) {
+                                                                echo '<i class="fa-solid fa-camera text-info mr-1" title="Reconocimiento Facial"></i>';
+                                                            } elseif (str_contains($v, 'tarjeta') || str_contains($v, 'card')) {
+                                                                echo '<i class="fa-solid fa-id-card text-success mr-1" title="Tarjeta RFID"></i>';
+                                                            } elseif (str_contains($v, 'clave') || str_contains($v, 'pin')) {
+                                                                echo '<i class="fa-solid fa-key text-warning mr-1" title="Contraseña / PIN"></i>';
+                                                            } else {
+                                                                echo '<i class="fa-solid fa-fingerprint text-primary mr-1" title="Huella Dactilar"></i>';
+                                                            }
+                                                        ?>
                                                         <?= htmlspecialchars($m['dispositivo_nombre'] ?? 'Reloj') ?>
                                                     </span>
                                                 </td>
@@ -619,6 +651,18 @@
                                                     <?= htmlspecialchars($m['apellidos'] . ' ' . $m['nombres']) ?>
                                                 </td>
                                                 <td class="small text-muted">
+                                                    <?php
+                                                        $v = strtolower($m['tipo_verificacion'] ?? '');
+                                                        if (str_contains($v, 'facial') || str_contains($v, 'face')) {
+                                                            echo '<i class="fa-solid fa-camera text-info mr-1" title="Reconocimiento Facial"></i>';
+                                                        } elseif (str_contains($v, 'tarjeta') || str_contains($v, 'card')) {
+                                                            echo '<i class="fa-solid fa-id-card text-success mr-1" title="Tarjeta RFID"></i>';
+                                                        } elseif (str_contains($v, 'clave') || str_contains($v, 'pin')) {
+                                                            echo '<i class="fa-solid fa-key text-warning mr-1" title="Contraseña / PIN"></i>';
+                                                        } else {
+                                                            echo '<i class="fa-solid fa-fingerprint text-primary mr-1" title="Huella Dactilar"></i>';
+                                                        }
+                                                    ?>
                                                     <?= htmlspecialchars($m['dispositivo_nombre'] ?? 'Reloj') ?>
                                                 </td>
                                                 <td>

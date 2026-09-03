@@ -40,11 +40,68 @@ define('DB_NAME', $_ENV['DB_NAME'] ?? 'control_personal');
 define('DB_USER', $_ENV['DB_USER'] ?? 'root');
 define('DB_PASS', $_ENV['DB_PASS'] ?? '');
 
-// Constantes de Aplicación
-define('APP_NAME', $_ENV['APP_NAME'] ?? 'Sistema de Control de Asistencia');
+// Constantes de Aplicación & Identidad Institucional
+define('APP_NAME', $_ENV['APP_NAME'] ?? 'JUSHSAL - Control de Personal y Asistencia');
+define('COMPANY_NAME', 'JUSHSAL');
+define('COMPANY_FULL_NAME', 'Junta de Usuarios del Sector Hidráulico Menor San Lorenzo');
+define('COMPANY_LOGO', 'public/img/logo_jushsal.png');
+define('COMPANY_ICON', 'public/img/logo_icon.png');
+define('COMPANY_FAVICON', 'public/img/favicon.png');
 define('APP_URL', $_ENV['APP_URL'] ?? 'http://localhost:8080/control_personal');
 define('APP_ROOT', dirname(__DIR__));
 define('ATTENDANCE_DEBOUNCE_MINUTES', (int)($_ENV['ATTENDANCE_DEBOUNCE_MINUTES'] ?? 3));
+
+/**
+ * Obtener Data URI (base64) del logo institucional para garantizar
+ * que SIEMPRE se muestre sin depender de rutas relativas o configuraciones de servidor.
+ */
+function jushsal_logo_data_uri(string $type = 'icon'): string {
+    static $cache = [];
+    if (isset($cache[$type])) {
+        return $cache[$type];
+    }
+    $fileMap = [
+        'icon' => APP_ROOT . '/public/img/logo_icon.png',
+        'full' => APP_ROOT . '/public/img/logo_jushsal.png',
+        'clean' => APP_ROOT . '/public/img/logo_jushsal.png',
+        'favicon' => APP_ROOT . '/public/img/favicon.png',
+    ];
+    $filePath = $fileMap[$type] ?? $fileMap['icon'];
+    if (!file_exists($filePath)) {
+        $filePath = APP_ROOT . '/img/' . basename($filePath);
+    }
+    if (file_exists($filePath)) {
+        $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+        $mime = match($ext) {
+            'jpg', 'jpeg' => 'image/jpeg',
+            'png' => 'image/png',
+            'gif' => 'image/gif',
+            'svg' => 'image/svg+xml',
+            default => 'image/png'
+        };
+        $data = base64_encode(file_get_contents($filePath));
+        $cache[$type] = 'data:' . $mime . ';base64,' . $data;
+        return $cache[$type];
+    }
+    return '';
+}
+
+/**
+ * Genera la URL relativa correcta para cualquier archivo estático según el entorno de ejecución
+ */
+function asset(string $path): string {
+    $path = ltrim($path, '/');
+    $scriptDir = dirname($_SERVER['SCRIPT_NAME'] ?? '');
+    $scriptDir = str_replace('\\', '/', $scriptDir);
+    $scriptDir = rtrim($scriptDir, '/');
+    
+    if (str_ends_with($scriptDir, '/public') && str_starts_with($path, 'public/')) {
+        $path = substr($path, 7);
+    }
+    
+    $base = $scriptDir !== '' ? $scriptDir : '';
+    return $base . '/' . $path;
+}
 
 // Configuración del ejecutable de Python (autodetección robusta)
 // NOTA: ZKBioTime instala un Python embebido en C:\ZKBioTime\Python311 que corrompe

@@ -1,4 +1,5 @@
-# Sistema de Control de Personal y Asistencia con Biometría ZKTeco
+# JUSHSAL - Sistema de Control de Personal y Asistencia Biométrico
+**Junta de Usuarios del Sector Hidráulico Menor San Lorenzo**
 
 Sistema profesional de control de personal y asistencia laboral diseñado para **entornos reales de producción**. Integra relojes biométricos **ZKTeco** (huella digital, facial, tarjeta RFID, clave) mediante un puente en **Python (`pyzk`)** hacia **MySQL / MariaDB**, con un backend y panel de control web en **PHP 8.x**.
 
@@ -137,8 +138,15 @@ chmod +x cron/cron_setup.sh
 ## 🔑 Credenciales de Acceso Web por Defecto
 
 - **URL de Acceso**: `http://localhost/Control%20de%20personal/` o `http://localhost:8000`
-- **Usuario**: `admin`
-- **Contraseña**: `admin123`
+
+| Usuario | Contraseña | Rol | Alcance y Permisos |
+|---|---|---|---|
+| **`admin`** | `admin123` | **ADMIN** | Acceso total al sistema: configuración de hardware/relojes biométricos, turnos, empleados, asistencias, recalcular y auditoría. |
+| **`rrhh`** | `admin123` | **RRHH** | Gestión de personal, creación/edición de turnos, marcaciones manuales, ajustes de asistencia y resolución de justificaciones. |
+| **`supervisor`** | `admin123` | **SUPERVISOR** | Supervisión de personal de área, registro de justificaciones y permisos, visualización de asistencias. |
+| **`consulta`** | `admin123` | **CONSULTA** | Solo consulta y auditoría: lectura de reportes, marcaciones y asistencias (sin permisos de modificación). |
+
+> **Nota de Seguridad:** Las contraseñas se almacenan con cifrado `BCRYPT`. Para generar una nueva contraseña en PHP utiliza `password_hash('tu_clave', PASSWORD_BCRYPT)`.
 
 ---
 

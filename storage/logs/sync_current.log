@@ -1,16 +1,10 @@
-2026-08-31 13:09:21,635 [INFO] [SyncEngine] Iniciando ciclo de sincronización para 1 dispositivo(s)...
-2026-08-31 13:09:21,635 [INFO] [SyncEngine] ==> Iniciando sincronización (SOLO HOY) con biométrico #1 [Reloj Principal - Entrada] en 192.168.1.201:4370 (TCP)
-2026-08-31 13:09:21,694 [INFO] [ZKService] Conexión exitosa con dispositivo 192.168.1.201:4370
-2026-08-31 13:09:21,706 [INFO] [ZKService] Hora del reloj 192.168.1.201 sincronizada a: 2026-08-31 13:09:21.695001
-2026-08-31 13:10:17,234 [INFO] [ZKService] Se descargaron 66078 registros brutos de 192.168.1.201
-2026-08-31 13:10:17,354 [INFO] [SyncEngine] Sincronización (SOLO HOY): 66078 en reloj, 26 evaluados, 4 nuevos insertados, 22 ya existentes.
-2026-08-31 13:10:17,416 [INFO] [ZKService] Desconectado de 192.168.1.201:4370
-2026-08-31 13:10:17,429 [INFO] [SyncEngine] Ejecutando motor de cálculo de asistencia diaria...
-2026-08-31 13:10:18,361 [INFO] [SyncEngine] Cálculo completado: Procesando asistencia para la fecha: 2026-08-31...
-Completado: 75 empleados evaluados.
-  - Presentes:   11
-  - Tardanzas:   10
-  - Faltas:      54
-  - Justificados: 0
-  - Sin salida:  0
-2026-08-31 13:10:18,361 [INFO] [SyncEngine] Ciclo de sincronización finalizado exitosamente.
+=== Iniciando sincronizaciÃ³n [SOLO HOY (RÃPIDO) - 2026-09-02 10:38:49] ===
+2026-09-02 10:38:50,253 [INFO] [SyncEngine] Iniciando ciclo de sincronización para 1 dispositivo(s)...
+2026-09-02 10:38:50,253 [INFO] [SyncEngine] ==> Iniciando sincronización (SOLO HOY) con biométrico #1 [Reloj Principal - Entrada] en 192.168.1.201:4370 (TCP)
+2026-09-02 10:38:50,294 [INFO] [ZKService] Conexión exitosa con dispositivo 192.168.1.201:4370
+2026-09-02 10:38:50,311 [INFO] [ZKService] Hora del reloj 192.168.1.201 sincronizada a: 2026-09-02 10:38:50.294993
+2026-09-02 10:39:49,285 [INFO] [ZKService] Se descargaron 66133 registros brutos de 192.168.1.201
+2026-09-02 10:39:49,432 [WARNING] [SyncEngine] Aviso al guardar eventos de auditoría: (1146, "Table 'control_personal.eventos_asistencia' doesn't exist")
+2026-09-02 10:39:49,437 [INFO] [SyncEngine] Sincronización (SOLO HOY): 66133 en reloj, 20 evaluados, 0 nuevos insertados, 20 ya existentes.
+2026-09-02 10:39:49,482 [INFO] [ZKService] Desconectado de 192.168.1.201:4370
+2026-09-02 10:39:49,491 [INFO] [SyncEngine] Ciclo de sincronización finalizado exitosamente.

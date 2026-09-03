@@ -3,6 +3,9 @@ namespace App\Controllers;
 
 use App\Database;
 use App\Services\AttendanceCalculator;
+use App\Services\EventStore;
+
+require_once __DIR__ . '/../Services/EventStore.php';
 
 class AsistenciaController {
     public function index(): void {
@@ -98,6 +101,10 @@ class AsistenciaController {
         $observaciones = trim($_POST['observaciones'] ?? '');
 
         if ($id > 0) {
+            // 1. Obtener estado previo para auditoría y trazabilidad
+            $prevRecord = Database::queryOne("SELECT * FROM asistencia_diaria WHERE id = ?", [$id]);
+
+            // 2. Actualizar proyección Read Model
             Database::execute("
                 UPDATE asistencia_diaria 
                 SET estado = :estado,
@@ -113,9 +120,72 @@ class AsistenciaController {
                 ':obs' => $observaciones,
                 ':id' => $id
             ]);
+
+            // 3. Event Sourcing: Registrar evento inmutable de modificación manual
+            if ($prevRecord) {
+                $currentUser = AuthController::user();
+                $usuario = $currentUser['usuario'] ?? 'ADMIN/RRHH';
+                $empId = (int)$prevRecord['id_empleado'];
+                $fecha = $prevRecord['fecha'];
+
+                try {
+                    EventStore::recordEvent(
+                        'ASISTENCIA_DIARIA',
+                        "emp_{$empId}_{$fecha}",
+                        'ASISTENCIA_MODIFICADA_MANUAL',
+                        [
+                            'id_asistencia'          => $id,
+                            'id_empleado'            => $empId,
+                            'fecha'                  => $fecha,
+                            'estado_anterior'        => $prevRecord['estado'],
+                            'nuevo_estado'           => $estado,
+                            'minutos_tardanza_ant'   => $prevRecord['minutos_tardanza'],
+                            'nuevos_minutos_tardanza'=> $minutosTardanza,
+                            'minutos_extra_ant'      => $prevRecord['minutos_extra'],
+                            'nuevos_minutos_extra'   => $minutosExtra,
+                            'observaciones_ant'      => $prevRecord['observaciones'],
+                            'motivo'                 => $observaciones ?: 'Ajuste manual sin motivo especificado',
+                            'modificado_por'         => $usuario
+                        ],
+                        $usuario
+                    );
+                } catch (\Exception $e) {
+                    // Silencioso
+                }
+            }
         }
 
-        header('Location: ' . ($_SERVER['HTTP_REFERER'] ?? '?route=asistencia'));
+        header('Location: ' . ($_SERVER['HTTP_REFERER'] ?? '?route=asistencia&msg=ajustado'));
+        exit;
+    }
+
+    /**
+     * Endpoint API para consultar la línea de tiempo completa de eventos de un empleado en una fecha
+     */
+    public function historialEventos(): void {
+        AuthController::checkAuth();
+        header('Content-Type: application/json');
+
+        $empId = (int)($_GET['id_empleado'] ?? 0);
+        $fecha = $_GET['fecha'] ?? date('Y-m-d');
+
+        if ($empId <= 0) {
+            echo json_encode(['success' => false, 'error' => 'ID de empleado inválido']);
+            exit;
+        }
+
+        $empleado = Database::queryOne("SELECT id, nombres, apellidos, dni, codigo_reloj FROM empleados WHERE id = ?", [$empId]);
+        $asistencia = Database::queryOne("SELECT * FROM asistencia_diaria WHERE id_empleado = ? AND fecha = ?", [$empId, $fecha]);
+        $timeline = EventStore::getTimelineForEmployeeDate($empId, $fecha);
+
+        echo json_encode([
+            'success'    => true,
+            'empleado'   => $empleado,
+            'asistencia' => $asistencia,
+            'fecha'      => $fecha,
+            'total'      => count($timeline),
+            'events'     => $timeline
+        ]);
         exit;
     }
 
@@ -196,7 +266,7 @@ class AsistenciaController {
 
         // Título del reporte
         echo '<table style="width:100%; margin-bottom: 12px;">';
-        echo '<tr><td colspan="16" class="title">' . htmlspecialchars(APP_NAME) . ' - REPORTE DE CONTROL DE ASISTENCIA</td></tr>';
+        echo '<tr><td colspan="16" class="title">JUNTA DE USUARIOS DEL SECTOR HIDRÁULICO MENOR SAN LORENZO (JUSHSAL)<br><span style="font-size:11pt; font-weight:600; color:#475569;">REPORTE OFICIAL DE CONTROL DE ASISTENCIA</span></td></tr>';
         echo '<tr><td colspan="16" class="subtitle">Período: <b>' . htmlspecialchars($start) . '</b> al <b>' . htmlspecialchars($end) . '</b>' . ($deptoNombre ? ' &nbsp;|&nbsp; Departamento: <b>' . htmlspecialchars($deptoNombre) . '</b>' : '') . ' &nbsp;|&nbsp; Generado: ' . date('d/m/Y H:i:s') . '</td></tr>';
         echo '</table>';
 

@@ -96,13 +96,13 @@
                 <div class="row">
                     <div class="col-6">
                         <div class="form-group">
-                            <label class="small font-weight-bold text-secondary">Hora de Entrada</label>
-                            <input type="time" name="hora_entrada" id="tur_entrada" class="form-control form-control-sm" required>
+                            <label class="small font-weight-bold text-success"><i class="fa-solid fa-arrow-right-to-bracket mr-1"></i> Hora de Ingreso / Entrada</label>
+                            <input type="time" name="hora_entrada" id="tur_entrada" class="form-control form-control-sm" required oninput="updateTolerancePreview()">
                         </div>
                     </div>
                     <div class="col-6">
                         <div class="form-group">
-                            <label class="small font-weight-bold text-secondary">Hora de Salida</label>
+                            <label class="small font-weight-bold text-primary"><i class="fa-solid fa-arrow-right-from-bracket mr-1"></i> Hora de Salida</label>
                             <input type="time" name="hora_salida" id="tur_salida" class="form-control form-control-sm" required>
                         </div>
                     </div>
@@ -111,28 +111,36 @@
                 <div class="row">
                     <div class="col-6">
                         <div class="form-group">
-                            <label class="small font-weight-bold text-secondary">Tolerancia para Tardanza (minutos)</label>
-                            <input type="number" name="tolerancia_minutos" id="tur_tolerancia" class="form-control form-control-sm" value="10" min="0" required>
+                            <label class="small font-weight-bold text-warning"><i class="fa-solid fa-stopwatch mr-1"></i> Tolerancia Tardanza (min)</label>
+                            <input type="number" name="tolerancia_minutos" id="tur_tolerancia" class="form-control form-control-sm" value="10" min="0" required oninput="updateTolerancePreview()">
                         </div>
                     </div>
                     <div class="col-6">
                         <div class="form-group">
-                            <label class="small font-weight-bold text-secondary">Límite para Considerar Falta (minutos)</label>
+                            <label class="small font-weight-bold text-danger"><i class="fa-solid fa-ban mr-1"></i> Límite para Falta (min)</label>
                             <input type="number" name="tolerancia_falta_minutos" id="tur_tolfalta" class="form-control form-control-sm" value="60" min="0" required>
                         </div>
+                    </div>
+                </div>
+
+                <!-- CALLOUT EXPLICATIVO DE REGLA DE ASISTENCIA -->
+                <div class="alert alert-info py-2 px-3 mb-3 small" style="border-left: 4px solid #17a2b8;">
+                    <div class="font-weight-bold mb-1"><i class="fa-solid fa-circle-info mr-1"></i> Regla de Evaluación de Tardanza:</div>
+                    <div id="toleranceHelpText">
+                        El personal que ingrese hasta <strong id="previewGraceTime">08:10</strong> se marcará como <strong>Presente</strong>. Pasando este límite, el sistema lo marcará como <strong>Tardanza</strong>.
                     </div>
                 </div>
 
                 <div class="row">
                     <div class="col-6">
                         <div class="form-group">
-                            <label class="small font-weight-bold text-secondary">Inicio de Refrigerio</label>
+                            <label class="small font-weight-bold text-secondary"><i class="fa-solid fa-utensils mr-1"></i> Inicio de Refrigerio</label>
                             <input type="time" name="hora_inicio_refrigerio" id="tur_ref_ini" class="form-control form-control-sm">
                         </div>
                     </div>
                     <div class="col-6">
                         <div class="form-group">
-                            <label class="small font-weight-bold text-secondary">Fin de Refrigerio</label>
+                            <label class="small font-weight-bold text-secondary"><i class="fa-solid fa-utensils mr-1"></i> Fin de Refrigerio</label>
                             <input type="time" name="hora_fin_refrigerio" id="tur_ref_fin" class="form-control form-control-sm">
                         </div>
                     </div>
@@ -180,6 +188,30 @@
 </div>
 
 <script>
+function updateTolerancePreview() {
+    const entrada = document.getElementById('tur_entrada').value;
+    const tol = parseInt(document.getElementById('tur_tolerancia').value) || 0;
+    
+    if (entrada) {
+        const parts = entrada.split(':');
+        const h = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10);
+        
+        let totalMin = h * 60 + m + tol;
+        let newH = Math.floor(totalMin / 60) % 24;
+        let newM = totalMin % 60;
+        
+        const limitStr = String(newH).padStart(2, '0') + ':' + String(newM).padStart(2, '0');
+        const previewEl = document.getElementById('previewGraceTime');
+        if (previewEl) previewEl.innerText = limitStr;
+        
+        const helpEl = document.getElementById('toleranceHelpText');
+        if (helpEl) {
+            helpEl.innerHTML = `El personal que ingrese hasta las <strong class="text-success">${limitStr}</strong> (Entrada: ${entrada} + ${tol} min) se registrará como <span class="badge badge-success">Presente</span>. A partir de las <strong class="text-danger">${limitStr} con 1 segundo</strong>, el sistema lo marcará como <span class="badge badge-warning text-white">Tardanza</span>.`;
+        }
+    }
+}
+
 function openNewTurnoModal() {
     document.getElementById('turnoModalTitle').innerText = 'Crear Nuevo Turno';
     document.getElementById('tur_id').value = '';
@@ -197,6 +229,7 @@ function openNewTurnoModal() {
     for (let i=1; i<=5; i++) document.getElementById('dia_' + i).checked = true;
     for (let i=6; i<=7; i++) document.getElementById('dia_' + i).checked = false;
 
+    updateTolerancePreview();
     $('#modalTurno').modal('show');
 }
 
@@ -219,6 +252,7 @@ function openEditTurnoModal(t) {
         document.getElementById('dia_' + i).checked = dias.includes(i.toString());
     }
 
+    updateTolerancePreview();
     $('#modalTurno').modal('show');
 }
 </script>
