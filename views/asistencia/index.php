@@ -1,14 +1,57 @@
-<?php require_once APP_ROOT . '/views/layout/header.php'; ?>
+<?php 
+require_once APP_ROOT . '/views/layout/header.php'; 
 
-<!-- Content Header (Page header) -->
-<div class="content-header">
+// Cálculos de KPIs y métricas de asistencia para el período consultado
+$kpiTotal = count($asistencias);
+$kpiPresentes = 0;
+$kpiTardanzas = 0;
+$kpiFaltas = 0;
+$kpiJustificados = 0;
+$kpiSinSalida = 0;
+$kpiMinTardanza = 0;
+$kpiMinTrabajados = 0;
+$kpiMinExtra = 0;
+
+foreach ($asistencias as $r) {
+    $st = $r['estado'];
+    if ($st === 'PRESENTE') $kpiPresentes++;
+    elseif ($st === 'TARDANZA') {
+        $kpiTardanzas++;
+        $kpiMinTardanza += (int)$r['minutos_tardanza'];
+    } elseif ($st === 'FALTA' || $st === 'FALTA_INJUSTIFICADA') $kpiFaltas++;
+    elseif (in_array($st, ['JUSTIFICADO', 'PERMISO', 'VACACIONES'], true)) $kpiJustificados++;
+    elseif ($st === 'SALIDA_SIN_MARCAR') $kpiSinSalida++;
+    
+    $kpiMinTrabajados += (int)$r['minutos_trabajados'];
+    $kpiMinExtra += (int)$r['minutos_extra'];
+}
+
+$kpiPuntualidad = $kpiTotal > 0 ? round(($kpiPresentes / $kpiTotal) * 100, 1) : 0;
+$kpiHorasTrab = sprintf('%dh %02dm', floor($kpiMinTrabajados / 60), $kpiMinTrabajados % 60);
+$kpiHorasExt = sprintf('%dh %02dm', floor($kpiMinExtra / 60), $kpiMinExtra % 60);
+$kpiHorasTard = sprintf('%dh %02dm', floor($kpiMinTardanza / 60), $kpiMinTardanza % 60);
+
+$deptoNombreFiltro = 'Todos los Departamentos';
+if (!empty($deptoId)) {
+    foreach ($departamentos as $d) {
+        if ($d['id'] == $deptoId) {
+            $deptoNombreFiltro = $d['nombre'];
+            break;
+        }
+    }
+}
+?><!-- Content Header (Page header) -->
+<div class="content-header no-print pb-2">
     <div class="container-fluid">
         <div class="row mb-2 align-items-center">
             <div class="col-sm-6">
-                <h1 class="m-0 font-weight-bold"><i class="fa-solid fa-calendar-check mr-2 text-primary"></i> Control de Asistencia Diaria</h1>
+                <h1 class="m-0 font-weight-bold text-dark" style="font-size: 1.45rem;">
+                    <i class="fa-solid fa-calendar-check mr-2 text-primary"></i> Control de Asistencia Diaria
+                </h1>
+                <div class="text-muted small mt-1">Consolidado oficial de puntualidad, tolerancias, inasistencias y horas acumuladas.</div>
             </div>
             <div class="col-sm-6">
-                <ol class="breadcrumb float-sm-right">
+                <ol class="breadcrumb float-sm-right mb-0">
                     <li class="breadcrumb-item"><a href="?route=dashboard">Inicio</a></li>
                     <li class="breadcrumb-item active">Asistencia</li>
                 </ol>
@@ -21,50 +64,164 @@
 <section class="content">
     <div class="container-fluid">
 
+        <!-- MEMBRETE OFICIAL DE IMPRESIÓN / PDF (Solo visible al imprimir o guardar como PDF) -->
+        <div class="print-only mb-3">
+            <table style="width: 100%; border-collapse: collapse; border-bottom: 2px solid #1e3a8a; padding-bottom: 8px;">
+                <tr>
+                    <td style="width: 120px; vertical-align: middle; text-align: center; padding-right: 15px;">
+                        <img src="<?= jushsal_logo_data_uri('full') ?: asset('img/logo_jushsal.png') ?>" alt="JUSHSAL" style="max-height: 60px; max-width: 110px; object-fit: contain;">
+                    </td>
+                    <td style="vertical-align: middle;">
+                        <div style="font-size: 13pt; font-weight: 800; color: #1e3a8a; text-transform: uppercase;">JUNTA DE USUARIOS DEL SECTOR HIDRÁULICO MENOR SAN LORENZO (JUSHSAL)</div>
+                        <div style="font-size: 9pt; color: #475569; font-weight: 600;">SISTEMA INTEGRADO DE CONTROL DE PERSONAL Y ASISTENCIA LABORAL</div>
+                        <div style="font-size: 11pt; font-weight: 700; color: #0f172a; margin-top: 4px;">REPORTE OFICIAL DETALLADO DE ASISTENCIA LABORAL</div>
+                    </td>
+                    <td style="width: 200px; text-align: right; vertical-align: middle; font-size: 8pt; color: #64748b;">
+                        <div><b>Período:</b> <?= date('d/m/Y', strtotime($fechaInicio)) ?> al <?= date('d/m/Y', strtotime($fechaFin)) ?></div>
+                        <div><b>Área:</b> <?= htmlspecialchars($deptoNombreFiltro) ?></div>
+                        <div><b>Emisión:</b> <?= date('d/m/Y H:i:s') ?></div>
+                        <div><b>Usuario:</b> <?= htmlspecialchars($currentUser['nombre'] ?? 'Administrador') ?></div>
+                    </td>
+                </tr>
+            </table>
+
+            <!-- Resumen KPIs para Impresión -->
+            <table class="table table-sm table-bordered mt-2 mb-2" style="font-size: 8pt; text-align: center;">
+                <thead style="background-color: #f1f5f9;">
+                    <tr>
+                        <th>Total Registros</th>
+                        <th>Asistencias Puntuales</th>
+                        <th>% Puntualidad</th>
+                        <th>Tardanzas</th>
+                        <th>Tiempo Tardanza</th>
+                        <th>Faltas</th>
+                        <th>Justificados</th>
+                        <th>Total Trabajado</th>
+                        <th>Horas Extras</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><b><?= $kpiTotal ?></b></td>
+                        <td style="color: #166534;"><b><?= $kpiPresentes ?></b></td>
+                        <td style="color: #0284c7;"><b><?= $kpiPuntualidad ?>%</b></td>
+                        <td style="color: #92400e;"><b><?= $kpiTardanzas ?></b></td>
+                        <td style="color: #92400e;"><b><?= $kpiHorasTard ?></b></td>
+                        <td style="color: #991b1b;"><b><?= $kpiFaltas ?></b></td>
+                        <td style="color: #075985;"><b><?= $kpiJustificados ?></b></td>
+                        <td><b><?= $kpiHorasTrab ?></b></td>
+                        <td style="color: #0369a1;"><b><?= $kpiHorasExt ?></b></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- KPI SUMMARY CARDS (PANTALLA) -->
+        <div class="row no-print">
+            <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="kpi-card h-100">
+                    <div class="kpi-card-header">
+                        <div>
+                            <div class="kpi-title">Total Registros</div>
+                            <div class="kpi-value text-dark"><?= $kpiTotal ?></div>
+                            <div class="kpi-subtitle">Puntualidad Global: <b><?= $kpiPuntualidad ?>%</b></div>
+                        </div>
+                        <div class="kpi-icon-box kpi-icon-blue">
+                            <i class="fa-solid fa-users-viewfinder"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="kpi-card h-100">
+                    <div class="kpi-card-header">
+                        <div>
+                            <div class="kpi-title">Asistencias Puntuales</div>
+                            <div class="kpi-value text-success"><?= $kpiPresentes ?></div>
+                            <div class="kpi-subtitle">Ingresos dentro de tolerancia</div>
+                        </div>
+                        <div class="kpi-icon-box kpi-icon-emerald">
+                            <i class="fa-solid fa-circle-check"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="kpi-card h-100">
+                    <div class="kpi-card-header">
+                        <div>
+                            <div class="kpi-title">Tardanzas Acumuladas</div>
+                            <div class="kpi-value text-warning"><?= $kpiTardanzas ?> <span style="font-size: 0.95rem; color: #64748b; font-weight: 600;">(<?= $kpiHorasTard ?>)</span></div>
+                            <div class="kpi-subtitle">Minutos fuera de tolerancia</div>
+                        </div>
+                        <div class="kpi-icon-box kpi-icon-amber">
+                            <i class="fa-solid fa-clock"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="kpi-card h-100">
+                    <div class="kpi-card-header">
+                        <div>
+                            <div class="kpi-title">Faltas / Horas Extras</div>
+                            <div class="kpi-value text-danger"><?= $kpiFaltas ?> <span style="font-size: 0.95rem; color: #0284c7; font-weight: 600;">| +<?= $kpiHorasExt ?></span></div>
+                            <div class="kpi-subtitle">Inasistencias e incidencias</div>
+                        </div>
+                        <div class="kpi-icon-box kpi-icon-rose">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- FILTER CARD -->
-        <div class="card card-default card-outline shadow-sm mb-3">
-            <div class="card-header">
-                <h3 class="card-title font-weight-bold"><i class="fa-solid fa-filter mr-1 text-secondary"></i> Filtros de Búsqueda</h3>
-                <div class="card-tools d-flex align-items-center flex-wrap">
+        <div class="card mb-3 no-print">
+            <div class="card-header d-flex align-items-center justify-content-between flex-wrap">
+                <h3 class="card-title font-weight-bold">
+                    <i class="fa-solid fa-filter mr-2 text-primary"></i> Filtros de Reporte y Asistencia
+                </h3>
+                <div class="card-tools d-flex align-items-center flex-wrap" style="gap: 5px;">
                     <?php if (in_array($userRole, ['ADMIN', 'RRHH'], true)): ?>
-                        <form method="POST" action="?route=asistencia&action=recalcular" class="d-inline mr-1">
+                        <form method="POST" action="?route=asistencia&action=recalcular" class="d-inline">
                             <input type="hidden" name="fecha_inicio" value="<?= htmlspecialchars($fechaInicio) ?>">
                             <input type="hidden" name="fecha_fin" value="<?= htmlspecialchars($fechaFin) ?>">
-                            <button type="submit" class="btn btn-outline-primary btn-sm shadow-sm" onclick="return confirm('¿Deseas recalcular la asistencia en este rango de fechas?')">
-                                <i class="fa-solid fa-calculator mr-1"></i> Recalcular Asistencias
+                            <button type="submit" class="btn btn-outline-primary btn-sm" onclick="return confirm('¿Deseas recalcular la asistencia en este rango de fechas?')">
+                                <i class="fa-solid fa-calculator mr-1"></i> Recalcular
                             </button>
                         </form>
                     <?php endif; ?>
                     
-                    <a href="?route=asistencia&fecha_inicio=<?= $fechaInicio ?>&fecha_fin=<?= $fechaFin ?>&departamento_id=<?= $deptoId ?>&estado=<?= $estado ?>&search=<?= urlencode($search ?? '') ?>&export=excel" class="btn btn-success btn-sm shadow-sm mr-1" title="Descargar reporte en formato Excel con diseño de tablas y colores">
-                        <i class="fa-solid fa-file-excel mr-1"></i> Exportar a Excel
+                    <a href="?route=asistencia&fecha_inicio=<?= $fechaInicio ?>&fecha_fin=<?= $fechaFin ?>&departamento_id=<?= $deptoId ?>&estado=<?= $estado ?>&search=<?= urlencode($search ?? '') ?>&export=excel" class="btn btn-success btn-sm" title="Descargar reporte oficial en formato Excel con diseño institucional">
+                        <i class="fa-solid fa-file-excel mr-1"></i> Excel
                     </a>
 
-                    <a href="?route=asistencia&fecha_inicio=<?= $fechaInicio ?>&fecha_fin=<?= $fechaFin ?>&departamento_id=<?= $deptoId ?>&estado=<?= $estado ?>&search=<?= urlencode($search ?? '') ?>&export=csv" class="btn btn-outline-secondary btn-sm shadow-sm mr-1" title="Descargar archivo CSV compatible con Excel">
+                    <a href="?route=asistencia&fecha_inicio=<?= $fechaInicio ?>&fecha_fin=<?= $fechaFin ?>&departamento_id=<?= $deptoId ?>&estado=<?= $estado ?>&search=<?= urlencode($search ?? '') ?>&export=csv" class="btn btn-outline-secondary btn-sm" title="Descargar archivo CSV">
                         <i class="fa-solid fa-file-csv mr-1"></i> CSV
                     </a>
 
-                    <button type="button" class="btn btn-outline-dark btn-sm shadow-sm" onclick="window.print()" title="Imprimir reporte o Guardar como PDF">
+                    <button type="button" class="btn btn-outline-dark btn-sm" onclick="window.print()" title="Imprimir reporte oficial o Guardar como PDF">
                         <i class="fa-solid fa-print mr-1"></i> Imprimir / PDF
                     </button>
                 </div>
             </div>
-            <div class="card-body py-3">
+            <div class="card-body">
                 <form method="GET" action="" class="row align-items-end">
                     <input type="hidden" name="route" value="asistencia">
 
-                    <div class="col-md-2 mb-2">
-                        <label class="small font-weight-bold text-secondary mb-1">Fecha Desde</label>
-                        <input type="date" name="fecha_inicio" class="form-control form-control-sm" value="<?= htmlspecialchars($fechaInicio) ?>">
+                    <div class="col-md-2 col-sm-6 mb-2">
+                        <label class="form-label-custom"><i class="fa-regular fa-calendar mr-1"></i> Fecha Inicio</label>
+                        <input type="date" name="fecha_inicio" class="form-control form-control-sm" value="<?= htmlspecialchars($fechaInicio) ?>" required>
                     </div>
 
-                    <div class="col-md-2 mb-2">
-                        <label class="small font-weight-bold text-secondary mb-1">Fecha Hasta</label>
-                        <input type="date" name="fecha_fin" class="form-control form-control-sm" value="<?= htmlspecialchars($fechaFin) ?>">
+                    <div class="col-md-2 col-sm-6 mb-2">
+                        <label class="form-label-custom"><i class="fa-regular fa-calendar-check mr-1"></i> Fecha Fin</label>
+                        <input type="date" name="fecha_fin" class="form-control form-control-sm" value="<?= htmlspecialchars($fechaFin) ?>" required>
                     </div>
 
-                    <div class="col-md-3 mb-2">
-                        <label class="small font-weight-bold text-secondary mb-1">Departamento / Área</label>
+                    <div class="col-md-3 col-sm-6 mb-2">
+                        <label class="form-label-custom"><i class="fa-solid fa-building mr-1"></i> Departamento / Área</label>
                         <select name="departamento_id" class="form-control form-control-sm">
                             <option value="">-- Todos los Departamentos --</option>
                             <?php foreach ($departamentos as $d): ?>
@@ -73,8 +230,8 @@
                         </select>
                     </div>
 
-                    <div class="col-md-2 mb-2">
-                        <label class="small font-weight-bold text-secondary mb-1">Estado</label>
+                    <div class="col-md-2 col-sm-6 mb-2">
+                        <label class="form-label-custom"><i class="fa-solid fa-tag mr-1"></i> Estado</label>
                         <select name="estado" class="form-control form-control-sm">
                             <option value="">-- Todos los Estados --</option>
                             <option value="PRESENTE" <?= $estado === 'PRESENTE' ? 'selected' : '' ?>>Presente</option>
@@ -85,23 +242,25 @@
                         </select>
                     </div>
 
-                    <div class="col-md-2 mb-2">
-                        <label class="small font-weight-bold text-secondary mb-1">Buscar</label>
+                    <div class="col-md-2 col-sm-8 mb-2">
+                        <label class="form-label-custom"><i class="fa-solid fa-magnifying-glass mr-1"></i> Buscar Empleado</label>
                         <input type="text" name="search" class="form-control form-control-sm" placeholder="Nombre, DNI..." value="<?= htmlspecialchars($search ?? '') ?>">
                     </div>
 
-                    <div class="col-md-1 mb-2">
-                        <button type="submit" class="btn btn-secondary btn-sm btn-block"><i class="fa-solid fa-magnifying-glass"></i></button>
+                    <div class="col-md-1 col-sm-4 mb-2">
+                        <button type="submit" class="btn btn-primary btn-sm btn-block" title="Filtrar resultados">
+                            <i class="fa-solid fa-filter mr-1"></i> Filtrar
+                        </button>
                     </div>
                 </form>
             </div>
         </div>
 
         <!-- MAIN TABLE CARD -->
-        <div class="card card-primary card-outline shadow-sm">
-            <div class="card-body">
-                <table class="table table-bordered table-hover datatable text-nowrap table-sm">
-                    <thead class="thead-light">
+        <div class="card">
+            <div class="card-body p-0 table-responsive">
+                <table class="table table-hover datatable text-nowrap table-sm">
+                    <thead>
                         <tr>
                             <th>Fecha</th>
                             <th>Empleado</th>
@@ -113,7 +272,7 @@
                             <th class="text-center">Horas Extras</th>
                             <th>Estado</th>
                             <?php if (in_array($userRole, ['ADMIN', 'RRHH'], true)): ?>
-                                <th class="text-center">Acciones</th>
+                                <th class="text-center no-print">Acciones</th>
                             <?php endif; ?>
                         </tr>
                     </thead>
@@ -123,37 +282,37 @@
                                 <td class="font-weight-bold text-dark"><?= $a['fecha'] ?></td>
                                 <td>
                                     <div class="font-weight-bold text-dark"><?= htmlspecialchars($a['apellidos'] . ' ' . $a['nombres']) ?></div>
-                                    <small class="text-muted">DNI: <?= htmlspecialchars($a['dni']) ?> | ID Reloj: <?= htmlspecialchars($a['codigo_reloj']) ?></small>
+                                    <small class="text-muted">DNI: <?= htmlspecialchars($a['dni']) ?> &bull; ID Reloj: <?= htmlspecialchars($a['codigo_reloj']) ?></small>
                                 </td>
                                 <td>
-                                    <span class="badge badge-light border"><?= htmlspecialchars($a['turno_nombre'] ?? 'Sin Turno') ?></span>
+                                    <span class="badge-pill-custom badge-pill-neutral"><?= htmlspecialchars($a['turno_nombre'] ?? 'Sin Turno') ?></span>
                                 </td>
                                 <td>
-                                    <div><small class="text-muted">Prog.:</small> <?= $a['hora_entrada_programada'] ?? '--:--' ?></div>
+                                    <div><small class="text-muted">Prog.:</small> <span class="font-monospace small"><?= $a['hora_entrada_programada'] ?? '--:--' ?></span></div>
                                     <div>
                                         <small class="text-muted">Real:</small> 
-                                        <span class="font-weight-bold <?= $a['minutos_tardanza'] > 0 ? 'text-danger' : 'text-success' ?>">
+                                        <span class="font-monospace small font-weight-bold <?= $a['minutos_tardanza'] > 0 ? 'text-danger' : 'text-success' ?>">
                                             <?= $a['hora_entrada_real'] ? substr($a['hora_entrada_real'], 11, 5) : '--:--' ?>
                                         </span>
                                     </div>
                                 </td>
                                 <td>
-                                    <div><small class="text-muted">Prog.:</small> <?= $a['hora_salida_programada'] ?? '--:--' ?></div>
+                                    <div><small class="text-muted">Prog.:</small> <span class="font-monospace small"><?= $a['hora_salida_programada'] ?? '--:--' ?></span></div>
                                     <div>
                                         <small class="text-muted">Real:</small> 
-                                        <span class="font-weight-bold text-dark">
+                                        <span class="font-monospace small font-weight-bold text-dark">
                                             <?= $a['hora_salida_real'] ? substr($a['hora_salida_real'], 11, 5) : '--:--' ?>
                                         </span>
                                     </div>
                                 </td>
                                 <td class="text-center">
                                     <?php if ($a['minutos_tardanza'] > 0): ?>
-                                        <span class="badge badge-warning text-white font-weight-bold">+<?= $a['minutos_tardanza'] ?> min</span>
+                                        <span class="badge-pill-custom badge-pill-tardanza">+<?= $a['minutos_tardanza'] ?> min</span>
                                     <?php else: ?>
-                                        <span class="text-muted">-</span>
+                                        <span class="text-muted small">-</span>
                                     <?php endif; ?>
                                 </td>
-                                <td class="text-center">
+                                <td class="text-center font-monospace small">
                                     <?php
                                         $hrs = floor($a['minutos_trabajados'] / 60);
                                         $min = $a['minutos_trabajados'] % 60;
@@ -162,9 +321,9 @@
                                 </td>
                                 <td class="text-center">
                                     <?php if ($a['minutos_extra'] > 0): ?>
-                                        <span class="badge badge-info font-weight-bold">+<?= $a['minutos_extra'] ?> min</span>
+                                        <span class="badge-pill-custom badge-pill-justificado">+<?= $a['minutos_extra'] ?> min</span>
                                     <?php else: ?>
-                                        <span class="text-muted">-</span>
+                                        <span class="text-muted small">-</span>
                                     <?php endif; ?>
                                 </td>
                                 <td>
@@ -172,25 +331,25 @@
                                         $est = $a['estado'];
                                         $obs = $a['observaciones'] ?? '';
                                         if ($est === 'PRESENTE' && str_contains($obs, 'Jornada en curso')) {
-                                            echo '<span class="badge badge-success px-2 py-1"><i class="fa-solid fa-user-clock mr-1"></i>En Jornada</span>';
+                                            echo '<span class="badge-pill-custom badge-pill-presente"><i class="fa-solid fa-user-clock mr-1"></i>En Jornada</span>';
                                         } elseif ($est === 'PRESENTE') {
-                                            echo '<span class="badge badge-success px-2 py-1"><i class="fa-solid fa-check mr-1"></i>Presente</span>';
+                                            echo '<span class="badge-pill-custom badge-pill-presente"><i class="fa-solid fa-check mr-1"></i>Presente</span>';
                                         } elseif ($est === 'TARDANZA') {
-                                            echo '<span class="badge badge-warning text-white px-2 py-1"><i class="fa-solid fa-clock mr-1"></i>Tardanza</span>';
+                                            echo '<span class="badge-pill-custom badge-pill-tardanza"><i class="fa-solid fa-clock mr-1"></i>Tardanza</span>';
                                         } elseif ($est === 'FALTA' || $est === 'FALTA_INJUSTIFICADA') {
-                                            echo '<span class="badge badge-danger px-2 py-1"><i class="fa-solid fa-xmark mr-1"></i>Falta</span>';
+                                            echo '<span class="badge-pill-custom badge-pill-falta"><i class="fa-solid fa-xmark mr-1"></i>Falta</span>';
                                         } elseif ($est === 'JUSTIFICADO') {
-                                            echo '<span class="badge badge-primary px-2 py-1"><i class="fa-solid fa-shield mr-1"></i>Justificado</span>';
+                                            echo '<span class="badge-pill-custom badge-pill-justificado"><i class="fa-solid fa-shield mr-1"></i>Justificado</span>';
                                         } elseif ($est === 'PERMISO') {
-                                            echo '<span class="badge badge-primary px-2 py-1"><i class="fa-solid fa-id-badge mr-1"></i>Permiso</span>';
+                                            echo '<span class="badge-pill-custom badge-pill-justificado"><i class="fa-solid fa-id-badge mr-1"></i>Permiso</span>';
                                         } elseif ($est === 'VACACIONES') {
-                                            echo '<span class="badge badge-info px-2 py-1"><i class="fa-solid fa-umbrella-beach mr-1"></i>Vacaciones</span>';
+                                            echo '<span class="badge-pill-custom badge-pill-justificado"><i class="fa-solid fa-umbrella-beach mr-1"></i>Vacaciones</span>';
                                         } elseif ($est === 'DESCANSO') {
-                                            echo '<span class="badge badge-secondary px-2 py-1"><i class="fa-solid fa-bed mr-1"></i>Descanso</span>';
+                                            echo '<span class="badge-pill-custom badge-pill-neutral"><i class="fa-solid fa-bed mr-1"></i>Descanso</span>';
                                         } elseif ($est === 'SALIDA_SIN_MARCAR') {
-                                            echo '<span class="badge badge-secondary px-2 py-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Sin Salida</span>';
+                                            echo '<span class="badge-pill-custom badge-pill-sin-salida"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Sin Salida</span>';
                                         } else {
-                                            echo '<span class="badge badge-light border px-2 py-1">' . htmlspecialchars($est) . '</span>';
+                                            echo '<span class="badge-pill-custom badge-pill-neutral">' . htmlspecialchars($est) . '</span>';
                                         }
                                     ?>
                                     <?php if (!empty($a['observaciones'])): ?>
@@ -200,8 +359,8 @@
                                     <?php endif; ?>
                                 </td>
                                 <?php if (in_array($userRole, ['ADMIN', 'RRHH'], true)): ?>
-                                    <td class="text-center">
-                                        <button class="btn btn-xs btn-outline-info mr-1" onclick="openTimelineModal(<?= $a['id_empleado'] ?>, '<?= $a['fecha'] ?>', '<?= htmlspecialchars(addslashes($a['apellidos'] . ' ' . $a['nombres'])) ?>')" title="Ver Trazabilidad y Auditoría de Eventos (Event Sourcing)">
+                                    <td class="text-center no-print">
+                                        <button class="btn btn-xs btn-outline-info mr-1" onclick="openTimelineModal(<?= $a['id_empleado'] ?>, '<?= $a['fecha'] ?>', '<?= htmlspecialchars(addslashes($a['apellidos'] . ' ' . $a['nombres'])) ?>')" title="Ver Trazabilidad y Auditoría de Eventos">
                                             <i class="fa-solid fa-timeline"></i> Eventos
                                         </button>
                                         <button class="btn btn-xs btn-default border" onclick="openEditModal(<?= htmlspecialchars(json_encode($a)) ?>)" title="Ajustar asistencia manualmente">
@@ -212,8 +371,37 @@
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
+                    <tfoot class="thead-light">
+                        <tr class="font-weight-bold">
+                            <th colspan="5" class="text-right">TOTALES GENERALES:</th>
+                            <th class="text-center text-warning"><?= $kpiMinTardanza > 0 ? "+{$kpiMinTardanza} min" : "0 min" ?></th>
+                            <th class="text-center text-dark"><?= $kpiHorasTrab ?></th>
+                            <th class="text-center text-info"><?= $kpiMinExtra > 0 ? "+{$kpiMinExtra} min" : "0 min" ?></th>
+                            <th colspan="<?= in_array($userRole, ['ADMIN', 'RRHH'], true) ? '2' : '1' ?>"><?= $kpiTotal ?> registros</th>
+                        </tr>
+                    </tfoot>
                 </table>
             </div>
+        </div>
+
+        <!-- BLOQUE DE FIRMAS OFICIALES DE IMPRESIÓN (Solo visible al imprimir / PDF) -->
+        <div class="print-only print-signatures">
+            <table style="width: 100%; text-align: center; border: none;">
+                <tr>
+                    <td style="width: 50%; padding-top: 50px; border: none;">
+                        <div style="display: inline-block; width: 260px; border-top: 1.5px solid #334155; padding-top: 6px;">
+                            <div style="font-weight: 700; font-size: 8.5pt; color: #0f172a;">RESPONSABLE DE RECURSOS HUMANOS</div>
+                            <div style="font-size: 7.5pt; color: #64748b;">Control de Personal y Asistencia - JUSHSAL</div>
+                        </div>
+                    </td>
+                    <td style="width: 50%; padding-top: 50px; border: none;">
+                        <div style="display: inline-block; width: 260px; border-top: 1.5px solid #334155; padding-top: 6px;">
+                            <div style="font-weight: 700; font-size: 8.5pt; color: #0f172a;">V°B° ADMINISTRACIÓN GENERAL</div>
+                            <div style="font-size: 7.5pt; color: #64748b;">Junta de Usuarios San Lorenzo</div>
+                        </div>
+                    </td>
+                </tr>
+            </table>
         </div>
 
     </div>

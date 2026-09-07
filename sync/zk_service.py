@@ -251,6 +251,97 @@ class ZKDeviceService:
             except Exception:
                 pass
 
+    def set_user(self, uid: int, name: str, privilege: int = 0, password: str = '', group_id: int = 0, user_id: str = '', card: int = 0):
+        """Crea o actualiza un usuario directamente en la memoria del reloj biométrico"""
+        if not self.conn:
+            self.connect()
+        try:
+            self.conn.disable_device()
+            uid_val = int(uid) if uid else int(user_id) if user_id.isdigit() else 1
+            user_id_str = str(user_id).strip()
+            name_str = str(name)[:24].strip() # ZKTeco name limit typical 24 chars
+            
+            res = self.conn.set_user(
+                uid=uid_val,
+                name=name_str,
+                privilege=int(privilege),
+                password=str(password),
+                group_id=str(group_id),
+                user_id=user_id_str,
+                card=int(card)
+            )
+            logger.info(f"Usuario {user_id_str} ({name_str}) guardado en reloj {self.ip}")
+            return True
+        except Exception as e:
+            logger.error(f"Error al guardar usuario en {self.ip}: {str(e)}")
+            raise
+        finally:
+            try:
+                self.conn.enable_device()
+            except Exception:
+                pass
+
+    def delete_user(self, uid: int = None, user_id: str = None):
+        """Elimina un usuario del reloj biométrico"""
+        if not self.conn:
+            self.connect()
+        try:
+            self.conn.disable_device()
+            self.conn.delete_user(uid=uid, user_id=user_id)
+            logger.info(f"Usuario uid={uid}/user_id={user_id} eliminado de {self.ip}")
+            return True
+        except Exception as e:
+            logger.error(f"Error al eliminar usuario de {self.ip}: {str(e)}")
+            raise
+        finally:
+            try:
+                self.conn.enable_device()
+            except Exception:
+                pass
+
+    def enroll_user(self, uid: int, temp_id: int = 0):
+        """
+        Activa el modo de enrolamiento en el reloj biométrico.
+        El reloj solicitará al usuario colocar su dedo o ubicarse frente a la cámara.
+        temp_id: 0 a 9 (dedo a enrolar)
+        """
+        if not self.conn:
+            self.connect()
+        try:
+            # Enrolar en el reloj
+            res = self.conn.enroll_user(uid=int(uid), temp_id=int(temp_id))
+            logger.info(f"Enrolamiento iniciado en {self.ip} para UID {uid}, dedo/tipo {temp_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Error al iniciar enrolamiento en {self.ip}: {str(e)}")
+            raise
+
+    def get_templates(self):
+        """Descarga todas las plantillas biométricas (huellas) registradas en el reloj"""
+        if not self.conn:
+            self.connect()
+        try:
+            self.conn.disable_device()
+            templates = self.conn.get_templates()
+            template_list = []
+            for t in templates:
+                template_list.append({
+                    "uid": getattr(t, 'uid', None),
+                    "fid": getattr(t, 'fid', 0), # Finger ID (0-9)
+                    "size": getattr(t, 'size', 0),
+                    "valid": getattr(t, 'valid', 1),
+                    "template": getattr(t, 'template', b'')
+                })
+            return template_list
+        except Exception as e:
+            logger.error(f"Error al obtener plantillas biométricas de {self.ip}: {str(e)}")
+            raise
+        finally:
+            try:
+                self.conn.enable_device()
+            except Exception:
+                pass
+
     def sync_time(self):
         """Sincroniza la hora del biométrico con la hora del servidor"""
         if not self.conn:
@@ -263,3 +354,4 @@ class ZKDeviceService:
         except Exception as e:
             logger.error(f"Error al sincronizar hora en {self.ip}: {str(e)}")
             raise
+

@@ -8,15 +8,54 @@
     <link rel="icon" type="image/png" href="<?= jushsal_logo_data_uri('favicon') ?: asset('img/favicon.png') ?>">
     <link rel="apple-touch-icon" href="<?= jushsal_logo_data_uri('icon') ?: asset('img/logo_icon.png') ?>">
 
-    <!-- Google Font: Source Sans Pro -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
+    <!-- Google Fonts: Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <!-- Theme style -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
     <style>
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+            background: #0f172a !important;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%) !important;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
         .login-box {
-            width: 420px;
+            width: 440px;
+        }
+        .card-login-custom {
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: #ffffff;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+        .form-control {
+            border-radius: 6px;
+            font-size: 0.9rem;
+            padding: 0.6rem 0.75rem;
+            border-color: #cbd5e1;
+        }
+        .form-control:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+        }
+        .btn-primary {
+            background-color: #1e40af;
+            border-color: #1e40af;
+            border-radius: 6px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+        }
+        .btn-primary:hover {
+            background-color: #1d4ed8;
+            border-color: #1d4ed8;
         }
         @media (max-width: 576px) {
             .login-box {
@@ -25,62 +64,66 @@
         }
     </style>
 </head>
-<body class="hold-transition login-page bg-dark" style="background: radial-gradient(circle at center, #1e3a5f 0%, #0f172a 100%);">
+<body class="hold-transition login-page">
 <div class="login-box">
-    <!-- /.login-logo -->
-    <div class="card card-outline card-primary shadow-lg border-0" style="border-radius: 12px; overflow: hidden;">
-        <div class="card-header text-center py-4 bg-white border-bottom">
+    <div class="card card-login-custom">
+        <div class="card-header text-center py-4 bg-white border-bottom" style="border-color: #f1f5f9 !important;">
             <div class="mb-3">
-                <img src="<?= jushsal_logo_data_uri('full') ?: asset('img/logo_jushsal.png') ?>" alt="JUSHSAL" class="img-fluid" style="max-height: 125px; width: auto; object-fit: contain;">
+                <img src="<?= jushsal_logo_data_uri('full') ?: asset('img/logo_jushsal.png') ?>" alt="JUSHSAL" class="img-fluid" style="max-height: 90px; width: auto; object-fit: contain;">
             </div>
-            <div class="badge badge-primary px-3 py-1 font-weight-normal" style="font-size: 0.8rem; letter-spacing: 0.5px;">
-                <i class="fa-solid fa-fingerprint mr-1"></i> Control de Personal y Asistencia
+            <div class="font-weight-bold text-dark mb-1" style="font-size: 1.05rem; letter-spacing: 0.3px;">
+                Control de Personal y Asistencia
+            </div>
+            <div class="text-muted small">
+                Junta de Usuarios San Lorenzo &bull; JUSHSAL
             </div>
         </div>
         <div class="card-body px-4 py-4">
-            <p class="login-box-msg text-secondary pt-0 mb-3 font-weight-bold">Ingresa tus credenciales para acceder</p>
+            <p class="text-secondary mb-3 font-weight-bold small text-center">Ingresa tus credenciales autorizadas</p>
 
             <?php if (!empty($error)): ?>
-                <div class="alert alert-danger py-2 px-3 small">
-                    <i class="fa-solid fa-triangle-exclamation mr-1"></i> <?= htmlspecialchars($error) ?>
+                <div class="alert alert-danger py-2 px-3 small border-0 shadow-sm" style="border-radius: 6px;">
+                    <i class="fa-solid fa-circle-exclamation mr-1"></i> <?= htmlspecialchars($error) ?>
                 </div>
             <?php endif; ?>
 
             <form action="?route=login" method="post">
-                <div class="input-group mb-3">
-                    <input type="text" name="usuario" class="form-control" placeholder="Nombre de usuario" required autofocus autocomplete="username">
-                    <div class="input-group-append">
-                        <div class="input-group-text">
-                            <span class="fas fa-user"></span>
+                <div class="form-group mb-3">
+                    <label class="small font-weight-bold text-dark mb-1">Nombre de Usuario</label>
+                    <div class="input-group">
+                        <input type="text" name="usuario" class="form-control" placeholder="Ej: admin" required autofocus autocomplete="username">
+                        <div class="input-group-append">
+                            <span class="input-group-text bg-light border-left-0 text-muted">
+                                <i class="fa-solid fa-user"></i>
+                            </span>
                         </div>
                     </div>
                 </div>
-                <div class="input-group mb-3">
-                    <input type="password" name="password" id="loginPassword" class="form-control" placeholder="Contraseña" required autocomplete="current-password">
-                    <div class="input-group-append">
-                        <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility()" title="Mostrar/Ocultar contraseña" style="border-color: #ced4da;">
-                            <i class="fa-solid fa-eye" id="togglePasswordIcon"></i>
-                        </button>
+
+                <div class="form-group mb-4">
+                    <label class="small font-weight-bold text-dark mb-1">Contraseña</label>
+                    <div class="input-group">
+                        <input type="password" name="password" id="loginPassword" class="form-control" placeholder="••••••••" required autocomplete="current-password">
+                        <div class="input-group-append">
+                            <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility()" title="Mostrar/Ocultar contraseña" style="border-color: #cbd5e1;">
+                                <i class="fa-solid fa-eye text-muted" id="togglePasswordIcon"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
-                <div class="row mt-4">
-                    <div class="col-12">
-                        <button type="submit" class="btn btn-primary btn-block font-weight-bold py-2 shadow-sm">
-                            <i class="fa-solid fa-right-to-bracket mr-1"></i> Iniciar Sesión
-                        </button>
-                    </div>
-                </div>
+
+                <button type="submit" class="btn btn-primary btn-block py-2">
+                    <i class="fa-solid fa-right-to-bracket mr-2"></i> Iniciar Sesión
+                </button>
             </form>
 
-            <div class="mt-4 pt-3 text-center border-top">
-                <small class="text-muted">
-                    <i class="fa-solid fa-shield-halved mr-1"></i> Acceso seguro al sistema de control de asistencia
+            <div class="mt-4 pt-3 text-center border-top" style="border-color: #f1f5f9 !important;">
+                <small class="text-muted font-weight-normal">
+                    <i class="fa-solid fa-shield-check mr-1 text-success"></i> Acceso seguro al sistema institucional
                 </small>
             </div>
         </div>
-        <!-- /.card-body -->
     </div>
-    <!-- /.card -->
 </div>
 <!-- /.login-box -->
 

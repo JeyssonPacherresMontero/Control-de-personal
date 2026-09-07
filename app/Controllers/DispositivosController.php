@@ -442,4 +442,217 @@ class DispositivosController {
         ], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
         exit;
     }
+
+    /**
+     * AJAX: Registra o actualiza un usuario directamente en el reloj biométrico ZKTeco
+     */
+    public function enviarUsuarioReloj(): void {
+        AuthController::checkAuth();
+        AuthController::requireRole(['ADMIN', 'RRHH']);
+
+        $deviceId = (int)($_POST['device_id'] ?? 1);
+        $userId = trim($_POST['user_id'] ?? '');
+        $name = trim($_POST['name'] ?? '');
+        $privilege = (int)($_POST['privilege'] ?? 0);
+        $password = trim($_POST['password'] ?? '');
+
+        if (empty($userId) || empty($name)) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'error' => 'Se requiere el código/ID de reloj y el nombre del usuario.']);
+            exit;
+        }
+
+        $pythonScript = APP_ROOT . '/sync/biometric_admin.py';
+        $pythonBin = defined('PYTHON_BIN') ? PYTHON_BIN : 'python';
+
+        $cmd = "\"$pythonBin\" -E \"$pythonScript\" set-user --device $deviceId --user-id " . escapeshellarg($userId) . " --name " . escapeshellarg($name) . " --privilege $privilege";
+        if (!empty($password)) {
+            $cmd .= " --password " . escapeshellarg($password);
+        }
+
+        $env = $this->buildCleanPythonEnv();
+        $descriptors = [
+            0 => ['pipe', 'r'],
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w']
+        ];
+        $process = proc_open($cmd, $descriptors, $pipes, APP_ROOT, $env);
+        
+        $output = '';
+        if (is_resource($process)) {
+            fclose($pipes[0]);
+            $stdout = stream_get_contents($pipes[1]);
+            $stderr = stream_get_contents($pipes[2]);
+            fclose($pipes[1]);
+            fclose($pipes[2]);
+            proc_close($process);
+            $output = trim($stdout . "\n" . $stderr);
+        }
+
+        $jsonStart = strpos($output, '{');
+        if ($jsonStart !== false) {
+            $jsonStr = substr($output, $jsonStart);
+            $parsed = json_decode($jsonStr, true);
+            if (is_array($parsed)) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode($parsed, JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+        }
+
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => true, 'message' => $output ?: 'Comando enviado al biométrico.']);
+        exit;
+    }
+
+    /**
+     * AJAX: Activa el modo de captura/enrolamiento de huella dactilar en el reloj biométrico
+     */
+    public function enrolarHuella(): void {
+        AuthController::checkAuth();
+        AuthController::requireRole(['ADMIN', 'RRHH']);
+
+        $deviceId = (int)($_POST['device_id'] ?? 1);
+        $userId = trim($_POST['user_id'] ?? '');
+        $tempId = (int)($_POST['temp_id'] ?? 0); // 0 = Dedo principal
+
+        if (empty($userId)) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'error' => 'Se requiere el ID de usuario en el reloj.']);
+            exit;
+        }
+
+        $pythonScript = APP_ROOT . '/sync/biometric_admin.py';
+        $pythonBin = defined('PYTHON_BIN') ? PYTHON_BIN : 'python';
+
+        $cmd = "\"$pythonBin\" -E \"$pythonScript\" enroll --device $deviceId --user-id " . escapeshellarg($userId) . " --temp-id $tempId";
+
+        $env = $this->buildCleanPythonEnv();
+        $descriptors = [
+            0 => ['pipe', 'r'],
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w']
+        ];
+        $process = proc_open($cmd, $descriptors, $pipes, APP_ROOT, $env);
+        
+        $output = '';
+        if (is_resource($process)) {
+            fclose($pipes[0]);
+            $stdout = stream_get_contents($pipes[1]);
+            $stderr = stream_get_contents($pipes[2]);
+            fclose($pipes[1]);
+            fclose($pipes[2]);
+            proc_close($process);
+            $output = trim($stdout . "\n" . $stderr);
+        }
+
+        $jsonStart = strpos($output, '{');
+        if ($jsonStart !== false) {
+            $jsonStr = substr($output, $jsonStart);
+            $parsed = json_decode($jsonStr, true);
+            if (is_array($parsed)) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode($parsed, JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+        }
+
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => true, 'message' => $output ?: 'Modo de captura activado en reloj.']);
+        exit;
+    }
+
+    /**
+     * AJAX: Descarga las huellas/rostros del reloj y las guarda en la tabla plantillas_biometricas
+     */
+    public function sincronizarBiometria(): void {
+        AuthController::checkAuth();
+        AuthController::requireRole(['ADMIN', 'RRHH']);
+
+        $deviceId = (int)($_POST['device_id'] ?? 1);
+        $userId = trim($_POST['user_id'] ?? '');
+
+        $pythonScript = APP_ROOT . '/sync/biometric_admin.py';
+        $pythonBin = defined('PYTHON_BIN') ? PYTHON_BIN : 'python';
+
+        $cmd = "\"$pythonBin\" -E \"$pythonScript\" download-templates --device $deviceId";
+        if (!empty($userId)) {
+            $cmd .= " --user-id " . escapeshellarg($userId);
+        } else {
+            $cmd .= " --user-id \"\"";
+        }
+
+        $env = $this->buildCleanPythonEnv();
+        $descriptors = [
+            0 => ['pipe', 'r'],
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w']
+        ];
+        $process = proc_open($cmd, $descriptors, $pipes, APP_ROOT, $env);
+        
+        $output = '';
+        if (is_resource($process)) {
+            fclose($pipes[0]);
+            $stdout = stream_get_contents($pipes[1]);
+            $stderr = stream_get_contents($pipes[2]);
+            fclose($pipes[1]);
+            fclose($pipes[2]);
+            proc_close($process);
+            $output = trim($stdout . "\n" . $stderr);
+        }
+
+        $jsonStart = strpos($output, '{');
+        if ($jsonStart !== false) {
+            $jsonStr = substr($output, $jsonStart);
+            $parsed = json_decode($jsonStr, true);
+            if (is_array($parsed)) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode($parsed, JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+        }
+
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => true, 'message' => $output ?: 'Plantillas biométricas respaldadas en base de datos.']);
+        exit;
+    }
+
+    /**
+     * AJAX: Consulta el estado biométrico del usuario en MySQL
+     */
+    public function obtenerBiometriaUsuario(): void {
+        AuthController::checkAuth();
+
+        $userId = trim($_GET['user_id'] ?? '');
+        if (empty($userId)) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'error' => 'Código de reloj no proporcionado.']);
+            exit;
+        }
+
+        $plantillas = Database::query("
+            SELECT pb.id, pb.codigo_reloj, pb.tipo, pb.dedo_indice, pb.tamano, pb.actualizado_en, d.nombre as dispositivo_nombre
+            FROM plantillas_biometricas pb
+            LEFT JOIN dispositivos d ON pb.id_dispositivo_origen = d.id
+            WHERE pb.codigo_reloj = ?
+        ", [$userId]);
+
+        $fingerCount = 0;
+        $faceCount = 0;
+        foreach ($plantillas as $p) {
+            if ($p['tipo'] === 'HUELLA') $fingerCount++;
+            if ($p['tipo'] === 'FACIAL') $faceCount++;
+        }
+
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'success' => true,
+            'user_id' => $userId,
+            'huellas_count' => $fingerCount,
+            'facial_count' => $faceCount,
+            'plantillas' => $plantillas
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
 }
+

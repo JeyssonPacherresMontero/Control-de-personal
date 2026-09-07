@@ -67,10 +67,10 @@ class AsistenciaController {
             }
 
             if ($exportType === 'excel' || $exportType === 'xls') {
-                $this->exportExcel($asistencias, $fechaInicio, $fechaFin, $deptoNombre);
+                $this->exportExcel($asistencias, $fechaInicio, $fechaFin, $deptoNombre, $estado, $search);
                 return;
             } elseif ($exportType === 'csv') {
-                $this->exportCSV($asistencias, $fechaInicio, $fechaFin);
+                $this->exportCSV($asistencias, $fechaInicio, $fechaFin, $deptoNombre, $estado);
                 return;
             }
         }
@@ -190,9 +190,9 @@ class AsistenciaController {
     }
 
     /**
-     * Exporta el reporte en formato Excel (.xls) estructurado en tablas HTML con estilos y colores.
+     * Exporta el reporte en formato Excel (.xls) estructurado en MHTML multipart con logo_icon.png incrustado nativamente.
      */
-    private function exportExcel(array $data, string $start, string $end, ?string $deptoNombre = null): void {
+    private function exportExcel(array $data, string $start, string $end, ?string $deptoNombre = null, ?string $estado = null, ?string $search = null): void {
         $filename = "Reporte_Asistencia_{$start}_al_{$end}.xls";
 
         header("Content-Type: application/vnd.ms-excel; charset=utf-8");
@@ -206,6 +206,7 @@ class AsistenciaController {
         $totalTardanzas = 0;
         $totalFaltas = 0;
         $totalJustificados = 0;
+        $totalSinSalida = 0;
         $sumMinTardanza = 0;
         $sumMinTrabajados = 0;
         $sumMinExtra = 0;
@@ -221,6 +222,8 @@ class AsistenciaController {
                 $totalFaltas++;
             } elseif (in_array($est, ['JUSTIFICADO', 'PERMISO', 'VACACIONES'], true)) {
                 $totalJustificados++;
+            } elseif ($est === 'SALIDA_SIN_MARCAR') {
+                $totalSinSalida++;
             }
             $sumMinTrabajados += (int)$r['minutos_trabajados'];
             $sumMinExtra += (int)$r['minutos_extra'];
@@ -229,23 +232,54 @@ class AsistenciaController {
         $horasTrabajadasTotales = sprintf('%dh %02dm', floor($sumMinTrabajados / 60), $sumMinTrabajados % 60);
         $horasExtrasTotales = sprintf('%dh %02dm', floor($sumMinExtra / 60), $sumMinExtra % 60);
         $horasTardanzaTotales = sprintf('%dh %02dm', floor($sumMinTardanza / 60), $sumMinTardanza % 60);
+        $pctPuntualidad = $totalRegistros > 0 ? round(($totalPresentes / $totalRegistros) * 100, 1) : 0;
+
+        $currentUser = AuthController::user();
+        $generadoPor = ($currentUser['nombre'] ?? 'Administrador') . ' (' . ($currentUser['rol'] ?? 'RRHH') . ')';
+
+        $logoPath = APP_ROOT . '/public/img/logo_icon.png';
+        if (!file_exists($logoPath)) {
+            $logoPath = APP_ROOT . '/img/logo_icon.png';
+        }
+        $hasLogo = file_exists($logoPath);
+        $logoData = $hasLogo ? base64_encode(file_get_contents($logoPath)) : '';
+        $logoDataChunked = chunk_split($logoData, 76, "\r\n");
+
+        $boundary = "----=_NextPart_JUSHSAL_" . md5(uniqid());
+
+        // Cabecera MHTML Multipart
+        echo "MIME-Version: 1.0\r\n";
+        echo "X-Document-Type: Worksheet\r\n";
+        echo "Content-Type: multipart/related; boundary=\"{$boundary}\"; type=\"text/html\"\r\n\r\n";
+
+        // Parte 1: Documento HTML
+        echo "--{$boundary}\r\n";
+        echo "Content-Type: text/html; charset=\"utf-8\"\r\n";
+        echo "Content-Transfer-Encoding: 8bit\r\n";
+        echo "Content-Location: report.htm\r\n\r\n";
 
         echo '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
         echo '<head>';
         echo '<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />';
+        echo '<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Control de Asistencia</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->';
         echo '<style>
-            body { font-family: "Segoe UI", Tahoma, Arial, sans-serif; font-size: 11pt; color: #1e293b; }
-            .title { font-size: 16pt; font-weight: bold; color: #0f172a; text-align: center; }
-            .subtitle { font-size: 10.5pt; color: #475569; text-align: center; }
+            body { font-family: "Segoe UI", Tahoma, Arial, sans-serif; font-size: 10pt; color: #1e293b; }
+            .inst-name { font-size: 14pt; font-weight: bold; color: #1e3a8a; text-transform: uppercase; }
+            .inst-sub { font-size: 9.5pt; color: #475569; font-weight: bold; }
+            .report-title { font-size: 13pt; font-weight: bold; color: #0f172a; background-color: #f1f5f9; padding: 6px; text-align: center; border: 1px solid #cbd5e1; }
             
-            .kpi-table { border-collapse: collapse; margin-bottom: 20px; }
-            .kpi-table td { border: 1px solid #cbd5e1; padding: 7px 12px; font-size: 10pt; }
-            .kpi-header { background-color: #f1f5f9; font-weight: bold; color: #334155; }
-            .kpi-val { font-weight: bold; text-align: center; }
+            .meta-table { border-collapse: collapse; margin-bottom: 12px; width: 100%; }
+            .meta-table td { border: 1px solid #e2e8f0; padding: 5px 8px; font-size: 9pt; }
+            .meta-label { background-color: #f8fafc; font-weight: bold; color: #334155; width: 15%; }
+            .meta-val { font-weight: 500; color: #0f172a; }
+
+            .kpi-table { border-collapse: collapse; margin-bottom: 16px; width: 100%; }
+            .kpi-table th { background-color: #0f172a; color: #ffffff; font-weight: bold; border: 1px solid #0f172a; padding: 6px 8px; font-size: 8.5pt; text-align: center; }
+            .kpi-table td { border: 1px solid #cbd5e1; padding: 6px 8px; font-size: 10pt; font-weight: bold; text-align: center; }
             
-            .report-table { border-collapse: collapse; width: 100%; }
-            .report-table th { background-color: #1e3a8a; color: #ffffff; font-weight: bold; border: 1px solid #172554; padding: 9px 8px; font-size: 10pt; text-align: center; }
-            .report-table td { border: 1px solid #cbd5e1; padding: 6px 8px; font-size: 9.5pt; vertical-align: middle; }
+            .report-table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+            .report-table th { background-color: #1e3a8a; color: #ffffff; font-weight: bold; border: 1px solid #172554; padding: 8px 6px; font-size: 9pt; text-align: center; }
+            .report-table td { border: 1px solid #cbd5e1; padding: 5px 6px; font-size: 8.5pt; vertical-align: middle; }
             .report-table tr:nth-child(even) { background-color: #f8fafc; }
             
             .text-center { text-align: center; }
@@ -259,50 +293,96 @@ class AsistenciaController {
             .badge-justificado { background-color: #e0f2fe; color: #075985; font-weight: bold; text-align: center; }
             .badge-sin-salida { background-color: #f1f5f9; color: #475569; font-weight: bold; text-align: center; }
             
-            .tfoot-total { background-color: #e2e8f0; font-weight: bold; border-top: 2px solid #475569; }
+            .tfoot-total { background-color: #e2e8f0; font-weight: bold; border-top: 2px solid #1e3a8a; }
+            .signatures-table { margin-top: 35px; width: 100%; border-collapse: collapse; }
+            .signatures-table td { border: none; text-align: center; font-size: 9pt; padding-top: 40px; }
         </style>';
         echo '</head>';
         echo '<body>';
 
-        // Título del reporte
-        echo '<table style="width:100%; margin-bottom: 12px;">';
-        echo '<tr><td colspan="16" class="title">JUNTA DE USUARIOS DEL SECTOR HIDRÁULICO MENOR SAN LORENZO (JUSHSAL)<br><span style="font-size:11pt; font-weight:600; color:#475569;">REPORTE OFICIAL DE CONTROL DE ASISTENCIA</span></td></tr>';
-        echo '<tr><td colspan="16" class="subtitle">Período: <b>' . htmlspecialchars($start) . '</b> al <b>' . htmlspecialchars($end) . '</b>' . ($deptoNombre ? ' &nbsp;|&nbsp; Departamento: <b>' . htmlspecialchars($deptoNombre) . '</b>' : '') . ' &nbsp;|&nbsp; Generado: ' . date('d/m/Y H:i:s') . '</td></tr>';
+        // 1. ENCABEZADO INSTITUCIONAL CON LOGO
+        echo '<table style="width:100%; margin-bottom: 12px; border-collapse: collapse;">';
+        echo '<tr>';
+        if ($hasLogo) {
+            echo '<td rowspan="2" style="width: 80px; text-align: center; vertical-align: middle; padding: 6px;">';
+            echo '<img src="logo_icon.png" alt="JUSHSAL" height="55" width="55" style="max-height:55px; max-width:55px; width:auto; object-fit:contain;" />';
+            echo '</td>';
+            echo '<td colspan="15" class="inst-name">JUNTA DE USUARIOS DEL SECTOR HIDRÁULICO MENOR SAN LORENZO (JUSHSAL)</td>';
+        } else {
+            echo '<td colspan="16" class="inst-name">JUNTA DE USUARIOS DEL SECTOR HIDRÁULICO MENOR SAN LORENZO (JUSHSAL)</td>';
+        }
+        echo '</tr>';
+        echo '<tr>';
+        echo '<td colspan="' . ($hasLogo ? '15' : '16') . '" class="inst-sub">SISTEMA INTEGRADO DE CONTROL DE PERSONAL Y ASISTENCIA LABORAL</td>';
+        echo '</tr>';
+        echo '<tr><td colspan="16" style="height: 6px;"></td></tr>';
+        echo '<tr><td colspan="16" class="report-title">REPORTE OFICIAL DETALLADO DE ASISTENCIA LABORAL</td></tr>';
         echo '</table>';
 
-        // Resumen / KPIs
-        echo '<table class="kpi-table" style="margin-bottom: 16px;">';
+        // 2. PARÁMETROS DEL REPORTE Y METADATOS
+        echo '<table class="meta-table">';
         echo '<tr>';
-        echo '<td class="kpi-header">Total Registros</td><td class="kpi-val">' . $totalRegistros . '</td>';
-        echo '<td class="kpi-header">Presentes</td><td class="kpi-val" style="color:#166534;">' . $totalPresentes . '</td>';
-        echo '<td class="kpi-header">Tardanzas</td><td class="kpi-val" style="color:#92400e;">' . $totalTardanzas . ' (' . $horasTardanzaTotales . ')</td>';
-        echo '<td class="kpi-header">Faltas</td><td class="kpi-val" style="color:#991b1b;">' . $totalFaltas . '</td>';
-        echo '<td class="kpi-header">Justificados</td><td class="kpi-val" style="color:#075985;">' . $totalJustificados . '</td>';
-        echo '<td class="kpi-header">Total Trabajado</td><td class="kpi-val">' . $horasTrabajadasTotales . '</td>';
-        echo '<td class="kpi-header">Total H. Extras</td><td class="kpi-val" style="color:#0369a1;">' . $horasExtrasTotales . '</td>';
+        echo '<td class="meta-label">Período Consultado:</td><td class="meta-val"><b>' . date('d/m/Y', strtotime($start)) . '</b> al <b>' . date('d/m/Y', strtotime($end)) . '</b></td>';
+        echo '<td class="meta-label">Departamento / Área:</td><td class="meta-val">' . htmlspecialchars($deptoNombre ?: 'Todos los Departamentos') . '</td>';
+        echo '</tr>';
+        echo '<tr>';
+        echo '<td class="meta-label">Filtro de Estado:</td><td class="meta-val">' . htmlspecialchars($estado ?: 'Todos los Estados') . ($search ? ' | Búsqueda: "' . htmlspecialchars($search) . '"' : '') . '</td>';
+        echo '<td class="meta-label">Emitido Por:</td><td class="meta-val">' . htmlspecialchars($generadoPor) . ' &nbsp;|&nbsp; <b>Fecha:</b> ' . date('d/m/Y H:i:s') . '</td>';
         echo '</tr>';
         echo '</table>';
 
-        // Tabla Principal
+        // 3. RESUMEN EJECUTIVO Y KPIS
+        echo '<table class="kpi-table">';
+        echo '<thead>';
+        echo '<tr>';
+        echo '<th>TOTAL REGISTROS</th>';
+        echo '<th>ASISTENCIAS PUNTUALES</th>';
+        echo '<th>% PUNTUALIDAD</th>';
+        echo '<th>TARDANZAS</th>';
+        echo '<th>TIEMPO TARDANZA</th>';
+        echo '<th>FALTAS</th>';
+        echo '<th>JUSTIFICADOS / PERMISOS</th>';
+        echo '<th>SIN SALIDA</th>';
+        echo '<th>HORAS TRABAJADAS</th>';
+        echo '<th>HORAS EXTRAS</th>';
+        echo '</tr>';
+        echo '</thead>';
+        echo '<tbody>';
+        echo '<tr>';
+        echo '<td style="background-color:#f8fafc;">' . $totalRegistros . '</td>';
+        echo '<td style="color:#166534; background-color:#f0fdf4;">' . $totalPresentes . '</td>';
+        echo '<td style="color:#0284c7; background-color:#f0f9ff;">' . $pctPuntualidad . '%</td>';
+        echo '<td style="color:#92400e; background-color:#fffbeb;">' . $totalTardanzas . '</td>';
+        echo '<td style="color:#92400e; background-color:#fffbeb;">' . $horasTardanzaTotales . '</td>';
+        echo '<td style="color:#991b1b; background-color:#fef2f2;">' . $totalFaltas . '</td>';
+        echo '<td style="color:#075985; background-color:#f0f9ff;">' . $totalJustificados . '</td>';
+        echo '<td style="color:#475569; background-color:#f8fafc;">' . $totalSinSalida . '</td>';
+        echo '<td style="color:#0f172a; background-color:#f8fafc;">' . $horasTrabajadasTotales . '</td>';
+        echo '<td style="color:#0369a1; background-color:#f0f9ff;">' . $horasExtrasTotales . '</td>';
+        echo '</tr>';
+        echo '</tbody>';
+        echo '</table>';
+
+        // 4. TABLA PRINCIPAL DE DATOS
         echo '<table class="report-table">';
         echo '<thead>';
         echo '<tr>';
         echo '<th style="width: 35px;">#</th>';
-        echo '<th style="width: 85px;">Fecha</th>';
-        echo '<th style="width: 80px;">DNI</th>';
-        echo '<th style="width: 75px;">Cód. Reloj</th>';
+        echo '<th style="width: 80px;">Fecha</th>';
+        echo '<th style="width: 75px;">DNI</th>';
+        echo '<th style="width: 70px;">Cód. Reloj</th>';
         echo '<th style="width: 220px;">Apellidos y Nombres</th>';
-        echo '<th style="width: 140px;">Departamento</th>';
-        echo '<th style="width: 110px;">Turno</th>';
-        echo '<th style="width: 75px;">Prog. Ent.</th>';
-        echo '<th style="width: 75px;">Prog. Sal.</th>';
-        echo '<th style="width: 75px;">Real Ent.</th>';
-        echo '<th style="width: 75px;">Real Sal.</th>';
-        echo '<th style="width: 85px;">Tardanza</th>';
-        echo '<th style="width: 95px;">T. Trabajado</th>';
-        echo '<th style="width: 85px;">H. Extra</th>';
-        echo '<th style="width: 115px;">Estado</th>';
-        echo '<th style="width: 180px;">Observaciones</th>';
+        echo '<th style="width: 130px;">Departamento / Área</th>';
+        echo '<th style="width: 100px;">Turno Asignado</th>';
+        echo '<th style="width: 70px;">Prog. Ent.</th>';
+        echo '<th style="width: 70px;">Prog. Sal.</th>';
+        echo '<th style="width: 70px;">Real Ent.</th>';
+        echo '<th style="width: 70px;">Real Sal.</th>';
+        echo '<th style="width: 80px;">Tardanza</th>';
+        echo '<th style="width: 90px;">T. Trabajado</th>';
+        echo '<th style="width: 80px;">H. Extra</th>';
+        echo '<th style="width: 110px;">Estado</th>';
+        echo '<th style="width: 180px;">Observaciones / Sustento</th>';
         echo '</tr>';
         echo '</thead>';
         echo '<tbody>';
@@ -346,7 +426,7 @@ class AsistenciaController {
 
             echo '<tr>';
             echo '<td class="text-center">' . $i++ . '</td>';
-            echo '<td class="text-center font-bold">' . htmlspecialchars($r['fecha']) . '</td>';
+            echo '<td class="text-center font-bold">' . date('d/m/Y', strtotime($r['fecha'])) . '</td>';
             echo '<td class="text-center" style="mso-number-format:\'@\';">' . htmlspecialchars($r['dni']) . '</td>';
             echo '<td class="text-center" style="mso-number-format:\'@\';">' . htmlspecialchars($r['codigo_reloj']) . '</td>';
             echo '<td class="text-left font-bold">' . htmlspecialchars($r['apellidos'] . ' ' . $r['nombres']) . '</td>';
@@ -377,15 +457,45 @@ class AsistenciaController {
         echo '</tfoot>';
         echo '</table>';
 
+        // 5. BLOQUE DE FIRMAS Y CONFORMIDAD INSTITUCIONAL
+        echo '<table class="signatures-table">';
+        echo '<tr>';
+        echo '<td style="width: 50%;">';
+        echo '<div style="display:inline-block; border-top: 1.5px solid #334155; padding-top: 6px; width: 280px;">';
+        echo '<b>RESPONSABLE DE RECURSOS HUMANOS</b><br>';
+        echo '<span style="color:#64748b; font-size:8.5pt;">Control de Personal y Asistencia - JUSHSAL</span>';
+        echo '</div>';
+        echo '</td>';
+        echo '<td style="width: 50%;">';
+        echo '<div style="display:inline-block; border-top: 1.5px solid #334155; padding-top: 6px; width: 280px;">';
+        echo '<b>V°B° ADMINISTRACIÓN GENERAL</b><br>';
+        echo '<span style="color:#64748b; font-size:8.5pt;">Junta de Usuarios San Lorenzo</span>';
+        echo '</div>';
+        echo '</td>';
+        echo '</tr>';
+        echo '</table>';
+
         echo '</body>';
         echo '</html>';
+
+        // Parte 2: Adjunto de la imagen incrustada
+        if ($hasLogo) {
+            echo "\r\n--{$boundary}\r\n";
+            echo "Content-Type: image/png; name=\"logo_icon.png\"\r\n";
+            echo "Content-Transfer-Encoding: base64\r\n";
+            echo "Content-ID: <logo_icon.png>\r\n";
+            echo "Content-Location: logo_icon.png\r\n\r\n";
+            echo $logoDataChunked . "\r\n";
+        }
+
+        echo "--{$boundary}--\r\n";
         exit;
     }
 
     /**
-     * Exporta el reporte a CSV con separador punto y coma (;) compatible con Excel en español y BOM UTF-8.
+     * Exporta el reporte a CSV altamente estructurado con membrete institucional, KPIs y formato compatible.
      */
-    private function exportCSV(array $data, string $start, string $end): void {
+    private function exportCSV(array $data, string $start, string $end, ?string $deptoNombre = null, ?string $estado = null): void {
         $filename = "reporte_asistencia_{$start}_al_{$end}.csv";
         header('Content-Type: text/csv; charset=utf-8');
         header("Content-Disposition: attachment; filename=\"$filename\"");
@@ -393,35 +503,102 @@ class AsistenciaController {
         header("Expires: 0");
 
         $output = fopen('php://output', 'w');
-        // BOM UTF-8 para que Excel en Windows reconozca tildes y caracteres especiales
+        // BOM UTF-8 para compatibilidad nativa con Excel en Windows (reconoce tildes y caracteres especiales)
         fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
 
-        // Delimitador punto y coma (;) para compatibilidad nativa con Excel en español
         $delimiter = ';';
 
-        // Cabeceras
+        // Cálculo de KPIs
+        $totalRegistros = count($data);
+        $totalPresentes = 0;
+        $totalTardanzas = 0;
+        $totalFaltas = 0;
+        $totalJustificados = 0;
+        $totalSinSalida = 0;
+        $sumMinTardanza = 0;
+        $sumMinTrabajados = 0;
+        $sumMinExtra = 0;
+
+        foreach ($data as $r) {
+            $est = $r['estado'];
+            if ($est === 'PRESENTE') $totalPresentes++;
+            elseif ($est === 'TARDANZA') {
+                $totalTardanzas++;
+                $sumMinTardanza += (int)$r['minutos_tardanza'];
+            } elseif ($est === 'FALTA' || $est === 'FALTA_INJUSTIFICADA') $totalFaltas++;
+            elseif (in_array($est, ['JUSTIFICADO', 'PERMISO', 'VACACIONES'], true)) $totalJustificados++;
+            elseif ($est === 'SALIDA_SIN_MARCAR') $totalSinSalida++;
+
+            $sumMinTrabajados += (int)$r['minutos_trabajados'];
+            $sumMinExtra += (int)$r['minutos_extra'];
+        }
+
+        $horasTrabajadasTotales = sprintf('%02dh %02dm', floor($sumMinTrabajados / 60), $sumMinTrabajados % 60);
+        $horasExtrasTotales = sprintf('%02dh %02dm', floor($sumMinExtra / 60), $sumMinExtra % 60);
+        $horasTardanzaTotales = sprintf('%02dh %02dm', floor($sumMinTardanza / 60), $sumMinTardanza % 60);
+        $pctPuntualidad = $totalRegistros > 0 ? round(($totalPresentes / $totalRegistros) * 100, 1) : 0;
+
+        $currentUser = AuthController::user();
+        $generadoPor = ($currentUser['nombre'] ?? 'Administrador') . ' (' . ($currentUser['rol'] ?? 'RRHH') . ')';
+
+        // 1. MEMBRETE Y METADATOS INSTITUCIONALES EN CSV
+        fputcsv($output, ['JUNTA DE USUARIOS DEL SECTOR HIDRAULICO MENOR SAN LORENZO (JUSHSAL)'], $delimiter);
+        fputcsv($output, ['SISTEMA INTEGRADO DE CONTROL DE PERSONAL Y ASISTENCIA LABORAL'], $delimiter);
+        fputcsv($output, ['REPORTE OFICIAL CONSOLIDADO DE ASISTENCIA DIARIA'], $delimiter);
+        fputcsv($output, ['Periodo:', date('d/m/Y', strtotime($start)) . ' al ' . date('d/m/Y', strtotime($end)), 'Area / Departamento:', $deptoNombre ?: 'Todos los Departamentos', 'Filtro Estado:', $estado ?: 'Todos', 'Emitido por:', $generadoPor, 'Fecha Emision:', date('d/m/Y H:i:s')], $delimiter);
+        fputcsv($output, [], $delimiter); // Línea en blanco
+
+        // 2. RESUMEN EJECUTIVO Y KPIS EN CSV
+        fputcsv($output, ['=== RESUMEN EJECUTIVO DE ASISTENCIA ==='], $delimiter);
+        fputcsv($output, ['Total Registros', 'Asistencias Puntuales', '% Puntualidad', 'Tardanzas (Casos)', 'Tiempo Tardanzas', 'Faltas', 'Justificados / Licencias', 'Sin Salida', 'Total Horas Laboradas', 'Total Horas Extras'], $delimiter);
         fputcsv($output, [
+            $totalRegistros,
+            $totalPresentes,
+            $pctPuntualidad . '%',
+            $totalTardanzas,
+            $horasTardanzaTotales,
+            $totalFaltas,
+            $totalJustificados,
+            $totalSinSalida,
+            $horasTrabajadasTotales,
+            $horasExtrasTotales
+        ], $delimiter);
+        fputcsv($output, [], $delimiter); // Línea en blanco
+
+        // 3. ENCABEZADO DE TABLA PRINCIPAL
+        fputcsv($output, ['=== DETALLE INDIVIDUAL DE ASISTENCIAS ==='], $delimiter);
+        fputcsv($output, [
+            'N°',
             'Fecha',
             'DNI',
-            'Código Reloj',
+            'Codigo Reloj',
             'Apellidos y Nombres',
-            'Departamento / Área',
+            'Departamento / Area',
             'Turno Asignado',
             'Entrada Programada',
             'Salida Programada',
             'Entrada Real',
             'Salida Real',
-            'Tardanza (Minutos)',
-            'Tiempo Trabajado (Horas:Min)',
+            'Minutos Tardanza',
+            'Tiempo Tardanza',
+            'Tiempo Trabajado',
             'Minutos Trabajados',
-            'Horas Extras (Minutos)',
-            'Estado',
-            'Observaciones'
+            'Minutos Horas Extras',
+            'Horas Extras',
+            'Estado Asistencia',
+            'Observaciones / Sustento'
         ], $delimiter);
 
+        $i = 1;
         foreach ($data as $r) {
             $minTrab = (int)$r['minutos_trabajados'];
             $strTrabajado = sprintf('%02dh %02dm', floor($minTrab / 60), $minTrab % 60);
+
+            $minTard = (int)$r['minutos_tardanza'];
+            $strTardanza = sprintf('%02dh %02dm', floor($minTard / 60), $minTard % 60);
+
+            $minExt = (int)$r['minutos_extra'];
+            $strExtra = sprintf('%02dh %02dm', floor($minExt / 60), $minExt % 60);
 
             $estLabel = match($r['estado']) {
                 'PRESENTE' => 'PRESENTE',
@@ -437,24 +614,31 @@ class AsistenciaController {
             };
 
             fputcsv($output, [
-                $r['fecha'],
-                $r['dni'],
-                $r['codigo_reloj'],
+                $i++,
+                date('d/m/Y', strtotime($r['fecha'])),
+                '="' . ($r['dni'] ?? '') . '"', // Formato para preservar ceros a la izquierda en Excel
+                '="' . ($r['codigo_reloj'] ?? '') . '"',
                 $r['apellidos'] . ' ' . $r['nombres'],
-                $r['departamento_nombre'] ?? 'Sin Área',
+                $r['departamento_nombre'] ?? 'Sin Area',
                 $r['turno_nombre'] ?? 'Sin Turno',
-                $r['hora_entrada_programada'] ?? '--:--',
-                $r['hora_salida_programada'] ?? '--:--',
+                $r['hora_entrada_programada'] ? substr($r['hora_entrada_programada'], 0, 5) : '--:--',
+                $r['hora_salida_programada'] ? substr($r['hora_salida_programada'], 0, 5) : '--:--',
                 $r['hora_entrada_real'] ? substr($r['hora_entrada_real'], 11, 5) : '--:--',
                 $r['hora_salida_real'] ? substr($r['hora_salida_real'], 11, 5) : '--:--',
-                (int)$r['minutos_tardanza'],
+                $minTard,
+                $strTardanza,
                 $strTrabajado,
                 $minTrab,
-                (int)$r['minutos_extra'],
+                $minExt,
+                $strExtra,
                 $estLabel,
                 $r['observaciones'] ?? ''
             ], $delimiter);
         }
+
+        // Fila de totales
+        fputcsv($output, [], $delimiter);
+        fputcsv($output, ['TOTALES GENERALES:', '', '', '', '', '', '', '', '', '', '', $sumMinTardanza, $horasTardanzaTotales, $horasTrabajadasTotales, $sumMinTrabajados, $sumMinExtra, $horasExtrasTotales, $totalRegistros . ' registros', ''], $delimiter);
 
         fclose($output);
         exit;

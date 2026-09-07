@@ -14,7 +14,9 @@ class EmpleadosController {
             SELECT e.*, 
                    d.nombre as departamento_nombre,
                    c.nombre as cargo_nombre,
-                   t.nombre as turno_nombre
+                   t.nombre as turno_nombre,
+                   (SELECT COUNT(*) FROM plantillas_biometricas pb WHERE pb.codigo_reloj = e.codigo_reloj AND pb.tipo = 'HUELLA') as huellas_count,
+                   (SELECT COUNT(*) FROM plantillas_biometricas pb WHERE pb.codigo_reloj = e.codigo_reloj AND pb.tipo = 'FACIAL') as facial_count
             FROM empleados e
             LEFT JOIN departamentos d ON e.departamento_id = d.id
             LEFT JOIN cargos c ON e.cargo_id = c.id
@@ -42,9 +44,21 @@ class EmpleadosController {
         $departamentos = Database::query("SELECT * FROM departamentos WHERE activo = 1 ORDER BY nombre ASC");
         $cargos = Database::query("SELECT * FROM cargos WHERE activo = 1 ORDER BY nombre ASC");
         $turnos = Database::query("SELECT * FROM turnos WHERE activo = 1 ORDER BY nombre ASC");
+        $dispositivos = Database::query("SELECT * FROM dispositivos WHERE activo = 1 ORDER BY id ASC");
+
+        // Calcular el siguiente ID correlativo numérico sugerido (ej: 1, 2, 3... 75 -> 76)
+        // Ignorando números grandes como DNIs de 8 dígitos para mantener la secuencia normal de reloj
+        $maxCodigoRow = Database::queryOne("
+            SELECT MAX(CAST(codigo_reloj AS UNSIGNED)) as max_c 
+            FROM empleados 
+            WHERE codigo_reloj REGEXP '^[0-9]+$' 
+              AND CAST(codigo_reloj AS UNSIGNED) < 100000
+        ");
+        $siguienteCodigo = !empty($maxCodigoRow['max_c']) ? ((int)$maxCodigoRow['max_c'] + 1) : 1;
 
         require_once APP_ROOT . '/views/empleados/index.php';
     }
+
 
     public function guardar(): void {
         AuthController::checkAuth();

@@ -1,16 +1,19 @@
 <?php require_once APP_ROOT . '/views/layout/header.php'; ?>
 
 <!-- Content Header (Page header) -->
-<div class="content-header">
+<div class="content-header pb-2">
     <div class="container-fluid">
         <div class="row mb-2 align-items-center">
             <div class="col-sm-6">
-                <h1 class="m-0 font-weight-bold"><i class="fa-solid fa-business-time mr-2 text-primary"></i> Turnos y Horarios Laborales</h1>
+                <h1 class="m-0 font-weight-bold text-dark" style="font-size: 1.45rem;">
+                    <i class="fa-solid fa-business-time mr-2 text-primary"></i> Turnos y Horarios Laborales
+                </h1>
+                <div class="text-muted small mt-1">Definición de jornadas laborales, horarios de refrigerio y márgenes de tolerancia.</div>
             </div>
             <div class="col-sm-6">
-                <ol class="breadcrumb float-sm-right">
+                <ol class="breadcrumb float-sm-right mb-0">
                     <li class="breadcrumb-item"><a href="?route=dashboard">Inicio</a></li>
-                    <li class="breadcrumb-item active">Turnos</li>
+                    <li class="breadcrumb-item active">Turnos y Horarios</li>
                 </ol>
             </div>
         </div>
@@ -22,50 +25,55 @@
     <div class="container-fluid">
 
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="text-secondary font-weight-bold mb-0">Horarios Configurados</h5>
-            <button class="btn btn-primary btn-sm shadow-sm" onclick="openNewTurnoModal()">
+            <h5 class="text-dark font-weight-bold mb-0" style="font-size: 1.1rem;">
+                <i class="fa-solid fa-clock-rotate-left mr-2 text-primary"></i> Horarios Laborales Registrados
+            </h5>
+            <button class="btn btn-primary btn-sm" onclick="openNewTurnoModal()">
                 <i class="fa-solid fa-plus mr-1"></i> Crear Nuevo Turno
             </button>
         </div>
 
         <div class="row">
             <?php foreach ($turnos as $t): ?>
-                <div class="col-md-6 col-lg-4">
-                    <div class="card card-outline card-info shadow-sm">
-                        <div class="card-header">
-                            <h3 class="card-title font-weight-bold"><?= htmlspecialchars($t['nombre']) ?></h3>
+                <div class="col-md-6 col-lg-4 mb-3">
+                    <div class="card h-100">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h3 class="card-title font-weight-bold">
+                                <i class="fa-solid fa-calendar-day mr-2 text-primary"></i>
+                                <?= htmlspecialchars($t['nombre']) ?>
+                            </h3>
                             <div class="card-tools">
                                 <?php if ($t['activo']): ?>
-                                    <span class="badge badge-success px-2 py-1">Activo</span>
+                                    <span class="badge-pill-custom badge-pill-online"><i class="fa-solid fa-circle" style="font-size: 6px;"></i> Activo</span>
                                 <?php else: ?>
-                                    <span class="badge badge-secondary px-2 py-1">Inactivo</span>
+                                    <span class="badge-pill-custom badge-pill-offline"><i class="fa-solid fa-circle" style="font-size: 6px;"></i> Inactivo</span>
                                 <?php endif; ?>
                             </div>
                         </div>
-                        <div class="card-body py-2">
-                            <ul class="list-group list-group-unbordered mb-3 small">
-                                <li class="list-group-item d-flex justify-content-between py-1">
-                                    <b class="text-secondary"><i class="fa-solid fa-arrow-right-to-bracket text-success mr-1"></i> Entrada:</b>
-                                    <span class="font-weight-bold fs-6 text-success"><?= substr($t['hora_entrada'], 0, 5) ?></span>
+                        <div class="card-body py-3 d-flex flex-column justify-content-between">
+                            <ul class="list-group list-group-flush mb-3 small">
+                                <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-0 border-0 border-bottom">
+                                    <span class="text-secondary"><i class="fa-solid fa-arrow-right-to-bracket text-success mr-2"></i> Hora de Entrada:</span>
+                                    <span class="font-weight-bold font-monospace text-success" style="font-size: 0.95rem;"><?= substr($t['hora_entrada'], 0, 5) ?></span>
                                 </li>
-                                <li class="list-group-item d-flex justify-content-between py-1">
-                                    <b class="text-secondary"><i class="fa-solid fa-arrow-right-from-bracket text-primary mr-1"></i> Salida:</b>
-                                    <span class="font-weight-bold fs-6 text-primary"><?= substr($t['hora_salida'], 0, 5) ?></span>
+                                <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-0 border-0 border-bottom">
+                                    <span class="text-secondary"><i class="fa-solid fa-arrow-right-from-bracket text-primary mr-2"></i> Hora de Salida:</span>
+                                    <span class="font-weight-bold font-monospace text-primary" style="font-size: 0.95rem;"><?= substr($t['hora_salida'], 0, 5) ?></span>
                                 </li>
-                                <li class="list-group-item d-flex justify-content-between py-1">
-                                     <b class="text-secondary"><i class="fa-solid fa-stopwatch text-warning mr-1"></i> Tolerancia de Entrada:</b>
-                                     <span class="badge badge-warning text-white font-weight-bold"><?= $t['tolerancia_minutos'] ?> min</span>
+                                <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-0 border-0 border-bottom">
+                                     <span class="text-secondary"><i class="fa-solid fa-stopwatch text-warning mr-2"></i> Tolerancia Entrada:</span>
+                                     <span class="badge-pill-custom badge-pill-tardanza"><?= $t['tolerancia_minutos'] ?> min</span>
                                  </li>
-                                 <li class="list-group-item d-flex justify-content-between py-1">
-                                     <b class="text-secondary"><i class="fa-solid fa-utensils text-secondary mr-1"></i> Refrigerio:</b>
-                                     <span class="font-weight-bold"><?= $t['minutos_refrigerio'] ?> min (<?= $t['hora_inicio_refrigerio'] ? substr($t['hora_inicio_refrigerio'], 0, 5) : 'Flexible' ?>)</span>
+                                 <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-0 border-0">
+                                     <span class="text-secondary"><i class="fa-solid fa-utensils text-secondary mr-2"></i> Refrigerio:</span>
+                                     <span class="font-weight-bold text-dark"><?= $t['minutos_refrigerio'] ?> min <?= $t['hora_inicio_refrigerio'] ? '(' . substr($t['hora_inicio_refrigerio'], 0, 5) . ')' : '(Flexible)' ?></span>
                                  </li>
                             </ul>
 
                             <div class="d-flex justify-content-between align-items-center pt-2 border-top">
-                                <span class="small text-muted"><i class="fa-solid fa-users mr-1"></i> <?= $t['total_empleados'] ?> empleados</span>
+                                <span class="small text-muted"><i class="fa-solid fa-users mr-1 text-primary"></i> <b><?= $t['total_empleados'] ?></b> trabajadores</span>
                                 <button class="btn btn-outline-secondary btn-sm" onclick="openEditTurnoModal(<?= htmlspecialchars(json_encode($t)) ?>)">
-                                     <i class="fa-solid fa-pen mr-1"></i> Editar
+                                     <i class="fa-solid fa-pen mr-1"></i> Editar Horario
                                 </button>
                             </div>
                         </div>

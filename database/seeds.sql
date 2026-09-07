@@ -57,12 +57,13 @@ INSERT INTO `dispositivos` (`id`, `nombre`, `ip`, `puerto`, `protocolo`, `clave_
 ON DUPLICATE KEY UPDATE `ip` = VALUES(`ip`), `clave_comunicacion` = VALUES(`clave_comunicacion`), `modelo` = VALUES(`modelo`);
 
 -- 7. Insertar Usuarios del Sistema por Defecto (Password: 'admin123' con BCRYPT)
-INSERT INTO `usuarios_sistema` (`id`, `usuario`, `password`, `nombre_completo`, `email`, `rol`, `activo`) VALUES
-(1, 'admin', '$2y$10$nfEJAy9pnSjPCfPWhoP1JeIEpIDtfU8TFawCuu/kp08eb0SlGkNoO', 'Administrador del Sistema', 'admin@empresa.com', 'ADMIN', 1),
-(2, 'rrhh', '$2y$10$nfEJAy9pnSjPCfPWhoP1JeIEpIDtfU8TFawCuu/kp08eb0SlGkNoO', 'Gestor de Recursos Humanos', 'rrhh@empresa.com', 'RRHH', 1),
-(3, 'supervisor', '$2y$10$nfEJAy9pnSjPCfPWhoP1JeIEpIDtfU8TFawCuu/kp08eb0SlGkNoO', 'Supervisor de Operaciones', 'supervisor@empresa.com', 'SUPERVISOR', 1),
-(4, 'consulta', '$2y$10$nfEJAy9pnSjPCfPWhoP1JeIEpIDtfU8TFawCuu/kp08eb0SlGkNoO', 'Auditor de Asistencias', 'auditoria@empresa.com', 'CONSULTA', 1)
-ON DUPLICATE KEY UPDATE `password` = VALUES(`password`), `rol` = VALUES(`rol`), `activo` = VALUES(`activo`);
+INSERT INTO `usuarios_sistema` (`id`, `usuario`, `password`, `nombre_completo`, `email`, `rol`, `permisos`, `activo`) VALUES
+(1, 'admin', '$2y$10$nfEJAy9pnSjPCfPWhoP1JeIEpIDtfU8TFawCuu/kp08eb0SlGkNoO', 'Administrador del Sistema', 'admin@empresa.com', 'ADMIN', '["*"]', 1),
+(2, 'rrhh', '$2y$10$nfEJAy9pnSjPCfPWhoP1JeIEpIDtfU8TFawCuu/kp08eb0SlGkNoO', 'Gestor de Recursos Humanos', 'rrhh@empresa.com', 'RRHH', '["dashboard","asistencia","marcaciones","empleados","turnos","justificaciones"]', 1),
+(3, 'supervisor', '$2y$10$nfEJAy9pnSjPCfPWhoP1JeIEpIDtfU8TFawCuu/kp08eb0SlGkNoO', 'Supervisor de Operaciones', 'supervisor@empresa.com', 'SUPERVISOR', '["dashboard","asistencia","marcaciones","empleados","justificaciones"]', 1),
+(4, 'consulta', '$2y$10$nfEJAy9pnSjPCfPWhoP1JeIEpIDtfU8TFawCuu/kp08eb0SlGkNoO', 'Auditor de Asistencias', 'auditoria@empresa.com', 'CONSULTA', '["dashboard","asistencia","marcaciones"]', 1)
+ON DUPLICATE KEY UPDATE `password` = VALUES(`password`), `rol` = VALUES(`rol`), `permisos` = VALUES(`permisos`), `activo` = VALUES(`activo`);
 
 -- Nota de Seguridad:
 -- Para generar una nueva contraseña en PHP: password_hash('tu_clave', PASSWORD_BCRYPT)
+

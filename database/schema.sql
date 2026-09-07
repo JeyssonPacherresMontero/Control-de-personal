@@ -208,6 +208,7 @@ CREATE TABLE IF NOT EXISTS `usuarios_sistema` (
     `nombre_completo` VARCHAR(120) NOT NULL,
     `email` VARCHAR(100) NULL,
     `rol` ENUM('ADMIN', 'RRHH', 'SUPERVISOR', 'CONSULTA') DEFAULT 'RRHH',
+    `permisos` TEXT NULL COMMENT 'JSON array de módulos permitidos en el menú',
     `activo` TINYINT(1) DEFAULT 1,
     `ultimo_login` DATETIME NULL,
     `creado_en` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -228,6 +229,21 @@ CREATE TABLE IF NOT EXISTS `eventos_asistencia` (
     INDEX `idx_events_aggregate` (`aggregate_type`, `aggregate_id`),
     INDEX `idx_events_type` (`event_type`),
     INDEX `idx_events_created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 14. TABLA: PLANTILLAS BIOMÉTRICAS (HUELLA DACTILAR Y RECONOCIMIENTO FACIAL)
+CREATE TABLE IF NOT EXISTS `plantillas_biometricas` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `codigo_reloj` VARCHAR(32) NOT NULL,
+    `tipo` ENUM('HUELLA', 'FACIAL', 'TARJETA', 'PASSWORD') NOT NULL DEFAULT 'HUELLA',
+    `dedo_indice` INT DEFAULT 0 COMMENT '0 a 9 para huellas, 0 para facial',
+    `tamano` INT DEFAULT 0,
+    `template_data` LONGTEXT NOT NULL COMMENT 'Base64 o payload de plantilla',
+    `id_dispositivo_origen` INT NULL,
+    `actualizado_en` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT `fk_plantillas_dispositivo` FOREIGN KEY (`id_dispositivo_origen`) REFERENCES `dispositivos` (`id`) ON DELETE SET NULL,
+    UNIQUE KEY `uniq_biometria_usuario` (`codigo_reloj`, `tipo`, `dedo_indice`),
+    INDEX `idx_biometria_codigo` (`codigo_reloj`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 SET FOREIGN_KEY_CHECKS = 1;

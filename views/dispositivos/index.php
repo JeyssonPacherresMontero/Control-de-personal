@@ -1,16 +1,19 @@
 <?php require_once APP_ROOT . '/views/layout/header.php'; ?>
 
 <!-- Content Header (Page header) -->
-<div class="content-header">
+<div class="content-header pb-2">
     <div class="container-fluid">
         <div class="row mb-2 align-items-center">
             <div class="col-sm-6">
-                <h1 class="m-0 font-weight-bold"><i class="fa-solid fa-network-wired mr-2 text-primary"></i> Relojes Biométricos ZKTeco</h1>
+                <h1 class="m-0 font-weight-bold text-dark" style="font-size: 1.45rem;">
+                    <i class="fa-solid fa-network-wired mr-2 text-primary"></i> Relojes Biométricos ZKTeco
+                </h1>
+                <div class="text-muted small mt-1">Monitoreo de red, conectividad IP, sincronización de marcaciones y auditoría.</div>
             </div>
             <div class="col-sm-6">
-                <ol class="breadcrumb float-sm-right">
+                <ol class="breadcrumb float-sm-right mb-0">
                     <li class="breadcrumb-item"><a href="?route=dashboard">Inicio</a></li>
-                    <li class="breadcrumb-item active">Dispositivos</li>
+                    <li class="breadcrumb-item active">Relojes Biométricos</li>
                 </ol>
             </div>
         </div>
@@ -22,22 +25,22 @@
     <div class="container-fluid">
 
         <!-- ACTIONS ROW -->
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <div>
-                <h5 class="text-dark font-weight-bold mb-0">
-                    <i class="fa-solid fa-server mr-1 text-primary"></i> Biométricos Configurados en Red
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
+            <div class="mb-2 mb-md-0">
+                <h5 class="text-dark font-weight-bold mb-0" style="font-size: 1.1rem;">
+                    <i class="fa-solid fa-server mr-2 text-primary"></i> Terminales Biométricas en Red
                 </h5>
-                <small class="text-muted">Gestión de terminales ZKTeco, conectividad IP y protocolos</small>
+                <div class="text-muted small">Gestión de dispositivos ZKTeco, conectividad IP y protocolos de comunicación.</div>
             </div>
-            <div class="d-flex align-items-center">
+            <div class="d-flex align-items-center flex-wrap" style="gap: 5px;">
                 <!-- Botón Principal: Sync Rápido Hoy -->
-                <button type="button" class="btn btn-success btn-sm shadow-sm" onclick="syncAllDevices('today', this)">
+                <button type="button" class="btn btn-success btn-sm" onclick="syncAllDevices('today', this)">
                     <i class="fa-solid fa-bolt mr-1"></i> Sincronizar Hoy (Rápido)
                 </button>
 
                 <!-- Menú Desplegable de Opciones Avanzadas -->
-                <div class="btn-group ml-1">
-                    <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle shadow-sm bg-white" data-toggle="dropdown" aria-expanded="false">
+                <div class="btn-group">
+                    <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
                         <i class="fa-solid fa-sliders mr-1"></i> Opciones
                     </button>
                     <div class="dropdown-menu dropdown-menu-right shadow border-0">
@@ -54,16 +57,16 @@
                     </div>
                 </div>
 
-                <button class="btn btn-primary btn-sm shadow-sm ml-2" onclick="openNewDeviceModal()">
+                <button class="btn btn-primary btn-sm" onclick="openNewDeviceModal()">
                     <i class="fa-solid fa-plus mr-1"></i> Nuevo Dispositivo
                 </button>
             </div>
         </div>
 
         <?php if (isset($_SESSION['flash_sync_output'])): ?>
-            <div class="alert alert-<?= $_SESSION['flash_sync_status'] === 'success' ? 'success' : 'warning' ?> alert-dismissible fade show" role="alert">
-                <h5 class="font-weight-bold"><i class="icon fas fa-info-circle"></i> Resultado del Ciclo de Sincronización:</h5>
-                <pre class="mb-0 bg-dark text-white p-2 rounded small" style="max-height: 160px; overflow-y: auto;"><?= htmlspecialchars($_SESSION['flash_sync_output']) ?></pre>
+            <div class="alert alert-<?= $_SESSION['flash_sync_status'] === 'success' ? 'success' : 'warning' ?> alert-dismissible fade show mb-3" role="alert">
+                <h5 class="font-weight-bold mb-2"><i class="icon fas fa-info-circle mr-1"></i> Resultado del Ciclo de Sincronización:</h5>
+                <pre class="mb-0 bg-dark text-white p-2 rounded small" style="max-height: 160px; overflow-y: auto; font-family: monospace;"><?= htmlspecialchars($_SESSION['flash_sync_output']) ?></pre>
                 <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
@@ -74,51 +77,54 @@
         <!-- DEVICE CARDS -->
         <div class="row">
             <?php foreach ($dispositivos as $d): ?>
-                <div class="col-md-6 col-lg-4" id="card-col-<?= $d['id'] ?>">
-                    <div class="card card-outline <?= $d['estado_conexion'] === 'ONLINE' ? 'card-success' : 'card-danger' ?> shadow-sm" id="device-card-<?= $d['id'] ?>">
-                        <div class="card-header">
-                            <h3 class="card-title font-weight-bold text-dark"><?= htmlspecialchars($d['nombre']) ?></h3>
+                <div class="col-md-6 col-lg-4 mb-3" id="card-col-<?= $d['id'] ?>">
+                    <div class="card h-100" id="device-card-<?= $d['id'] ?>">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h3 class="card-title font-weight-bold text-dark">
+                                <i class="fa-solid fa-fingerprint text-primary mr-2"></i>
+                                <?= htmlspecialchars($d['nombre']) ?>
+                            </h3>
                             <div class="card-tools" id="device-badge-<?= $d['id'] ?>">
                                 <?php if ($d['estado_conexion'] === 'ONLINE'): ?>
-                                    <span class="badge badge-success px-2 py-1"><i class="fa-solid fa-signal mr-1"></i> EN LÍNEA</span>
+                                    <span class="badge-pill-custom badge-pill-online"><i class="fa-solid fa-circle" style="font-size: 6px;"></i> En Línea</span>
                                 <?php else: ?>
-                                    <span class="badge badge-danger px-2 py-1"><i class="fa-solid fa-circle-xmark mr-1"></i> DESCONECTADO</span>
+                                    <span class="badge-pill-custom badge-pill-offline"><i class="fa-solid fa-circle" style="font-size: 6px;"></i> Desconectado</span>
                                 <?php endif; ?>
                             </div>
                         </div>
-                        <div class="card-body py-2">
-                            <ul class="list-group list-group-unbordered mb-3 small">
-                                <li class="list-group-item d-flex justify-content-between py-1">
-                                    <b class="text-secondary">Dirección IP:</b>
-                                    <span class="font-weight-bold font-monospace"><?= htmlspecialchars($d['ip']) ?>:<?= $d['puerto'] ?></span>
+                        <div class="card-body py-3 d-flex flex-column justify-content-between">
+                            <ul class="list-group list-group-flush mb-3 small">
+                                <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-0 border-0 border-bottom">
+                                    <span class="text-secondary"><i class="fa-solid fa-network-wired mr-2 text-primary"></i> Dirección IP / Puerto:</span>
+                                    <span class="font-weight-bold font-monospace text-dark"><?= htmlspecialchars($d['ip']) ?>:<?= $d['puerto'] ?></span>
                                 </li>
-                                <li class="list-group-item d-flex justify-content-between py-1">
-                                    <b class="text-secondary">Protocolo / Clave:</b>
-                                    <span>Protocolo <?= $d['protocolo'] ?> (Clave: <?= $d['clave_comunicacion'] ?>)</span>
+                                <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-0 border-0 border-bottom">
+                                    <span class="text-secondary"><i class="fa-solid fa-shield-halved mr-2 text-secondary"></i> Protocolo / Clave:</span>
+                                    <span><span class="badge-pill-custom badge-pill-neutral"><?= $d['protocolo'] ?></span> (Clave: <?= $d['clave_comunicacion'] ?>)</span>
                                 </li>
-                                <li class="list-group-item d-flex justify-content-between py-1">
-                                    <b class="text-secondary">Ubicación / Sede:</b>
-                                    <span><i class="fa-solid fa-location-dot text-danger mr-1"></i><?= htmlspecialchars($d['ubicacion'] ?? 'General') ?></span>
+                                <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-0 border-0 border-bottom">
+                                    <span class="text-secondary"><i class="fa-solid fa-location-dot text-danger mr-2"></i> Ubicación / Sede:</span>
+                                    <span class="text-dark font-weight-bold"><?= htmlspecialchars($d['ubicacion'] ?? 'Sede Principal') ?></span>
                                 </li>
-                                <li class="list-group-item d-flex justify-content-between py-1">
-                                    <b class="text-secondary">Última Sincronización:</b>
-                                    <span class="text-muted" id="device-sync-<?= $d['id'] ?>"><?= $d['ultimo_sync'] ? substr($d['ultimo_sync'], 0, 16) : 'Nunca' ?></span>
+                                <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-0 border-0">
+                                    <span class="text-secondary"><i class="fa-solid fa-clock mr-2 text-secondary"></i> Último Sync:</span>
+                                    <span class="text-muted font-monospace small" id="device-sync-<?= $d['id'] ?>"><?= $d['ultimo_sync'] ? substr($d['ultimo_sync'], 0, 16) : 'Nunca' ?></span>
                                 </li>
                             </ul>
 
                             <div id="device-error-<?= $d['id'] ?>">
                                 <?php if (!empty($d['ultimo_error'])): ?>
-                                    <div class="alert alert-danger p-2 small mb-2">
+                                    <div class="alert alert-danger p-2 small mb-3">
                                         <i class="fa-solid fa-triangle-exclamation mr-1"></i> <?= htmlspecialchars(mb_strimwidth($d['ultimo_error'], 0, 90, '...')) ?>
                                     </div>
                                 <?php endif; ?>
                             </div>
 
-                            <div class="d-flex justify-content-between align-items-center">
-                                <button type="button" class="btn btn-outline-primary btn-sm flex-grow-1 mr-1" onclick="testConnection(<?= $d['id'] ?>, this)">
+                            <div class="d-flex justify-content-between align-items-center pt-2 border-top" style="gap: 5px;">
+                                <button type="button" class="btn btn-outline-primary btn-sm flex-grow-1" onclick="testConnection(<?= $d['id'] ?>, this)">
                                     <i class="fa-solid fa-plug mr-1"></i> Probar Conexión
                                 </button>
-                                <button type="button" class="btn btn-success btn-sm mr-1" onclick="syncDevice(<?= $d['id'] ?>, this, 'today')" title="Sincronizar hoy (rápido)">
+                                <button type="button" class="btn btn-success btn-sm" onclick="syncDevice(<?= $d['id'] ?>, this, 'today')" title="Sincronizar hoy">
                                     <i class="fa-solid fa-bolt"></i>
                                 </button>
                                 
@@ -149,32 +155,32 @@
         </div>
 
         <!-- LOGS TABLE CARD -->
-        <div class="card card-primary card-outline shadow-sm mt-3">
-            <div class="card-header">
+        <div class="card mt-3">
+            <div class="card-header d-flex align-items-center justify-content-between">
                 <h3 class="card-title font-weight-bold">
-                    <i class="fa-solid fa-list-check mr-1 text-primary"></i>
-                    Historial de Sincronización y Auditoría
+                    <i class="fa-solid fa-clock-rotate-left mr-2 text-primary"></i> Historial de Sincronización y Auditoría
                 </h3>
+                <span class="badge-pill-custom badge-pill-neutral">Auditoría en tiempo real</span>
             </div>
-            <div class="card-body">
-                <table class="table table-bordered table-hover datatable text-nowrap table-sm">
-                    <thead class="thead-light">
+            <div class="card-body p-0 table-responsive">
+                <table class="table table-hover datatable text-nowrap table-sm">
+                    <thead>
                         <tr>
                             <th>Fecha y Hora</th>
                             <th>Dispositivo</th>
                             <th>Evento</th>
-                            <th>Descargados</th>
-                            <th>Insertados</th>
-                            <th>Duplicados</th>
-                            <th>Estado</th>
-                            <th>Duración</th>
-                            <th>Mensaje</th>
+                            <th class="text-center">Descargados</th>
+                            <th class="text-center">Insertados</th>
+                            <th class="text-center">Duplicados</th>
+                            <th class="text-center">Estado</th>
+                            <th class="text-center">Duración</th>
+                            <th>Mensaje / Salida</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($logs as $l): ?>
                             <tr>
-                                <td class="text-secondary"><?= $l['fecha_hora'] ?></td>
+                                <td class="text-secondary font-monospace small"><?= $l['fecha_hora'] ?></td>
                                 <td class="font-weight-bold text-dark"><?= htmlspecialchars($l['dispositivo_nombre'] ?? 'Global') ?></td>
                                 <td>
                                     <?php
@@ -184,25 +190,25 @@
                                             'TEST_CONEXION' => 'Prueba de Conexión',
                                             'CLEAR_ATTENDANCE' => 'Limpieza de Memoria',
                                             'SYNC_USERS' => 'Sincronización de Usuarios',
-                                            'ERROR' => 'Error',
+                                            'ERROR' => 'Error de Conexión',
                                             default => htmlspecialchars($l['tipo_evento'])
                                         };
                                     ?>
-                                    <span class="badge badge-light border"><?= $eventoLabel ?></span>
+                                    <span class="badge-pill-custom badge-pill-neutral"><?= $eventoLabel ?></span>
                                 </td>
                                 <td class="text-center font-weight-bold"><?= $l['total_descargados'] ?></td>
                                 <td class="text-center text-success font-weight-bold">+<?= $l['total_insertados'] ?></td>
-                                <td class="text-center text-muted"><?= $l['total_duplicados'] ?></td>
-                                <td>
+                                <td class="text-center text-muted font-monospace small"><?= $l['total_duplicados'] ?></td>
+                                <td class="text-center">
                                     <?php if ($l['estado'] === 'EXITO'): ?>
-                                        <span class="badge badge-success px-2 py-1">Éxito</span>
+                                        <span class="badge-pill-custom badge-pill-presente"><i class="fa-solid fa-check mr-1"></i> Éxito</span>
                                     <?php elseif ($l['estado'] === 'ERROR'): ?>
-                                        <span class="badge badge-danger px-2 py-1">Error</span>
+                                        <span class="badge-pill-custom badge-pill-falta"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Error</span>
                                     <?php else: ?>
-                                        <span class="badge badge-warning text-white px-2 py-1">Alerta</span>
+                                        <span class="badge-pill-custom badge-pill-tardanza">Alerta</span>
                                     <?php endif; ?>
                                 </td>
-                                <td><?= $l['duracion_segundos'] ?>s</td>
+                                <td class="text-center font-monospace small"><?= $l['duracion_segundos'] ?>s</td>
                                 <td class="small text-muted" title="<?= htmlspecialchars($l['mensaje'] ?? '') ?>">
                                     <?= htmlspecialchars(mb_strimwidth($l['mensaje'] ?? '', 0, 50, '...')) ?>
                                 </td>

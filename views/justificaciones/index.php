@@ -1,16 +1,19 @@
 <?php require_once APP_ROOT . '/views/layout/header.php'; ?>
 
 <!-- Content Header (Page header) -->
-<div class="content-header">
+<div class="content-header pb-2">
     <div class="container-fluid">
         <div class="row mb-2 align-items-center">
             <div class="col-sm-6">
-                <h1 class="m-0 font-weight-bold"><i class="fa-solid fa-file-signature mr-2 text-primary"></i> Justificaciones, Permisos y Licencias</h1>
+                <h1 class="m-0 font-weight-bold text-dark" style="font-size: 1.45rem;">
+                    <i class="fa-solid fa-file-signature mr-2 text-primary"></i> Permisos y Justificaciones
+                </h1>
+                <div class="text-muted small mt-1">Gestión de licencias, descansos médicos, comisiones de servicio y tolerancias.</div>
             </div>
             <div class="col-sm-6">
-                <ol class="breadcrumb float-sm-right">
+                <ol class="breadcrumb float-sm-right mb-0">
                     <li class="breadcrumb-item"><a href="?route=dashboard">Inicio</a></li>
-                    <li class="breadcrumb-item active">Justificaciones</li>
+                    <li class="breadcrumb-item active">Permisos y Justificaciones</li>
                 </ol>
             </div>
         </div>
@@ -22,26 +25,28 @@
     <div class="container-fluid">
 
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="text-secondary font-weight-bold mb-0">Solicitudes y Registros</h5>
+            <h5 class="text-dark font-weight-bold mb-0" style="font-size: 1.1rem;">
+                <i class="fa-solid fa-list mr-2 text-primary"></i> Solicitudes y Registros de Permiso
+            </h5>
             <?php if (in_array($userRole, ['ADMIN', 'RRHH', 'SUPERVISOR'], true)): ?>
-                <button class="btn btn-primary btn-sm shadow-sm" data-toggle="modal" data-target="#modalJustificacion">
+                <button class="btn btn-primary btn-sm" data-toggle="modal" data-target="#modalJustificacion">
                     <i class="fa-solid fa-plus mr-1"></i> Registrar Justificación
                 </button>
             <?php endif; ?>
         </div>
 
         <!-- MAIN TABLE CARD -->
-        <div class="card card-primary card-outline shadow-sm">
-            <div class="card-body">
-                <table class="table table-bordered table-hover datatable text-nowrap table-sm">
-                    <thead class="thead-light">
+        <div class="card">
+            <div class="card-body p-0 table-responsive">
+                <table class="table table-hover datatable text-nowrap table-sm">
+                    <thead>
                         <tr>
-                            <th>ID</th>
+                            <th>N°</th>
                             <th>Empleado</th>
-                            <th>Tipo Permiso</th>
+                            <th>Tipo de Permiso</th>
                             <th>Rango de Fechas</th>
                             <th>Motivo / Sustento</th>
-                            <th>Estado</th>
+                            <th class="text-center">Estado</th>
                             <th>Aprobado Por</th>
                             <?php if (in_array($userRole, ['ADMIN', 'RRHH'], true)): ?>
                                 <th class="text-center">Acciones</th>
@@ -51,10 +56,10 @@
                     <tbody>
                         <?php foreach ($justificaciones as $j): ?>
                             <tr>
-                                <td class="text-muted">#<?= $j['id'] ?></td>
+                                <td class="text-muted font-monospace small">#<?= $j['id'] ?></td>
                                 <td>
                                     <div class="font-weight-bold text-dark"><?= htmlspecialchars($j['apellidos'] . ' ' . $j['nombres']) ?></div>
-                                    <small class="text-muted"><?= htmlspecialchars($j['departamento_nombre'] ?? 'Sin Área') ?> | DNI: <?= htmlspecialchars($j['dni']) ?></small>
+                                    <small class="text-muted"><?= htmlspecialchars($j['departamento_nombre'] ?? 'Sin Área') ?> &bull; DNI: <?= htmlspecialchars($j['dni']) ?></small>
                                 </td>
                                 <td>
                                      <?php
@@ -68,25 +73,25 @@
                                              default => htmlspecialchars($j['tipo'])
                                          };
                                      ?>
-                                     <span class="badge badge-light border font-weight-bold"><?= $tipoLabel ?></span>
+                                     <span class="badge-pill-custom badge-pill-neutral font-weight-bold"><?= $tipoLabel ?></span>
                                  </td>
                                 <td>
-                                    <span class="font-weight-bold text-dark"><?= $j['fecha_inicio'] ?></span> 
+                                    <span class="font-weight-bold text-dark font-monospace small"><?= $j['fecha_inicio'] ?></span> 
                                     <?php if ($j['fecha_inicio'] !== $j['fecha_fin']): ?>
-                                        <span class="text-muted">al</span> <span class="font-weight-bold text-dark"><?= $j['fecha_fin'] ?></span>
+                                        <span class="text-muted small">al</span> <span class="font-weight-bold text-dark font-monospace small"><?= $j['fecha_fin'] ?></span>
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <div class="text-dark"><?= htmlspecialchars($j['motivo']) ?></div>
-                                    <small class="text-muted">Registrado: <?= substr($j['creado_en'], 0, 16) ?></small>
+                                    <div class="text-dark small font-weight-bold"><?= htmlspecialchars($j['motivo']) ?></div>
+                                    <small class="text-muted font-monospace">Reg: <?= substr($j['creado_en'], 0, 16) ?></small>
                                 </td>
-                                <td>
+                                <td class="text-center">
                                     <?php if ($j['estado'] === 'APROBADO'): ?>
-                                        <span class="badge badge-success px-2 py-1"><i class="fa-solid fa-check mr-1"></i> Aprobado</span>
+                                        <span class="badge-pill-custom badge-pill-presente"><i class="fa-solid fa-check mr-1"></i> Aprobado</span>
                                     <?php elseif ($j['estado'] === 'RECHAZADO'): ?>
-                                        <span class="badge badge-danger px-2 py-1"><i class="fa-solid fa-xmark mr-1"></i> Rechazado</span>
+                                        <span class="badge-pill-custom badge-pill-falta"><i class="fa-solid fa-xmark mr-1"></i> Rechazado</span>
                                     <?php else: ?>
-                                        <span class="badge badge-warning text-white px-2 py-1"><i class="fa-solid fa-clock mr-1"></i> Pendiente</span>
+                                        <span class="badge-pill-custom badge-pill-tardanza"><i class="fa-solid fa-clock mr-1"></i> Pendiente</span>
                                     <?php endif; ?>
                                 </td>
                                 <td>
@@ -95,16 +100,16 @@
                                 <?php if (in_array($userRole, ['ADMIN', 'RRHH'], true)): ?>
                                     <td class="text-center">
                                         <?php if ($j['estado'] === 'PENDIENTE'): ?>
-                                            <div class="btn-group btn-group-sm">
+                                            <div class="btn-group btn-group-sm" style="gap: 3px;">
                                                 <form method="POST" action="?route=justificaciones&action=resolver" class="d-inline">
                                                     <input type="hidden" name="id" value="<?= $j['id'] ?>">
                                                     <input type="hidden" name="estado" value="APROBADO">
-                                                    <button type="submit" class="btn btn-outline-success btn-xs" title="Aprobar"><i class="fa-solid fa-check"></i></button>
+                                                    <button type="submit" class="btn btn-outline-success btn-xs px-2" title="Aprobar Solicitud"><i class="fa-solid fa-check"></i></button>
                                                 </form>
-                                                <form method="POST" action="?route=justificaciones&action=resolver" class="d-inline ml-1">
+                                                <form method="POST" action="?route=justificaciones&action=resolver" class="d-inline">
                                                     <input type="hidden" name="id" value="<?= $j['id'] ?>">
                                                     <input type="hidden" name="estado" value="RECHAZADO">
-                                                    <button type="submit" class="btn btn-outline-danger btn-xs" title="Rechazar"><i class="fa-solid fa-xmark"></i></button>
+                                                    <button type="submit" class="btn btn-outline-danger btn-xs px-2" title="Rechazar Solicitud"><i class="fa-solid fa-xmark"></i></button>
                                                 </form>
                                             </div>
                                         <?php else: ?>

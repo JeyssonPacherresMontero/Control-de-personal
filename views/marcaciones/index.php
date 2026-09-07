@@ -1,14 +1,48 @@
-<?php require_once APP_ROOT . '/views/layout/header.php'; ?>
+<?php 
+require_once APP_ROOT . '/views/layout/header.php'; 
+
+$kpiTotalMarcaciones = count($marcaciones);
+$kpiEntradas = 0;
+$kpiSalidas = 0;
+$kpiRefrigerios = 0;
+$kpiOtros = 0;
+$kpiProcesados = 0;
+
+foreach ($marcaciones as $m) {
+    $t = strtolower($m['tipo'] ?? '');
+    if ($t === 'entrada') $kpiEntradas++;
+    elseif ($t === 'salida') $kpiSalidas++;
+    elseif (str_contains($t, 'refrigerio')) $kpiRefrigerios++;
+    else $kpiOtros++;
+
+    if (!empty($m['procesado'])) $kpiProcesados++;
+}
+
+$kpiPctProcesado = $kpiTotalMarcaciones > 0 ? round(($kpiProcesados / $kpiTotalMarcaciones) * 100, 1) : 0;
+
+$dispNombreFiltro = 'Todos los Relojes Biométricos';
+if (!empty($dispositivoId)) {
+    foreach ($dispositivos as $d) {
+        if ($d['id'] == $dispositivoId) {
+            $dispNombreFiltro = $d['nombre'] . ' (' . $d['ip'] . ')';
+            break;
+        }
+    }
+}
+?>
 
 <!-- Content Header (Page header) -->
-<div class="content-header">
+<div class="content-header no-print pb-2">
     <div class="container-fluid">
         <div class="row mb-2 align-items-center">
             <div class="col-sm-6">
-                <h1 class="m-0 font-weight-bold"><i class="fa-solid fa-clock-rotate-left mr-2 text-primary"></i> Registro de Marcaciones de Relojes Biométricos</h1>
+                <h1 class="m-0 font-weight-bold text-dark" style="font-size: 1.45rem;">
+                    <i class="fa-solid fa-clock-rotate-left mr-2 text-primary"></i> Registro de Marcaciones de Relojes Biométricos
+                </h1>
+                <div class="text-muted small mt-1">Auditoría y trazabilidad de eventos crudos registrados en terminales biométricas.</div>
             </div>
             <div class="col-sm-6">
-                <ol class="breadcrumb float-sm-right">
+                <ol class="breadcrumb float-sm-right mb-0">
                     <li class="breadcrumb-item"><a href="?route=dashboard">Inicio</a></li>
                     <li class="breadcrumb-item active">Marcaciones</li>
                 </ol>
@@ -21,38 +55,151 @@
 <section class="content">
     <div class="container-fluid">
 
+        <!-- MEMBRETE OFICIAL DE IMPRESIÓN / PDF (Solo visible al imprimir o exportar a PDF) -->
+        <div class="print-only mb-3">
+            <table style="width: 100%; border-collapse: collapse; border-bottom: 2px solid #0f766e; padding-bottom: 8px;">
+                <tr>
+                    <td style="width: 120px; vertical-align: middle; text-align: center; padding-right: 15px;">
+                        <img src="<?= jushsal_logo_data_uri('full') ?: asset('img/logo_jushsal.png') ?>" alt="JUSHSAL" style="max-height: 60px; max-width: 110px; object-fit: contain;">
+                    </td>
+                    <td style="vertical-align: middle;">
+                        <div style="font-size: 13pt; font-weight: 800; color: #0f766e; text-transform: uppercase;">JUNTA DE USUARIOS DEL SECTOR HIDRÁULICO MENOR SAN LORENZO (JUSHSAL)</div>
+                        <div style="font-size: 9pt; color: #475569; font-weight: 600;">SISTEMA INTEGRADO DE CONTROL DE PERSONAL Y ASISTENCIA LABORAL</div>
+                        <div style="font-size: 11pt; font-weight: 700; color: #0f172a; margin-top: 4px;">REGISTRO OFICIAL DE MARCACIONES DE RELOJES BIOMÉTRICOS</div>
+                    </td>
+                    <td style="width: 200px; text-align: right; vertical-align: middle; font-size: 8pt; color: #64748b;">
+                        <div><b>Período:</b> <?= date('d/m/Y', strtotime($fechaInicio)) ?> al <?= date('d/m/Y', strtotime($fechaFin)) ?></div>
+                        <div><b>Reloj:</b> <?= htmlspecialchars($dispNombreFiltro) ?></div>
+                        <div><b>Emisión:</b> <?= date('d/m/Y H:i:s') ?></div>
+                        <div><b>Usuario:</b> <?= htmlspecialchars($currentUser['nombre'] ?? 'Administrador') ?></div>
+                    </td>
+                </tr>
+            </table>
+
+            <!-- Resumen de Marcaciones para Impresión -->
+            <table class="table table-sm table-bordered mt-2 mb-2" style="font-size: 8pt; text-align: center;">
+                <thead style="background-color: #f1f5f9;">
+                    <tr>
+                        <th>Total Marcaciones</th>
+                        <th>Entradas</th>
+                        <th>Salidas</th>
+                        <th>Refrigerios</th>
+                        <th>Otras</th>
+                        <th>Procesadas en Asistencia</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><b><?= $kpiTotalMarcaciones ?></b></td>
+                        <td style="color: #166534;"><b><?= $kpiEntradas ?></b></td>
+                        <td style="color: #3730a3;"><b><?= $kpiSalidas ?></b></td>
+                        <td style="color: #075985;"><b><?= $kpiRefrigerios ?></b></td>
+                        <td><b><?= $kpiOtros ?></b></td>
+                        <td style="color: #15803d;"><b><?= $kpiProcesados ?> (<?= $kpiPctProcesado ?>%)</b></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- KPI SUMMARY CARDS (PANTALLA) -->
+        <div class="row no-print">
+            <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="kpi-card h-100">
+                    <div class="kpi-card-header">
+                        <div>
+                            <div class="kpi-title">Total Marcaciones</div>
+                            <div class="kpi-value text-dark"><?= $kpiTotalMarcaciones ?></div>
+                            <div class="kpi-subtitle">Registros capturados en el período</div>
+                        </div>
+                        <div class="kpi-icon-box kpi-icon-indigo">
+                            <i class="fa-solid fa-fingerprint"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="kpi-card h-100">
+                    <div class="kpi-card-header">
+                        <div>
+                            <div class="kpi-title">Entradas Registradas</div>
+                            <div class="kpi-value text-success"><?= $kpiEntradas ?></div>
+                            <div class="kpi-subtitle">Marcaciones de inicio de jornada</div>
+                        </div>
+                        <div class="kpi-icon-box kpi-icon-emerald">
+                            <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="kpi-card h-100">
+                    <div class="kpi-card-header">
+                        <div>
+                            <div class="kpi-title">Salidas Registradas</div>
+                            <div class="kpi-value text-primary"><?= $kpiSalidas ?></div>
+                            <div class="kpi-subtitle">Marcaciones de fin de jornada</div>
+                        </div>
+                        <div class="kpi-icon-box kpi-icon-blue">
+                            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="kpi-card h-100">
+                    <div class="kpi-card-header">
+                        <div>
+                            <div class="kpi-title">Procesadas en Asistencia</div>
+                            <div class="kpi-value text-info"><?= $kpiProcesados ?> <span style="font-size: 0.95rem; color: #64748b; font-weight: 600;">(<?= $kpiPctProcesado ?>%)</span></div>
+                            <div class="kpi-subtitle">Eventos procesados por el motor</div>
+                        </div>
+                        <div class="kpi-icon-box kpi-icon-slate">
+                            <i class="fa-solid fa-circle-check"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- FILTER CARD -->
-        <div class="card card-default card-outline shadow-sm mb-3">
-            <div class="card-header">
-                <h3 class="card-title font-weight-bold"><i class="fa-solid fa-filter mr-1 text-secondary"></i> Filtros de Auditoría</h3>
-                <div class="card-tools d-flex align-items-center flex-wrap">
+        <div class="card mb-3 no-print">
+            <div class="card-header d-flex align-items-center justify-content-between flex-wrap">
+                <h3 class="card-title font-weight-bold">
+                    <i class="fa-solid fa-filter mr-2 text-primary"></i> Filtros de Auditoría y Rango de Fechas
+                </h3>
+                <div class="card-tools d-flex align-items-center flex-wrap" style="gap: 5px;">
                     <?php if (in_array($userRole, ['ADMIN', 'RRHH'], true)): ?>
-                        <button class="btn btn-primary btn-sm shadow-sm mr-1" data-toggle="modal" data-target="#modalNuevaMarcacion">
-                            <i class="fa-solid fa-plus mr-1"></i> Registrar Marcación
+                        <button class="btn btn-primary btn-sm" data-toggle="modal" data-target="#modalNuevaMarcacion">
+                            <i class="fa-solid fa-plus mr-1"></i> Registrar Marcación Manual
                         </button>
                     <?php endif; ?>
-                    <a href="?route=marcaciones&fecha=<?= $fecha ?>&dispositivo_id=<?= $dispositivoId ?>&search=<?= urlencode($search ?? '') ?>&export=excel" class="btn btn-success btn-sm shadow-sm mr-1" title="Exportar marcaciones a Excel">
+                    <a href="?route=marcaciones&fecha_inicio=<?= $fechaInicio ?>&fecha_fin=<?= $fechaFin ?>&dispositivo_id=<?= $dispositivoId ?>&tipo=<?= $tipo ?? '' ?>&search=<?= urlencode($search ?? '') ?>&export=excel" class="btn btn-success btn-sm" title="Descargar reporte en Excel">
                         <i class="fa-solid fa-file-excel mr-1"></i> Excel
                     </a>
-                    <a href="?route=marcaciones&fecha=<?= $fecha ?>&dispositivo_id=<?= $dispositivoId ?>&search=<?= urlencode($search ?? '') ?>&export=csv" class="btn btn-outline-secondary btn-sm shadow-sm mr-1" title="Exportar a CSV">
+                    <a href="?route=marcaciones&fecha_inicio=<?= $fechaInicio ?>&fecha_fin=<?= $fechaFin ?>&dispositivo_id=<?= $dispositivoId ?>&tipo=<?= $tipo ?? '' ?>&search=<?= urlencode($search ?? '') ?>&export=csv" class="btn btn-outline-secondary btn-sm" title="Exportar archivo CSV">
                         <i class="fa-solid fa-file-csv mr-1"></i> CSV
                     </a>
-                    <button type="button" class="btn btn-outline-dark btn-sm shadow-sm" onclick="window.print()" title="Imprimir o PDF">
-                        <i class="fa-solid fa-print"></i>
+                    <button type="button" class="btn btn-outline-dark btn-sm" onclick="window.print()" title="Imprimir reporte oficial o Guardar como PDF">
+                        <i class="fa-solid fa-print mr-1"></i> Imprimir / PDF
                     </button>
                 </div>
             </div>
-            <div class="card-body py-3">
+            <div class="card-body">
                 <form method="GET" action="" class="row align-items-end">
                     <input type="hidden" name="route" value="marcaciones">
 
-                    <div class="col-md-3 mb-2">
-                        <label class="small font-weight-bold text-secondary mb-1">Fecha</label>
-                        <input type="date" name="fecha" class="form-control form-control-sm" value="<?= htmlspecialchars($fecha) ?>">
+                    <div class="col-md-2 col-sm-6 mb-2">
+                        <label class="form-label-custom"><i class="fa-regular fa-calendar mr-1"></i> Fecha Inicio</label>
+                        <input type="date" name="fecha_inicio" class="form-control form-control-sm" value="<?= htmlspecialchars($fechaInicio) ?>" required>
                     </div>
 
-                    <div class="col-md-4 mb-2">
-                        <label class="small font-weight-bold text-secondary mb-1">Dispositivo Biométrico</label>
+                    <div class="col-md-2 col-sm-6 mb-2">
+                        <label class="form-label-custom"><i class="fa-regular fa-calendar-check mr-1"></i> Fecha Fin</label>
+                        <input type="date" name="fecha_fin" class="form-control form-control-sm" value="<?= htmlspecialchars($fechaFin) ?>" required>
+                    </div>
+
+                    <div class="col-md-3 col-sm-6 mb-2">
+                        <label class="form-label-custom"><i class="fa-solid fa-network-wired mr-1"></i> Dispositivo Biométrico</label>
                         <select name="dispositivo_id" class="form-control form-control-sm">
                             <option value="">-- Todos los Relojes --</option>
                             <?php foreach ($dispositivos as $d): ?>
@@ -61,23 +208,36 @@
                         </select>
                     </div>
 
-                    <div class="col-md-4 mb-2">
-                        <label class="small font-weight-bold text-secondary mb-1">Buscar Empleado / ID Reloj</label>
+                    <div class="col-md-2 col-sm-6 mb-2">
+                        <label class="form-label-custom"><i class="fa-solid fa-list-check mr-1"></i> Tipo Marcación</label>
+                        <select name="tipo" class="form-control form-control-sm">
+                            <option value="">-- Todos los Tipos --</option>
+                            <option value="entrada" <?= ($tipo ?? '') === 'entrada' ? 'selected' : '' ?>>Entrada</option>
+                            <option value="salida" <?= ($tipo ?? '') === 'salida' ? 'selected' : '' ?>>Salida</option>
+                            <option value="refrigerio_salida" <?= ($tipo ?? '') === 'refrigerio_salida' ? 'selected' : '' ?>>Salida Refrigerio</option>
+                            <option value="refrigerio_entrada" <?= ($tipo ?? '') === 'refrigerio_entrada' ? 'selected' : '' ?>>Regreso Refrigerio</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-2 col-sm-8 mb-2">
+                        <label class="form-label-custom"><i class="fa-solid fa-magnifying-glass mr-1"></i> Buscar Empleado / ID</label>
                         <input type="text" name="search" class="form-control form-control-sm" placeholder="Nombre, DNI o ID..." value="<?= htmlspecialchars($search ?? '') ?>">
                     </div>
 
-                    <div class="col-md-1 mb-2">
-                        <button type="submit" class="btn btn-secondary btn-sm btn-block"><i class="fa-solid fa-magnifying-glass"></i></button>
+                    <div class="col-md-1 col-sm-4 mb-2">
+                        <button type="submit" class="btn btn-primary btn-sm btn-block" title="Filtrar resultados">
+                            <i class="fa-solid fa-filter mr-1"></i> Filtrar
+                        </button>
                     </div>
                 </form>
             </div>
         </div>
 
         <!-- MAIN TABLE CARD -->
-        <div class="card card-primary card-outline shadow-sm">
-            <div class="card-body">
-                <table class="table table-bordered table-hover datatable text-nowrap table-sm">
-                    <thead class="thead-light">
+        <div class="card">
+            <div class="card-body p-0 table-responsive">
+                <table class="table table-hover datatable text-nowrap table-sm">
+                    <thead>
                         <tr>
                             <th>N° Registro</th>
                             <th>Fecha y Hora</th>
@@ -86,76 +246,105 @@
                             <th>Reloj Biométrico</th>
                             <th>Tipo de Marcación</th>
                             <th>Método de Verificación</th>
-                            <th class="text-center">Estado de Procesamiento</th>
-                            <th class="text-center">Trazabilidad Event Sourcing</th>
+                            <th class="text-center">Estado Procesado</th>
+                            <th class="text-center no-print">Trazabilidad Event Sourcing</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($marcaciones as $m): ?>
                             <tr>
-                                <td class="text-muted font-monospace">#<?= $m['id'] ?></td>
-                                <td class="font-weight-bold text-dark"><?= $m['fecha_hora'] ?></td>
-                                <td><span class="badge badge-light border">ID: <?= htmlspecialchars($m['codigo_reloj']) ?></span></td>
+                                <td class="text-muted font-monospace small">#<?= $m['id'] ?></td>
+                                <td class="font-weight-bold text-dark font-monospace small"><?= $m['fecha_hora'] ?></td>
+                                <td><span class="badge-pill-custom badge-pill-neutral">ID: <?= htmlspecialchars($m['codigo_reloj']) ?></span></td>
                                 <td>
                                     <?php if (!empty($m['nombres'])): ?>
                                         <div class="font-weight-bold text-dark"><?= htmlspecialchars($m['apellidos'] . ' ' . $m['nombres']) ?></div>
                                         <small class="text-muted">DNI: <?= htmlspecialchars($m['dni']) ?></small>
                                     <?php else: ?>
-                                        <span class="badge badge-warning"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Sin vincular a empleado</span>
+                                        <span class="badge-pill-custom badge-pill-tardanza"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Sin vincular</span>
                                     <?php endif; ?>
                                 </td>
                                 <td>
                                     <div class="text-dark font-weight-bold"><?= htmlspecialchars($m['dispositivo_nombre'] ?? 'Desconocido') ?></div>
-                                    <small class="text-muted"><?= htmlspecialchars($m['dispositivo_ip'] ?? '') ?></small>
+                                    <small class="text-muted font-monospace"><?= htmlspecialchars($m['dispositivo_ip'] ?? '') ?></small>
                                 </td>
                                 <td>
                                     <?php
                                         $t = strtolower($m['tipo']);
-                                        if ($t === 'entrada') echo '<span class="badge badge-success px-2 py-1"><i class="fa-solid fa-arrow-right-to-bracket mr-1"></i>Entrada</span>';
-                                        elseif ($t === 'salida') echo '<span class="badge badge-primary px-2 py-1"><i class="fa-solid fa-arrow-right-from-bracket mr-1"></i>Salida</span>';
-                                        elseif (str_contains($t, 'refrigerio')) echo '<span class="badge badge-info px-2 py-1"><i class="fa-solid fa-utensils mr-1"></i>Refrigerio</span>';
-                                        else echo '<span class="badge badge-secondary px-2 py-1">Marcación</span>';
+                                        if ($t === 'entrada') echo '<span class="badge-pill-custom badge-pill-presente"><i class="fa-solid fa-arrow-right-to-bracket mr-1"></i> Entrada</span>';
+                                        elseif ($t === 'salida') echo '<span class="badge-pill-custom badge-pill-justificado"><i class="fa-solid fa-arrow-right-from-bracket mr-1"></i> Salida</span>';
+                                        elseif (str_contains($t, 'refrigerio')) echo '<span class="badge-pill-custom badge-pill-neutral"><i class="fa-solid fa-utensils mr-1"></i> Refrigerio</span>';
+                                        else echo '<span class="badge-pill-custom badge-pill-neutral">Marcación</span>';
                                     ?>
                                 </td>
                                 <td>
+                                    <span class="small">
                                     <?php
                                         $verif = strtolower($m['tipo_verificacion'] ?? '');
                                         if (str_contains($verif, 'huella') || $verif === 'fingerprint') {
                                              echo '<i class="fa-solid fa-fingerprint text-primary mr-1"></i> Huella Dactilar';
                                         } elseif (str_contains($verif, 'facial') || str_contains($verif, 'face')) {
-                                            echo '<i class="fa-solid fa-camera text-info mr-1"></i> Rostro / Facial';
+                                            echo '<i class="fa-solid fa-camera text-info mr-1"></i> Facial';
                                         } elseif (str_contains($verif, 'tarjeta') || str_contains($verif, 'card') || str_contains($verif, 'rfid')) {
                                             echo '<i class="fa-solid fa-id-card text-success mr-1"></i> Tarjeta RFID';
                                         } elseif (str_contains($verif, 'manual')) {
-                                            echo '<i class="fa-solid fa-keyboard text-secondary mr-1"></i> Registro Manual RRHH';
+                                            echo '<i class="fa-solid fa-keyboard text-secondary mr-1"></i> Manual RRHH';
                                         } elseif (str_contains($verif, 'clave') || str_contains($verif, 'pin') || str_contains($verif, 'password')) {
                                             echo '<i class="fa-solid fa-key text-warning mr-1"></i> Contraseña / PIN';
                                         } else {
                                             echo '<i class="fa-solid fa-check text-muted mr-1"></i> ' . htmlspecialchars($m['tipo_verificacion'] ?: 'Biométrico');
                                         }
                                     ?>
+                                    </span>
                                 </td>
                                 <td class="text-center">
                                     <?php if ($m['procesado']): ?>
-                                        <span class="badge badge-success px-2 py-1"><i class="fa-solid fa-circle-check mr-1"></i> Procesado</span>
+                                        <span class="badge-pill-custom badge-pill-presente"><i class="fa-solid fa-circle-check mr-1"></i> Procesado</span>
                                     <?php else: ?>
-                                        <span class="badge badge-warning text-white px-2 py-1"><i class="fa-solid fa-clock mr-1"></i> Pendiente</span>
+                                        <span class="badge-pill-custom badge-pill-tardanza"><i class="fa-solid fa-clock mr-1"></i> Pendiente</span>
                                     <?php endif; ?>
                                 </td>
-                                <td class="text-center">
+                                <td class="text-center no-print">
                                     <?php if (!empty($m['id_empleado'])): ?>
-                                        <button class="btn btn-xs btn-outline-info" onclick="openTimelineModal(<?= $m['id_empleado'] ?>, '<?= substr($m['fecha_hora'], 0, 10) ?>', '<?= htmlspecialchars(addslashes(($m['apellidos'] ?? '') . ' ' . ($m['nombres'] ?? ''))) ?>')" title="Ver flujo completo de eventos inmutables">
-                                            <i class="fa-solid fa-timeline mr-1"></i> Auditoría
+                                        <button class="btn btn-xs btn-outline-info" onclick="openTimelineModal(<?= $m['id_empleado'] ?>, '<?= substr($m['fecha_hora'], 0, 10) ?>', '<?= htmlspecialchars(addslashes(($m['apellidos'] ?? '') . ' ' . ($m['nombres'] ?? ''))) ?>')" title="Ver auditoría de eventos">
+                                             <i class="fa-solid fa-timeline mr-1"></i> Eventos
                                         </button>
                                     <?php else: ?>
-                                        <span class="text-muted small">N/A</span>
+                                        <span class="text-muted small">-</span>
                                     <?php endif; ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
+                    <tfoot class="thead-light">
+                        <tr class="font-weight-bold">
+                            <th colspan="7" class="text-right">TOTAL DE MARCACIONES EN EL PERÍODO:</th>
+                            <th class="text-center text-success"><?= $kpiTotalMarcaciones ?></th>
+                            <th class="no-print"></th>
+                        </tr>
+                    </tfoot>
                 </table>
             </div>
+        </div>
+
+        <!-- BLOQUE DE FIRMAS OFICIALES DE IMPRESIÓN (Solo visible al imprimir / PDF) -->
+        <div class="print-only print-signatures">
+            <table style="width: 100%; text-align: center; border: none;">
+                <tr>
+                    <td style="width: 50%; padding-top: 50px; border: none;">
+                        <div style="display: inline-block; width: 260px; border-top: 1.5px solid #334155; padding-top: 6px;">
+                            <div style="font-weight: 700; font-size: 8.5pt; color: #0f172a;">RESPONSABLE DE CONTROL DE ASISTENCIA</div>
+                            <div style="font-size: 7.5pt; color: #64748b;">Recursos Humanos - JUSHSAL</div>
+                        </div>
+                    </td>
+                    <td style="width: 50%; padding-top: 50px; border: none;">
+                        <div style="display: inline-block; width: 260px; border-top: 1.5px solid #334155; padding-top: 6px;">
+                            <div style="font-weight: 700; font-size: 8.5pt; color: #0f172a;">RESPONSABLE DE TI & SISTEMAS</div>
+                            <div style="font-size: 7.5pt; color: #64748b;">Auditoría de Dispositivos Biométricos</div>
+                        </div>
+                    </td>
+                </tr>
+            </table>
         </div>
 
     </div>
