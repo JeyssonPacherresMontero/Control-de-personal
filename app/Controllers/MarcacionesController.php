@@ -17,45 +17,74 @@ class MarcacionesController {
         $tipo = !empty($_GET['tipo']) ? trim($_GET['tipo']) : null;
         $search = !empty($_GET['search']) ? trim($_GET['search']) : null;
 
-        $sql = "
-            SELECT m.*, 
-                   e.nombres, e.apellidos, e.dni,
-                   d.nombre as dispositivo_nombre, d.ip as dispositivo_ip
-            FROM marcaciones m
-            LEFT JOIN empleados e ON m.id_empleado = e.id
-            LEFT JOIN dispositivos d ON m.id_dispositivo = d.id
-            WHERE DATE(m.fecha_hora) BETWEEN :fecha_inicio AND :fecha_fin
-        ";
+        // Paginación
+        $page = max(1, (int)($_GET['page'] ?? 1));
+        $perPage = max(10, min(1000, (int)($_GET['per_page'] ?? 250)));
+        $offset = ($page - 1) * $perPage;
+
+        // Construcción de cláusula WHERE
+        $where = " WHERE DATE(m.fecha_hora) BETWEEN :fecha_inicio AND :fecha_fin";
         $params = [
             ':fecha_inicio' => $fechaInicio,
             ':fecha_fin'    => $fechaFin
         ];
 
         if ($dispositivoId) {
-            $sql .= " AND m.id_dispositivo = :disp_id";
+            $where .= " AND m.id_dispositivo = :disp_id";
             $params[':disp_id'] = $dispositivoId;
         }
 
-        if ($tipo) {
-            $sql .= " AND LOWER(m.tipo) = :tipo";
-            $params[':tipo'] = strtolower($tipo);
+        if (!empty($tipo) && strtolower($tipo) !== 'todos') {
+            $tipoLower = strtolower($tipo);
+            if ($tipoLower === 'refrigerio' || $tipoLower === 'refrigerios') {
+                $where .= " AND (LOWER(m.tipo) LIKE '%refrigerio%' OR LOWER(m.tipo) LIKE '%break%')";
+            } else {
+                $where .= " AND LOWER(m.tipo) = :tipo";
+                $params[':tipo'] = $tipoLower;
+            }
         }
 
         if ($search) {
-            $sql .= " AND (e.nombres LIKE :s1 OR e.apellidos LIKE :s2 OR e.dni LIKE :s3 OR m.codigo_reloj LIKE :s4)";
+            $where .= " AND (e.nombres LIKE :s1 OR e.apellidos LIKE :s2 OR e.dni LIKE :s3 OR m.codigo_reloj LIKE :s4)";
             $params[':s1'] = "%$search%";
             $params[':s2'] = "%$search%";
             $params[':s3'] = "%$search%";
             $params[':s4'] = "%$search%";
         }
 
-        $sql .= " ORDER BY m.fecha_hora DESC";
+        // 1. Agregación de KPIs directamente en SQL para máxima velocidad
+        $kpiSql = "
+            SELECT 
+                COUNT(*) as total,
+                SUM(CASE WHEN LOWER(m.tipo) = 'entrada' THEN 1 ELSE 0 END) as entradas,
+                SUM(CASE WHEN LOWER(m.tipo) = 'salida' THEN 1 ELSE 0 END) as salidas,
+                SUM(CASE WHEN LOWER(m.tipo) LIKE '%refrigerio%' OR LOWER(m.tipo) LIKE '%break%' THEN 1 ELSE 0 END) as refrigerios,
+                SUM(CASE WHEN LOWER(m.tipo) NOT IN ('entrada', 'salida') AND LOWER(m.tipo) NOT LIKE '%refrigerio%' AND LOWER(m.tipo) NOT LIKE '%break%' THEN 1 ELSE 0 END) as otros,
+                SUM(CASE WHEN m.procesado = 1 THEN 1 ELSE 0 END) as procesados
+            FROM marcaciones m
+            LEFT JOIN empleados e ON m.id_empleado = e.id
+            $where
+        ";
+        $kpis = Database::queryOne($kpiSql, $params) ?: [
+            'total' => 0, 'entradas' => 0, 'salidas' => 0, 'refrigerios' => 0, 'otros' => 0, 'procesados' => 0
+        ];
+        $totalRecords = (int)($kpis['total'] ?? 0);
+        $totalPages = $totalRecords > 0 ? (int)ceil($totalRecords / $perPage) : 1;
 
-        $marcaciones = Database::query($sql, $params);
-        $dispositivos = Database::query("SELECT * FROM dispositivos ORDER BY nombre ASC");
-        $empleados = Database::query("SELECT id, codigo_reloj, dni, nombres, apellidos FROM empleados WHERE activo = 1 ORDER BY apellidos ASC");
-
+        // 2. Exportación (si aplica, procesa el conjunto completo sin paginación)
         if (isset($_GET['export'])) {
+            $exportSql = "
+                SELECT m.*, 
+                       e.nombres, e.apellidos, e.dni,
+                       d.nombre as dispositivo_nombre, d.ip as dispositivo_ip
+                FROM marcaciones m
+                LEFT JOIN empleados e ON m.id_empleado = e.id
+                LEFT JOIN dispositivos d ON m.id_dispositivo = d.id
+                $where
+                ORDER BY m.fecha_hora DESC
+            ";
+            $exportData = Database::query($exportSql, $params);
+
             $exportType = strtolower(trim($_GET['export']));
             $dispositivoNombre = null;
             if ($dispositivoId) {
@@ -64,13 +93,30 @@ class MarcacionesController {
             }
 
             if ($exportType === 'excel' || $exportType === 'xls') {
-                $this->exportExcel($marcaciones, $fechaInicio, $fechaFin, $dispositivoNombre, $tipo, $search);
+                $this->exportExcel($exportData, $fechaInicio, $fechaFin, $dispositivoNombre, $tipo, $search);
                 return;
             } elseif ($exportType === 'csv') {
-                $this->exportCSV($marcaciones, $fechaInicio, $fechaFin, $dispositivoNombre, $tipo);
+                $this->exportCSV($exportData, $fechaInicio, $fechaFin, $dispositivoNombre, $tipo);
                 return;
             }
         }
+
+        // 3. Consulta de registros paginados
+        $sql = "
+            SELECT m.*, 
+                   e.nombres, e.apellidos, e.dni,
+                   d.nombre as dispositivo_nombre, d.ip as dispositivo_ip
+            FROM marcaciones m
+            LEFT JOIN empleados e ON m.id_empleado = e.id
+            LEFT JOIN dispositivos d ON m.id_dispositivo = d.id
+            $where
+            ORDER BY m.fecha_hora DESC
+            LIMIT $perPage OFFSET $offset
+        ";
+
+        $marcaciones = Database::query($sql, $params);
+        $dispositivos = Database::query("SELECT * FROM dispositivos ORDER BY nombre ASC");
+        $empleados = Database::query("SELECT id, codigo_reloj, dni, nombres, apellidos FROM empleados WHERE activo = 1 ORDER BY apellidos ASC");
 
         require_once APP_ROOT . '/views/marcaciones/index.php';
     }
@@ -99,298 +145,180 @@ class MarcacionesController {
             if (!empty($m['procesado'])) $totalProcesados++;
         }
 
-        $currentUser = AuthController::user();
-        $generadoPor = ($currentUser['nombre'] ?? 'Administrador') . ' (' . ($currentUser['rol'] ?? 'RRHH') . ')';
+        $pctProcesado = $totalRegistros > 0 ? round(($totalProcesados / $totalRegistros) * 100, 1) : 0;
+        $generadoEl = date('d/m/Y H:i:s');
+        $usuario = AuthController::user()['nombre'] ?? 'Administrador';
 
-        $logoPath = APP_ROOT . '/public/img/logo_icon.png';
-        if (!file_exists($logoPath)) {
-            $logoPath = APP_ROOT . '/img/logo_icon.png';
-        }
-        $hasLogo = file_exists($logoPath);
-        $logoData = $hasLogo ? base64_encode(file_get_contents($logoPath)) : '';
-        $logoDataChunked = chunk_split($logoData, 76, "\r\n");
+        ?>
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; }
+                table { border-collapse: collapse; width: 100%; }
+                th, td { border: 1px solid #B0C4DE; padding: 6px 8px; text-align: left; }
+                .title-main { font-size: 14pt; font-weight: bold; color: #1E3A8A; text-align: center; }
+                .title-sub { font-size: 11pt; color: #475569; text-align: center; font-style: italic; }
+                .meta-header { background-color: #F1F5F9; font-weight: bold; color: #334155; }
+                .th-col { background-color: #1E3A8A; color: #FFFFFF; font-weight: bold; text-align: center; }
+                .text-center { text-align: center; }
+                .bg-entrada { background-color: #ECFDF5; color: #065F46; font-weight: bold; }
+                .bg-salida { background-color: #EFF6FF; color: #1E40AF; font-weight: bold; }
+                .bg-refrigerio { background-color: #FFFBEB; color: #92400E; }
+                .bg-otro { background-color: #F8FAFC; color: #475569; }
+                .badge-proc { color: #065F46; font-weight: bold; }
+                .badge-pend { color: #D97706; font-weight: bold; }
+                .summary-table td { border: 1px solid #CBD5E1; padding: 5px 10px; }
+            </style>
+        </head>
+        <body>
+            <table>
+                <tr>
+                    <td colspan="10" class="title-main">JUNTA DE USUARIOS DEL SECTOR HIDRÁULICO MENOR SAN LORENZO (JUSHSAL)</td>
+                </tr>
+                <tr>
+                    <td colspan="10" class="title-sub">SISTEMA DE CONTROL DE PERSONAL Y ASISTENCIA - REPORTE DE MARCACIONES CRUDAS</td>
+                </tr>
+                <tr><td colspan="10"></td></tr>
+                <tr>
+                    <td colspan="2" class="meta-header">Período de Consulta:</td>
+                    <td colspan="3"><?= date('d/m/Y', strtotime($start)) ?> al <?= date('d/m/Y', strtotime($end)) ?></td>
+                    <td colspan="2" class="meta-header">Generado por:</td>
+                    <td colspan="3"><?= htmlspecialchars($usuario) ?></td>
+                </tr>
+                <tr>
+                    <td colspan="2" class="meta-header">Terminal / Filtro:</td>
+                    <td colspan="3"><?= htmlspecialchars($dispositivoNombre ?: 'Todos los Relojes') ?></td>
+                    <td colspan="2" class="meta-header">Fecha de Emisión:</td>
+                    <td colspan="3"><?= $generadoEl ?></td>
+                </tr>
+                <tr><td colspan="10"></td></tr>
+            </table>
 
-        $boundary = "----=_NextPart_JUSHSAL_" . md5(uniqid());
+            <!-- TABLA DE RESUMEN EJECUTIVO -->
+            <table class="summary-table" style="width: 70%; margin-bottom: 15px;">
+                <tr style="background-color: #E2E8F0; font-weight: bold;">
+                    <td colspan="6" class="text-center">RESUMEN CONSOLIDADO DE EVENTOS</td>
+                </tr>
+                <tr class="text-center">
+                    <td style="background-color: #F8FAFC;">Total Marcaciones</td>
+                    <td style="background-color: #ECFDF5;">Entradas</td>
+                    <td style="background-color: #EFF6FF;">Salidas</td>
+                    <td style="background-color: #FFFBEB;">Refrigerios</td>
+                    <td style="background-color: #F1F5F9;">Otros</td>
+                    <td style="background-color: #ECFDF5;">% Procesado</td>
+                </tr>
+                <tr class="text-center" style="font-weight: bold; font-size: 12pt;">
+                    <td><?= $totalRegistros ?></td>
+                    <td style="color: #065F46;"><?= $totalEntradas ?></td>
+                    <td style="color: #1E40AF;"><?= $totalSalidas ?></td>
+                    <td style="color: #92400E;"><?= $totalRefrigerios ?></td>
+                    <td style="color: #475569;"><?= $totalOtros ?></td>
+                    <td style="color: #065F46;"><?= $pctProcesado ?>%</td>
+                </tr>
+            </table>
 
-        // Cabecera MHTML Multipart
-        echo "MIME-Version: 1.0\r\n";
-        echo "X-Document-Type: Worksheet\r\n";
-        echo "Content-Type: multipart/related; boundary=\"{$boundary}\"; type=\"text/html\"\r\n\r\n";
-
-        // Parte 1: Documento HTML
-        echo "--{$boundary}\r\n";
-        echo "Content-Type: text/html; charset=\"utf-8\"\r\n";
-        echo "Content-Transfer-Encoding: 8bit\r\n";
-        echo "Content-Location: report.htm\r\n\r\n";
-
-        echo '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
-        echo '<head>';
-        echo '<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />';
-        echo '<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Marcaciones</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->';
-        echo '<style>
-            body { font-family: "Segoe UI", Tahoma, Arial, sans-serif; font-size: 10pt; color: #1e293b; }
-            .inst-name { font-size: 14pt; font-weight: bold; color: #0f766e; text-transform: uppercase; }
-            .inst-sub { font-size: 9.5pt; color: #475569; font-weight: bold; }
-            .report-title { font-size: 13pt; font-weight: bold; color: #0f172a; background-color: #f1f5f9; padding: 6px; text-align: center; border: 1px solid #cbd5e1; }
-            
-            .meta-table { border-collapse: collapse; margin-bottom: 12px; width: 100%; }
-            .meta-table td { border: 1px solid #e2e8f0; padding: 5px 8px; font-size: 9pt; }
-            .meta-label { background-color: #f8fafc; font-weight: bold; color: #334155; width: 18%; }
-            .meta-val { font-weight: 500; color: #0f172a; }
-
-            .kpi-table { border-collapse: collapse; margin-bottom: 16px; width: 100%; }
-            .kpi-table th { background-color: #0f766e; color: #ffffff; font-weight: bold; border: 1px solid #0f766e; padding: 6px 8px; font-size: 8.5pt; text-align: center; }
-            .kpi-table td { border: 1px solid #cbd5e1; padding: 6px 8px; font-size: 10pt; font-weight: bold; text-align: center; }
-
-            .report-table { border-collapse: collapse; width: 100%; }
-            .report-table th { background-color: #0f766e; color: #ffffff; font-weight: bold; border: 1px solid #115e59; padding: 8px 6px; font-size: 9pt; text-align: center; }
-            .report-table td { border: 1px solid #cbd5e1; padding: 5px 6px; font-size: 8.5pt; vertical-align: middle; }
-            .report-table tr:nth-child(even) { background-color: #f8fafc; }
-            
-            .text-center { text-align: center; }
-            .text-left { text-align: left; }
-            .font-bold { font-weight: bold; }
-            
-            .badge-entrada { background-color: #dcfce7; color: #166534; font-weight: bold; text-align: center; }
-            .badge-salida { background-color: #e0e7ff; color: #3730a3; font-weight: bold; text-align: center; }
-            .badge-refrig { background-color: #e0f2fe; color: #075985; font-weight: bold; text-align: center; }
-            .badge-otro { background-color: #f1f5f9; color: #475569; font-weight: bold; text-align: center; }
-
-            .tfoot-total { background-color: #e2e8f0; font-weight: bold; border-top: 2px solid #0f766e; }
-            .signatures-table { margin-top: 35px; width: 100%; border-collapse: collapse; }
-            .signatures-table td { border: none; text-align: center; font-size: 9pt; padding-top: 40px; }
-        </style>';
-        echo '</head>';
-        echo '<body>';
-
-        // 1. ENCABEZADO CON LOGO
-        echo '<table style="width:100%; margin-bottom: 12px; border-collapse: collapse;">';
-        echo '<tr>';
-        if ($hasLogo) {
-            echo '<td rowspan="2" style="width: 80px; text-align: center; vertical-align: middle; padding: 6px;">';
-            echo '<img src="logo_icon.png" alt="JUSHSAL" height="55" width="55" style="max-height:55px; max-width:55px; width:auto; object-fit:contain;" />';
-            echo '</td>';
-            echo '<td colspan="8" class="inst-name">JUNTA DE USUARIOS DEL SECTOR HIDRÁULICO MENOR SAN LORENZO (JUSHSAL)</td>';
-        } else {
-            echo '<td colspan="9" class="inst-name">JUNTA DE USUARIOS DEL SECTOR HIDRÁULICO MENOR SAN LORENZO (JUSHSAL)</td>';
-        }
-        echo '</tr>';
-        echo '<tr>';
-        echo '<td colspan="' . ($hasLogo ? '8' : '9') . '" class="inst-sub">SISTEMA INTEGRADO DE CONTROL DE PERSONAL Y ASISTENCIA LABORAL</td>';
-        echo '</tr>';
-        echo '<tr><td colspan="9" style="height: 6px;"></td></tr>';
-        echo '<tr><td colspan="9" class="report-title">REGISTRO OFICIAL DE MARCACIONES DE RELOJES BIOMÉTRICOS</td></tr>';
-        echo '</table>';
-
-        // 2. PARÁMETROS DEL REPORTE
-        echo '<table class="meta-table">';
-        echo '<tr>';
-        echo '<td class="meta-label">Período Consultado:</td><td class="meta-val"><b>' . date('d/m/Y', strtotime($start)) . '</b> al <b>' . date('d/m/Y', strtotime($end)) . '</b></td>';
-        echo '<td class="meta-label">Reloj Biométrico:</td><td class="meta-val">' . htmlspecialchars($dispositivoNombre ?: 'Todos los Dispositivos') . '</td>';
-        echo '</tr>';
-        echo '<tr>';
-        echo '<td class="meta-label">Filtros Aplicados:</td><td class="meta-val">' . htmlspecialchars($tipo ? 'Tipo: ' . strtoupper($tipo) : 'Todos los Tipos') . ($search ? ' | Búsqueda: "' . htmlspecialchars($search) . '"' : '') . '</td>';
-        echo '<td class="meta-label">Emitido Por:</td><td class="meta-val">' . htmlspecialchars($generadoPor) . ' &nbsp;|&nbsp; <b>Fecha:</b> ' . date('d/m/Y H:i:s') . '</td>';
-        echo '</tr>';
-        echo '</table>';
-
-        // 3. RESUMEN DE MARCACIONES
-        echo '<table class="kpi-table">';
-        echo '<thead>';
-        echo '<tr>';
-        echo '<th>TOTAL MARCACIONES</th>';
-        echo '<th>ENTRADAS</th>';
-        echo '<th>SALIDAS</th>';
-        echo '<th>REFRIGERIOS</th>';
-        echo '<th>OTRAS MARCACIONES</th>';
-        echo '<th>PROCESADAS EN ASISTENCIA</th>';
-        echo '</tr>';
-        echo '</thead>';
-        echo '<tbody>';
-        echo '<tr>';
-        echo '<td style="background-color:#f8fafc;">' . $totalRegistros . '</td>';
-        echo '<td style="color:#166534; background-color:#f0fdf4;">' . $totalEntradas . '</td>';
-        echo '<td style="color:#3730a3; background-color:#eef2ff;">' . $totalSalidas . '</td>';
-        echo '<td style="color:#075985; background-color:#f0f9ff;">' . $totalRefrigerios . '</td>';
-        echo '<td style="color:#475569; background-color:#f8fafc;">' . $totalOtros . '</td>';
-        echo '<td style="color:#15803d; background-color:#f0fdf4;">' . $totalProcesados . ' (' . ($totalRegistros > 0 ? round(($totalProcesados / $totalRegistros) * 100, 1) : 0) . '%)</td>';
-        echo '</tr>';
-        echo '</tbody>';
-        echo '</table>';
-
-        // 4. TABLA PRINCIPAL DE DATOS
-        echo '<table class="report-table">';
-        echo '<thead><tr>';
-        echo '<th style="width: 35px;">#</th>';
-        echo '<th style="width: 125px;">Fecha y Hora</th>';
-        echo '<th style="width: 75px;">ID en Reloj</th>';
-        echo '<th style="width: 75px;">DNI</th>';
-        echo '<th style="width: 220px;">Empleado Identificado</th>';
-        echo '<th style="width: 160px;">Reloj Biométrico</th>';
-        echo '<th style="width: 110px;">Tipo de Marcación</th>';
-        echo '<th style="width: 140px;">Método de Verificación</th>';
-        echo '<th style="width: 90px;">Estado</th>';
-        echo '</tr></thead><tbody>';
-
-        $i = 1;
-        foreach ($data as $m) {
-            $t = strtolower($m['tipo'] ?? '');
-            $tipoStr = match($t) {
-                'entrada' => 'Entrada',
-                'salida' => 'Salida',
-                'refrigerio_salida' => 'Salida a Refrigerio',
-                'refrigerio_entrada' => 'Regreso de Refrigerio',
-                default => 'Marcación'
-            };
-
-            $badgeClass = match($t) {
-                'entrada' => 'badge-entrada',
-                'salida' => 'badge-salida',
-                'refrigerio_salida', 'refrigerio_entrada' => 'badge-refrig',
-                default => 'badge-otro'
-            };
-
-            $verif = strtolower($m['tipo_verificacion'] ?? '');
-            if (str_contains($verif, 'huella') || $verif === 'fingerprint') $verifStr = 'Huella Dactilar';
-            elseif (str_contains($verif, 'facial') || str_contains($verif, 'face')) $verifStr = 'Reconocimiento Facial';
-            elseif (str_contains($verif, 'tarjeta') || str_contains($verif, 'card') || str_contains($verif, 'rfid')) $verifStr = 'Tarjeta RFID';
-            elseif (str_contains($verif, 'manual')) $verifStr = 'Registro Manual RRHH';
-            elseif (str_contains($verif, 'clave') || str_contains($verif, 'pin')) $verifStr = 'Contraseña / PIN';
-            else $verifStr = $m['tipo_verificacion'] ?: 'Biométrico';
-
-            echo '<tr>';
-            echo '<td class="text-center">' . $i++ . '</td>';
-            echo '<td class="text-center font-bold">' . htmlspecialchars($m['fecha_hora']) . '</td>';
-            echo '<td class="text-center" style="mso-number-format:\'@\';">' . htmlspecialchars($m['codigo_reloj']) . '</td>';
-            echo '<td class="text-center" style="mso-number-format:\'@\';">' . htmlspecialchars($m['dni'] ?? '-') . '</td>';
-            echo '<td class="text-left font-bold">' . htmlspecialchars(!empty($m['nombres']) ? $m['apellidos'] . ' ' . $m['nombres'] : 'Sin vincular') . '</td>';
-            echo '<td class="text-left">' . htmlspecialchars($m['dispositivo_nombre'] ?? 'Desconocido') . '</td>';
-            echo '<td class="' . $badgeClass . '">' . htmlspecialchars($tipoStr) . '</td>';
-            echo '<td class="text-center">' . htmlspecialchars($verifStr) . '</td>';
-            echo '<td class="text-center" style="' . ($m['procesado'] ? 'color:#15803d; font-weight:bold;' : 'color:#b45309;') . '">' . ($m['procesado'] ? 'Procesado' : 'Pendiente') . '</td>';
-            echo '</tr>';
-        }
-
-        echo '</tbody>';
-        echo '<tfoot>';
-        echo '<tr class="tfoot-total">';
-        echo '<td colspan="8" class="text-right font-bold" style="padding: 8px;">TOTAL DE MARCACIONES REGISTRADAS:</td>';
-        echo '<td class="text-center font-bold">' . $totalRegistros . '</td>';
-        echo '</tr>';
-        echo '</tfoot>';
-        echo '</table>';
-
-        // 5. BLOQUE DE FIRMAS
-        echo '<table class="signatures-table">';
-        echo '<tr>';
-        echo '<td style="width: 50%;">';
-        echo '<div style="display:inline-block; border-top: 1.5px solid #334155; padding-top: 6px; width: 280px;">';
-        echo '<b>RESPONSABLE DE CONTROL DE ASISTENCIA</b><br>';
-        echo '<span style="color:#64748b; font-size:8.5pt;">Recursos Humanos - JUSHSAL</span>';
-        echo '</div>';
-        echo '</td>';
-        echo '<td style="width: 50%;">';
-        echo '<div style="display:inline-block; border-top: 1.5px solid #334155; padding-top: 6px; width: 280px;">';
-        echo '<b>RESPONSABLE DE TI & SISTEMAS</b><br>';
-        echo '<span style="color:#64748b; font-size:8.5pt;">Auditoría de Dispositivos Biométricos</span>';
-        echo '</div>';
-        echo '</td>';
-        echo '</tr>';
-        echo '</table>';
-
-        echo '</body></html>';
-
-        // Parte 2: Adjunto de la imagen incrustada
-        if ($hasLogo) {
-            echo "\r\n--{$boundary}\r\n";
-            echo "Content-Type: image/png; name=\"logo_icon.png\"\r\n";
-            echo "Content-Transfer-Encoding: base64\r\n";
-            echo "Content-ID: <logo_icon.png>\r\n";
-            echo "Content-Location: logo_icon.png\r\n\r\n";
-            echo $logoDataChunked . "\r\n";
-        }
-
-        echo "--{$boundary}--\r\n";
+            <!-- DETALLE DE MARCACIONES -->
+            <table>
+                <thead>
+                    <tr>
+                        <th class="th-col" style="width: 40px;">#</th>
+                        <th class="th-col" style="width: 90px;">Fecha</th>
+                        <th class="th-col" style="width: 80px;">Hora</th>
+                        <th class="th-col" style="width: 90px;">Cód. Reloj</th>
+                        <th class="th-col" style="width: 90px;">DNI</th>
+                        <th class="th-col" style="width: 220px;">Apellidos y Nombres</th>
+                        <th class="th-col" style="width: 140px;">Terminal Biométrico</th>
+                        <th class="th-col" style="width: 100px;">Tipo Evento</th>
+                        <th class="th-col" style="width: 110px;">Método Verif.</th>
+                        <th class="th-col" style="width: 90px;">Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php 
+                    $i = 1;
+                    foreach ($data as $m): 
+                        $t = strtolower($m['tipo'] ?? '');
+                        $classBg = match(true) {
+                            $t === 'entrada' => 'bg-entrada',
+                            $t === 'salida' => 'bg-salida',
+                            str_contains($t, 'refrigerio') => 'bg-refrigerio',
+                            default => 'bg-otro'
+                        };
+                        $tipoLabel = match(true) {
+                            $t === 'entrada' => 'ENTRADA',
+                            $t === 'salida' => 'SALIDA',
+                            str_contains($t, 'refrigerio') => 'REFRIGERIO',
+                            default => strtoupper($m['tipo'] ?? 'MARCACIÓN')
+                        };
+                        $fechaPart = substr($m['fecha_hora'], 0, 10);
+                        $horaPart = substr($m['fecha_hora'], 11, 8);
+                        $verif = strtoupper($m['tipo_verificacion'] ?? 'HUELLA');
+                    ?>
+                    <tr>
+                        <td class="text-center"><?= $i++ ?></td>
+                        <td class="text-center"><?= date('d/m/Y', strtotime($fechaPart)) ?></td>
+                        <td class="text-center" style="font-weight: bold;"><?= $horaPart ?></td>
+                        <td class="text-center" style="mso-number-format:'\@';"><?= htmlspecialchars($m['codigo_reloj']) ?></td>
+                        <td class="text-center" style="mso-number-format:'\@';"><?= htmlspecialchars($m['dni'] ?? '-') ?></td>
+                        <td><?= htmlspecialchars(!empty($m['nombres']) ? $m['apellidos'] . ' ' . $m['nombres'] : 'Sin vincular') ?></td>
+                        <td><?= htmlspecialchars($m['dispositivo_nombre'] ?? 'Desconocido') ?></td>
+                        <td class="text-center <?= $classBg ?>"><?= $tipoLabel ?></td>
+                        <td class="text-center"><?= htmlspecialchars($verif) ?></td>
+                        <td class="text-center <?= $m['procesado'] ? 'badge-proc' : 'badge-pend' ?>">
+                            <?= $m['procesado'] ? 'PROCESADO' : 'PENDIENTE' ?>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </body>
+        </html>
+        <?php
         exit;
     }
 
     private function exportCSV(array $data, string $start, string $end, ?string $dispositivoNombre = null, ?string $tipo = null): void {
-        $filename = "reporte_marcaciones_{$start}_al_{$end}.csv";
-        header('Content-Type: text/csv; charset=utf-8');
+        $filename = "Reporte_Marcaciones_{$start}_al_{$end}.csv";
+        header("Content-Type: text/csv; charset=utf-8");
         header("Content-Disposition: attachment; filename=\"$filename\"");
         header("Pragma: no-cache");
         header("Expires: 0");
 
         $output = fopen('php://output', 'w');
-        // BOM UTF-8 para compatibilidad nativa con Excel
-        fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
-        $delimiter = ';';
+        fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF)); // BOM UTF-8
 
-        $totalRegistros = count($data);
-        $totalEntradas = 0;
-        $totalSalidas = 0;
-        $totalRefrigerios = 0;
-        $totalOtros = 0;
-        $totalProcesados = 0;
+        $delimiter = ";";
 
-        foreach ($data as $m) {
-            $t = strtolower($m['tipo'] ?? '');
-            if ($t === 'entrada') $totalEntradas++;
-            elseif ($t === 'salida') $totalSalidas++;
-            elseif (str_contains($t, 'refrigerio')) $totalRefrigerios++;
-            else $totalOtros++;
-
-            if (!empty($m['procesado'])) $totalProcesados++;
-        }
-
-        $currentUser = AuthController::user();
-        $generadoPor = ($currentUser['nombre'] ?? 'Administrador') . ' (' . ($currentUser['rol'] ?? 'RRHH') . ')';
-
-        // 1. MEMBRETE INSTITUCIONAL
+        // Encabezado institucional
         fputcsv($output, ['JUNTA DE USUARIOS DEL SECTOR HIDRAULICO MENOR SAN LORENZO (JUSHSAL)'], $delimiter);
-        fputcsv($output, ['SISTEMA INTEGRADO DE CONTROL DE PERSONAL Y ASISTENCIA LABORAL'], $delimiter);
-        fputcsv($output, ['REGISTRO OFICIAL DE MARCACIONES DE RELOJES BIOMETRICOS'], $delimiter);
-        fputcsv($output, ['Periodo:', date('d/m/Y', strtotime($start)) . ' al ' . date('d/m/Y', strtotime($end)), 'Reloj Biometrico:', $dispositivoNombre ?: 'Todos los Relojes', 'Tipo Marcacion:', $tipo ? strtoupper($tipo) : 'Todos', 'Emitido por:', $generadoPor, 'Fecha Emision:', date('d/m/Y H:i:s')], $delimiter);
+        fputcsv($output, ['REPORTE OFICIAL DE MARCACIONES CRUDAS DE BIOMETRICOS'], $delimiter);
+        fputcsv($output, ['Periodo:', "Del $start al $end"], $delimiter);
+        fputcsv($output, ['Terminal / Filtro:', $dispositivoNombre ?: 'Todos los Relojes'], $delimiter);
+        fputcsv($output, ['Fecha de Emision:', date('d/m/Y H:i:s')], $delimiter);
         fputcsv($output, [], $delimiter);
 
-        // 2. RESUMEN DE MARCACIONES
-        fputcsv($output, ['=== RESUMEN DE MARCACIONES BIOMETRICAS ==='], $delimiter);
-        fputcsv($output, ['Total Marcaciones', 'Entradas', 'Salidas', 'Refrigerios', 'Otras', 'Procesadas en Asistencia', '% Procesadas'], $delimiter);
+        // Cabeceras de columnas
         fputcsv($output, [
-            $totalRegistros,
-            $totalEntradas,
-            $totalSalidas,
-            $totalRefrigerios,
-            $totalOtros,
-            $totalProcesados,
-            ($totalRegistros > 0 ? round(($totalProcesados / $totalRegistros) * 100, 1) : 0) . '%'
+            '#', 'Fecha', 'Hora', 'Cod. Reloj', 'DNI', 'Apellidos y Nombres', 
+            'Terminal Biometrico', 'Tipo Evento', 'Metodo Verificacion', 'Estado'
         ], $delimiter);
-        fputcsv($output, [], $delimiter);
-
-        // 3. TABLA PRINCIPAL
-        fputcsv($output, ['=== DETALLE DE MARCACIONES ==='], $delimiter);
-        fputcsv($output, ['N°', 'Fecha', 'Hora', 'ID en Reloj', 'DNI', 'Apellidos y Nombres', 'Reloj Biometrico', 'Tipo de Marcacion', 'Metodo de Verificacion', 'Estado de Procesamiento'], $delimiter);
 
         $i = 1;
+        $totalRegistros = count($data);
+
         foreach ($data as $m) {
-            $tipoStr = match(strtolower($m['tipo'] ?? '')) {
-                'entrada' => 'Entrada',
-                'salida' => 'Salida',
-                'refrigerio_salida' => 'Salida a Refrigerio',
-                'refrigerio_entrada' => 'Regreso de Refrigerio',
-                default => 'Marcación'
-            };
-
-            $verif = strtolower($m['tipo_verificacion'] ?? '');
-            if (str_contains($verif, 'huella') || $verif === 'fingerprint') $verifStr = 'Huella Dactilar';
-            elseif (str_contains($verif, 'facial') || str_contains($verif, 'face')) $verifStr = 'Reconocimiento Facial';
-            elseif (str_contains($verif, 'tarjeta') || str_contains($verif, 'card') || str_contains($verif, 'rfid')) $verifStr = 'Tarjeta RFID';
-            elseif (str_contains($verif, 'manual')) $verifStr = 'Registro Manual RRHH';
-            elseif (str_contains($verif, 'clave') || str_contains($verif, 'pin')) $verifStr = 'Contraseña / PIN';
-            else $verifStr = $m['tipo_verificacion'] ?: 'Biométrico';
-
             $fechaPart = substr($m['fecha_hora'], 0, 10);
             $horaPart = substr($m['fecha_hora'], 11, 8);
+            $t = strtolower($m['tipo'] ?? '');
+            $tipoStr = match(true) {
+                $t === 'entrada' => 'ENTRADA',
+                $t === 'salida' => 'SALIDA',
+                str_contains($t, 'refrigerio') => 'REFRIGERIO',
+                default => strtoupper($m['tipo'] ?? 'MARCACION')
+            };
+            $verifStr = strtoupper($m['tipo_verificacion'] ?? 'HUELLA');
 
             fputcsv($output, [
                 $i++,
@@ -416,17 +344,24 @@ class MarcacionesController {
 
     public function guardarManual(): void {
         AuthController::checkAuth();
+        AuthController::requireRole(['ADMIN', 'RRHH'], 'marcaciones');
+        \App\Csrf::validateRequest();
 
         $idEmpleado = (int)($_POST['id_empleado'] ?? 0);
         $fechaHora = trim($_POST['fecha_hora'] ?? '');
         $tipo = $_POST['tipo'] ?? 'entrada';
         $idDispositivo = (int)($_POST['id_dispositivo'] ?? 1);
 
-        if ($idEmpleado > 0 && !empty($fechaHora)) {
+        if ($idEmpleado <= 0 || empty($fechaHora)) {
+            header('Location: ?route=marcaciones&error=campos_requeridos');
+            exit;
+        }
+
+        try {
             $emp = Database::queryOne("SELECT codigo_reloj FROM empleados WHERE id = ?", [$idEmpleado]);
             $codigoReloj = $emp ? $emp['codigo_reloj'] : (string)$idEmpleado;
 
-            // Inserción de marcación manual (Proyección Read Model)
+            // Inserción de marcación manual
             Database::execute("
                 INSERT INTO marcaciones 
                 (id_empleado, codigo_reloj, id_dispositivo, fecha_hora, tipo, tipo_verificacion, procesado)
@@ -466,9 +401,12 @@ class MarcacionesController {
             $dateOnly = substr($fechaHora, 0, 10);
             $calculator = new AttendanceCalculator(ATTENDANCE_DEBOUNCE_MINUTES);
             $calculator->processDate($dateOnly);
-        }
 
-        header('Location: ?route=marcaciones&fecha=' . substr($fechaHora, 0, 10) . '&msg=guardado');
-        exit;
+            header('Location: ?route=marcaciones&fecha=' . substr($fechaHora, 0, 10) . '&msg=guardado');
+            exit;
+        } catch (\PDOException $e) {
+            header('Location: ?route=marcaciones&error=db_error');
+            exit;
+        }
     }
 }

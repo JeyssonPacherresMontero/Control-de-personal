@@ -150,6 +150,7 @@
 <div class="modal fade" id="modalEmpleado" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <form method="POST" action="?route=empleados&action=guardar" class="modal-content">
+            <?= csrf_field() ?>
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title font-weight-bold" id="empModalTitle">Ficha de Empleado</h5>
                 <button type="button" class="close text-white" data-dismiss="modal">&times;</button>

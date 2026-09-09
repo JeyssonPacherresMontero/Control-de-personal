@@ -124,8 +124,8 @@
                                 <button type="button" class="btn btn-outline-primary btn-sm flex-grow-1" onclick="testConnection(<?= $d['id'] ?>, this)">
                                     <i class="fa-solid fa-plug mr-1"></i> Probar Conexión
                                 </button>
-                                <button type="button" class="btn btn-success btn-sm" onclick="syncDevice(<?= $d['id'] ?>, this, 'today')" title="Sincronizar hoy">
-                                    <i class="fa-solid fa-bolt"></i>
+                                <button type="button" class="btn btn-success btn-sm" onclick="syncDevice(<?= $d['id'] ?>, this, 'incremental')" title="Sincronizar marcaciones pendientes">
+                                    <i class="fa-solid fa-arrows-rotate"></i>
                                 </button>
                                 
                                 <div class="btn-group">
@@ -226,6 +226,7 @@
 <div class="modal fade" id="modalDispositivo" tabindex="-1">
     <div class="modal-dialog">
         <form method="POST" action="?route=dispositivos&action=guardar" class="modal-content">
+            <?= csrf_field() ?>
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title font-weight-bold" id="deviceModalTitle">Configurar Reloj Biométrico</h5>
                 <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
@@ -426,6 +427,7 @@ function testConnection(deviceId, btn) {
 
 function monitorSyncProgress(btn, originalHtml, customTitle) {
     let secondsElapsed = 0;
+    let consecutiveErrors = 0;
     
     Swal.fire({
         title: customTitle || 'Sincronizando Relojes Biométricos...',
@@ -451,14 +453,36 @@ function monitorSyncProgress(btn, originalHtml, customTitle) {
         if (timerEl) {
             timerEl.innerText = `Tiempo transcurrido: ${secondsElapsed}s`;
         }
+        
+        // Timeout de seguridad en cliente tras 120 segundos
+        if (secondsElapsed > 120) {
+            clearInterval(timerInterval);
+            clearInterval(pollInterval);
+            if (btn) {
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+            }
+            Swal.fire({
+                icon: 'info',
+                title: 'Sincronización en curso',
+                text: 'El proceso continúa ejecutándose en el servidor. La pantalla se actualizará automáticamente.',
+                confirmButtonText: 'Aceptar'
+            }).then(() => {
+                location.href = '?route=dispositivos';
+            });
+        }
     }, 1000);
 
     const pollInterval = setInterval(() => {
         fetch('?route=dispositivos&action=sync_status', {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         })
-        .then(res => res.json())
+        .then(res => {
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return res.json();
+        })
         .then(data => {
+            consecutiveErrors = 0;
             const logEl = document.getElementById('swal-sync-log');
             if (logEl && data.log_tail) {
                 logEl.style.display = 'block';
@@ -481,11 +505,12 @@ function monitorSyncProgress(btn, originalHtml, customTitle) {
                     });
                 }
 
+                const outMsg = data.output || (data.success ? 'Sincronización completada exitosamente.' : 'Sincronización finalizada.');
                 if (data.success) {
                     Swal.fire({
                         icon: 'success',
                         title: '¡Sincronización Completada!',
-                        html: `<pre class="text-left bg-dark text-white p-3 rounded small" style="max-height: 250px; overflow-y: auto;">${escapeHtml(data.output)}</pre>`,
+                        html: `<pre class="text-left bg-dark text-white p-3 rounded small" style="max-height: 250px; overflow-y: auto;">${escapeHtml(outMsg)}</pre>`,
                         confirmButtonText: 'Aceptar',
                         confirmButtonColor: '#28a745'
                     }).then(() => {
@@ -495,7 +520,7 @@ function monitorSyncProgress(btn, originalHtml, customTitle) {
                     Swal.fire({
                         icon: 'warning',
                         title: 'Resultado de Sincronización',
-                        html: `<pre class="text-left bg-dark text-white p-3 rounded small" style="max-height: 250px; overflow-y: auto;">${escapeHtml(data.output)}</pre>`,
+                        html: `<pre class="text-left bg-dark text-white p-3 rounded small" style="max-height: 250px; overflow-y: auto;">${escapeHtml(outMsg)}</pre>`,
                         confirmButtonText: 'Entendido'
                     }).then(() => {
                         location.href = '?route=dispositivos';
@@ -505,21 +530,48 @@ function monitorSyncProgress(btn, originalHtml, customTitle) {
         })
         .catch(err => {
             console.error("Polling error:", err);
+            consecutiveErrors++;
+            if (consecutiveErrors >= 5) {
+                clearInterval(pollInterval);
+                clearInterval(timerInterval);
+                if (btn) {
+                    btn.innerHTML = originalHtml;
+                    btn.disabled = false;
+                }
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Verificando estado...',
+                    text: 'El proceso se inició en segundo plano. Recargando para verificar los nuevos registros.',
+                    confirmButtonText: 'Recargar'
+                }).then(() => {
+                    location.href = '?route=dispositivos';
+                });
+            }
         });
     }, 2500);
 }
 
-function syncDevice(deviceId, btn, mode = 'today') {
+function syncDevice(deviceId, btn, mode = 'incremental') {
     const originalHtml = btn ? btn.innerHTML : '';
     if (btn) {
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
         btn.disabled = true;
     }
 
-    const title = (mode === 'today') ? 'Sincronización Rápida de Hoy...' : 'Sincronización Histórica Completa...';
+    const title = (mode === 'today') ? 'Sincronización Rápida de Hoy...' : ((mode === 'full') ? 'Sincronización Histórica Completa...' : 'Sincronización Inteligente de Marcaciones...');
 
-    fetch(`?route=dispositivos&action=sincronizar&id=${deviceId}&mode=${mode}&ajax=1`, {
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    const formData = new FormData();
+    formData.append('id', deviceId);
+    formData.append('mode', mode);
+    formData.append('_csrf_token', window._csrfToken || '');
+
+    fetch(`?route=dispositivos&action=sincronizar&ajax=1`, {
+        method: 'POST',
+        headers: { 
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': window._csrfToken || ''
+        },
+        body: formData
     })
     .then(res => res.json())
     .then(data => {
@@ -534,17 +586,26 @@ function syncDevice(deviceId, btn, mode = 'today') {
     });
 }
 
-function syncAllDevices(mode = 'today', btn = null) {
+function syncAllDevices(mode = 'incremental', btn = null) {
     const originalHtml = btn ? btn.innerHTML : '';
     if (btn) {
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Sincronizando...';
         btn.disabled = true;
     }
 
-    const title = (mode === 'today') ? 'Sincronizando Todos los Relojes (Solo Hoy)...' : 'Sincronizando Todo el Histórico...';
+    const title = (mode === 'today') ? 'Sincronizando Relojes (Solo Hoy)...' : ((mode === 'full') ? 'Sincronizando Todo el Histórico...' : 'Sincronizando Marcaciones Pendientes...');
 
-    fetch(`?route=dispositivos&action=sincronizar&mode=${mode}&ajax=1`, {
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    const formData = new FormData();
+    formData.append('mode', mode);
+    formData.append('_csrf_token', window._csrfToken || '');
+
+    fetch(`?route=dispositivos&action=sincronizar&ajax=1`, {
+        method: 'POST',
+        headers: { 
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': window._csrfToken || ''
+        },
+        body: formData
     })
     .then(res => res.json())
     .then(data => {

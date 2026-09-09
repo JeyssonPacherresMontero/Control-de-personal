@@ -155,8 +155,53 @@ spl_autoload_register(function ($class) {
     }
 });
 
-// Configuración de Sesión Segura
+// Configuración de Sesión Segura (Hardening OWASP)
 if (session_status() === PHP_SESSION_NONE) {
+    ini_set('session.cookie_httponly', '1');
+    ini_set('session.use_only_cookies', '1');
+    ini_set('session.use_trans_sid', '0');
+
+    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+               || (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443)
+               || (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
+
+    if (PHP_VERSION_ID >= 70300) {
+        session_set_cookie_params([
+            'lifetime' => 0, // Cookie dura hasta cerrar el navegador
+            'path'     => '/',
+            'domain'   => '',
+            'secure'   => $isHttps,
+            'httponly' => true,
+            'samesite' => 'Lax'
+        ]);
+    } else {
+        session_set_cookie_params(0, '/; samesite=Lax', '', $isHttps, true);
+    }
+
     session_start();
 }
+
+// Control de Inactividad de Sesión (Idle Timeout: 2 Horas = 7200 segundos)
+if (isset($_SESSION['user_id'])) {
+    $maxIdleTime = (int)($_ENV['SESSION_IDLE_TIMEOUT'] ?? 7200);
+    if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > $maxIdleTime)) {
+        session_unset();
+        session_destroy();
+        header('Location: ?route=login&msg=sesion_expirada');
+        exit;
+    }
+    $_SESSION['last_activity'] = time();
+}
+
+/**
+ * Helpers globales para CSRF
+ */
+function csrf_token(): string {
+    return \App\Csrf::getToken();
+}
+
+function csrf_field(): string {
+    return \App\Csrf::field();
+}
+
 

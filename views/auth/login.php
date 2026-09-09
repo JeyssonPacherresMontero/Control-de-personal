@@ -88,6 +88,7 @@
             <?php endif; ?>
 
             <form action="?route=login" method="post">
+                <?= csrf_field() ?>
                 <div class="form-group mb-3">
                     <label class="small font-weight-bold text-dark mb-1">Nombre de Usuario</label>
                     <div class="input-group">

@@ -105,6 +105,7 @@ switch ($route) {
             AuthController::requireRole(['ADMIN', 'RRHH']);
             $controller->sincronizarBiometria();
         } elseif ($action === 'obtener_biometria_usuario') {
+            AuthController::requireRole(['ADMIN', 'RRHH']);
             $controller->obtenerBiometriaUsuario();
         } else {
             // Administración de hardware exclusiva de ADMIN
@@ -173,6 +174,8 @@ switch ($route) {
             $controller->guardar();
         } elseif ($action === 'cambiar_estado') {
             $controller->cambiarEstado();
+        } elseif ($action === 'restablecer_password') {
+            $controller->restablecerPassword();
         } elseif ($action === 'eliminar') {
             $controller->eliminar();
         } else {

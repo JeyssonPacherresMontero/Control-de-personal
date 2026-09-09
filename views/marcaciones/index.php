@@ -1,24 +1,17 @@
 <?php 
 require_once APP_ROOT . '/views/layout/header.php'; 
 
-$kpiTotalMarcaciones = count($marcaciones);
-$kpiEntradas = 0;
-$kpiSalidas = 0;
-$kpiRefrigerios = 0;
-$kpiOtros = 0;
-$kpiProcesados = 0;
-
-foreach ($marcaciones as $m) {
-    $t = strtolower($m['tipo'] ?? '');
-    if ($t === 'entrada') $kpiEntradas++;
-    elseif ($t === 'salida') $kpiSalidas++;
-    elseif (str_contains($t, 'refrigerio')) $kpiRefrigerios++;
-    else $kpiOtros++;
-
-    if (!empty($m['procesado'])) $kpiProcesados++;
-}
-
+$kpiTotalMarcaciones = (int)($kpis['total'] ?? count($marcaciones));
+$kpiEntradas = (int)($kpis['entradas'] ?? 0);
+$kpiSalidas = (int)($kpis['salidas'] ?? 0);
+$kpiRefrigerios = (int)($kpis['refrigerios'] ?? 0);
+$kpiOtros = (int)($kpis['otros'] ?? 0);
+$kpiProcesados = (int)($kpis['procesados'] ?? 0);
 $kpiPctProcesado = $kpiTotalMarcaciones > 0 ? round(($kpiProcesados / $kpiTotalMarcaciones) * 100, 1) : 0;
+
+$page = $page ?? 1;
+$totalPages = $totalPages ?? 1;
+$perPage = $perPage ?? 250;
 
 $dispNombreFiltro = 'Todos los Relojes Biométricos';
 if (!empty($dispositivoId)) {
@@ -211,11 +204,12 @@ if (!empty($dispositivoId)) {
                     <div class="col-md-2 col-sm-6 mb-2">
                         <label class="form-label-custom"><i class="fa-solid fa-list-check mr-1"></i> Tipo Marcación</label>
                         <select name="tipo" class="form-control form-control-sm">
-                            <option value="">-- Todos los Tipos --</option>
-                            <option value="entrada" <?= ($tipo ?? '') === 'entrada' ? 'selected' : '' ?>>Entrada</option>
-                            <option value="salida" <?= ($tipo ?? '') === 'salida' ? 'selected' : '' ?>>Salida</option>
-                            <option value="refrigerio_salida" <?= ($tipo ?? '') === 'refrigerio_salida' ? 'selected' : '' ?>>Salida Refrigerio</option>
-                            <option value="refrigerio_entrada" <?= ($tipo ?? '') === 'refrigerio_entrada' ? 'selected' : '' ?>>Regreso Refrigerio</option>
+                            <option value="">-- Todas las Marcaciones (Todos) --</option>
+                            <option value="entrada" <?= ($tipo ?? '') === 'entrada' ? 'selected' : '' ?>>Entrada (Inicio de Jornada)</option>
+                            <option value="salida" <?= ($tipo ?? '') === 'salida' ? 'selected' : '' ?>>Salida (Fin de Jornada)</option>
+                            <option value="refrigerio" <?= ($tipo ?? '') === 'refrigerio' ? 'selected' : '' ?>>Todos los Refrigerios (Salida + Retorno)</option>
+                            <option value="refrigerio_salida" <?= ($tipo ?? '') === 'refrigerio_salida' ? 'selected' : '' ?>>Solo Salida a Refrigerio</option>
+                            <option value="refrigerio_entrada" <?= ($tipo ?? '') === 'refrigerio_entrada' ? 'selected' : '' ?>>Solo Retorno de Refrigerio</option>
                         </select>
                     </div>
 
@@ -325,6 +319,48 @@ if (!empty($dispositivoId)) {
                     </tfoot>
                 </table>
             </div>
+
+            <?php if ($totalPages > 1): ?>
+            <div class="card-footer bg-white border-top py-2 px-3 d-flex flex-wrap justify-content-between align-items-center no-print">
+                <div class="small text-muted mb-2 mb-md-0">
+                    Mostrando página <b><?= $page ?></b> de <b><?= $totalPages ?></b> (<b><?= number_format($kpiTotalMarcaciones) ?></b> marcaciones en total)
+                </div>
+                <nav aria-label="Paginación de marcaciones">
+                    <ul class="pagination pagination-sm mb-0">
+                        <?php
+                            $queryParams = $_GET;
+                            $buildPageUrl = function($p) use ($queryParams) {
+                                $queryParams['page'] = $p;
+                                return '?' . http_build_query($queryParams);
+                            };
+                        ?>
+                        <li class="page-item <?= ($page <= 1) ? 'disabled' : '' ?>">
+                            <a class="page-link" href="<?= $buildPageUrl(1) ?>" title="Primera página"><i class="fa-solid fa-angles-left"></i></a>
+                        </li>
+                        <li class="page-item <?= ($page <= 1) ? 'disabled' : '' ?>">
+                            <a class="page-link" href="<?= $buildPageUrl($page - 1) ?>" title="Página anterior"><i class="fa-solid fa-angle-left"></i></a>
+                        </li>
+                        
+                        <?php
+                            $startPage = max(1, $page - 2);
+                            $endPage = min($totalPages, $page + 2);
+                            for ($i = $startPage; $i <= $endPage; $i++):
+                        ?>
+                            <li class="page-item <?= ($i === $page) ? 'active font-weight-bold' : '' ?>">
+                                <a class="page-link" href="<?= $buildPageUrl($i) ?>"><?= $i ?></a>
+                            </li>
+                        <?php endfor; ?>
+
+                        <li class="page-item <?= ($page >= $totalPages) ? 'disabled' : '' ?>">
+                            <a class="page-link" href="<?= $buildPageUrl($page + 1) ?>" title="Página siguiente"><i class="fa-solid fa-angle-right"></i></a>
+                        </li>
+                        <li class="page-item <?= ($page >= $totalPages) ? 'disabled' : '' ?>">
+                            <a class="page-link" href="<?= $buildPageUrl($totalPages) ?>" title="Última página"><i class="fa-solid fa-angles-right"></i></a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+            <?php endif; ?>
         </div>
 
         <!-- BLOQUE DE FIRMAS OFICIALES DE IMPRESIÓN (Solo visible al imprimir / PDF) -->
@@ -355,6 +391,7 @@ if (!empty($dispositivoId)) {
 <div class="modal fade" id="modalNuevaMarcacion" tabindex="-1">
     <div class="modal-dialog">
         <form method="POST" action="?route=marcaciones&action=guardar_manual" class="modal-content">
+            <?= csrf_field() ?>
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title font-weight-bold"><i class="fa-solid fa-plus-circle mr-2"></i> Registrar Marcación Manual</h5>
                 <button type="button" class="close text-white" data-dismiss="modal">&times;</button>

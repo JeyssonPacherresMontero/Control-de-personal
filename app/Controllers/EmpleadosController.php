@@ -62,6 +62,8 @@ class EmpleadosController {
 
     public function guardar(): void {
         AuthController::checkAuth();
+        AuthController::requireRole(['ADMIN', 'RRHH'], 'empleados');
+        \App\Csrf::validateRequest();
 
         $id = (int)($_POST['id'] ?? 0);
         $codigoReloj = trim($_POST['codigo_reloj'] ?? '');
@@ -76,59 +78,92 @@ class EmpleadosController {
         $fechaIngreso = !empty($_POST['fecha_ingreso']) ? $_POST['fecha_ingreso'] : null;
         $activo = isset($_POST['activo']) ? 1 : 0;
 
-        if ($id > 0) {
-            Database::execute("
-                UPDATE empleados 
-                SET codigo_reloj = :cod, dni = :dni, nombres = :nom, apellidos = :ape,
-                    email = :email, telefono = :tel, departamento_id = :depto, cargo_id = :cargo,
-                    turno_id = :turno, fecha_ingreso = :fecha, activo = :act
-                WHERE id = :id
-            ", [
-                ':cod'   => $codigoReloj,
-                ':dni'   => $dni,
-                ':nom'   => $nombres,
-                ':ape'   => $apellidos,
-                ':email' => $email ?: null,
-                ':tel'   => $telefono ?: null,
-                ':depto' => $deptoId,
-                ':cargo' => $cargoId,
-                ':turno' => $turnoId,
-                ':fecha' => $fechaIngreso,
-                ':act'   => $activo,
-                ':id'    => $id
-            ]);
-        } else {
-            Database::execute("
-                INSERT INTO empleados 
-                (codigo_reloj, dni, nombres, apellidos, email, telefono, departamento_id, cargo_id, turno_id, fecha_ingreso, activo)
-                VALUES (:cod, :dni, :nom, :ape, :email, :tel, :depto, :cargo, :turno, :fecha, :act)
-            ", [
-                ':cod'   => $codigoReloj,
-                ':dni'   => $dni,
-                ':nom'   => $nombres,
-                ':ape'   => $apellidos,
-                ':email' => $email ?: null,
-                ':tel'   => $telefono ?: null,
-                ':depto' => $deptoId,
-                ':cargo' => $cargoId,
-                ':turno' => $turnoId,
-                ':fecha' => $fechaIngreso,
-                ':act'   => $activo
-            ]);
+        if (empty($dni) || empty($nombres) || empty($apellidos) || empty($codigoReloj)) {
+            header('Location: ?route=empleados&error=campos_requeridos');
+            exit;
         }
 
-        header('Location: ?route=empleados&msg=guardado');
-        exit;
+        try {
+            if ($id > 0) {
+                Database::execute("
+                    UPDATE empleados 
+                    SET codigo_reloj = :cod, dni = :dni, nombres = :nom, apellidos = :ape,
+                        email = :email, telefono = :tel, departamento_id = :depto, cargo_id = :cargo,
+                        turno_id = :turno, fecha_ingreso = :fecha, activo = :act
+                    WHERE id = :id
+                ", [
+                    ':cod'   => $codigoReloj,
+                    ':dni'   => $dni,
+                    ':nom'   => $nombres,
+                    ':ape'   => $apellidos,
+                    ':email' => $email ?: null,
+                    ':tel'   => $telefono ?: null,
+                    ':depto' => $deptoId,
+                    ':cargo' => $cargoId,
+                    ':turno' => $turnoId,
+                    ':fecha' => $fechaIngreso,
+                    ':act'   => $activo,
+                    ':id'    => $id
+                ]);
+            } else {
+                Database::execute("
+                    INSERT INTO empleados 
+                    (codigo_reloj, dni, nombres, apellidos, email, telefono, departamento_id, cargo_id, turno_id, fecha_ingreso, activo)
+                    VALUES (:cod, :dni, :nom, :ape, :email, :tel, :depto, :cargo, :turno, :fecha, :act)
+                ", [
+                    ':cod'   => $codigoReloj,
+                    ':dni'   => $dni,
+                    ':nom'   => $nombres,
+                    ':ape'   => $apellidos,
+                    ':email' => $email ?: null,
+                    ':tel'   => $telefono ?: null,
+                    ':depto' => $deptoId,
+                    ':cargo' => $cargoId,
+                    ':turno' => $turnoId,
+                    ':fecha' => $fechaIngreso,
+                    ':act'   => $activo
+                ]);
+            }
+
+            header('Location: ?route=empleados&msg=guardado');
+            exit;
+        } catch (\PDOException $e) {
+            $errorCode = (string)$e->getCode();
+            $errorInfo = $e->errorInfo[1] ?? 0;
+            $msg = $e->getMessage();
+
+            if ($errorCode === '23000' || $errorInfo === 1062) {
+                if (stripos($msg, 'dni') !== false) {
+                    header('Location: ?route=empleados&error=dni_duplicado');
+                } elseif (stripos($msg, 'codigo_reloj') !== false) {
+                    header('Location: ?route=empleados&error=codigo_duplicado');
+                } else {
+                    header('Location: ?route=empleados&error=duplicado');
+                }
+            } else {
+                header('Location: ?route=empleados&error=db_error');
+            }
+            exit;
+        }
     }
 
     public function eliminar(): void {
         AuthController::checkAuth();
+        AuthController::requireRole(['ADMIN', 'RRHH'], 'empleados');
+        \App\Csrf::validateRequest();
 
         $id = (int)($_POST['id'] ?? 0);
         if ($id > 0) {
-            Database::execute("UPDATE empleados SET activo = 0 WHERE id = ?", [$id]);
+            try {
+                Database::execute("UPDATE empleados SET activo = 0 WHERE id = ?", [$id]);
+                header('Location: ?route=empleados&msg=desactivado');
+                exit;
+            } catch (\PDOException $e) {
+                header('Location: ?route=empleados&error=db_error');
+                exit;
+            }
         }
-        header('Location: ?route=empleados&msg=desactivado');
+        header('Location: ?route=empleados');
         exit;
     }
 }

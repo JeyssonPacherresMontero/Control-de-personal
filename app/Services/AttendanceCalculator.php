@@ -130,19 +130,43 @@ class AttendanceCalculator {
 
         // Si es feriado o día no laborable y no hay marcaciones
         if ($isHoliday && count($cleanPunches) === 0) {
-            $this->saveAttendanceRecord($empId, $turnoId, $date, null, null, null, null, 0, 0, 0, 0, 'DESCANSO', 'Feriado / Día no laborable');
+            $this->saveAttendanceRecord(
+                $empId, $turnoId, $date,
+                $employee['hora_entrada'] ?? null,
+                $employee['hora_salida'] ?? null,
+                null, null, null, null,
+                0, 0, 0, 0,
+                'DESCANSO',
+                'Feriado / Día no laborable'
+            );
             return 'DESCANSO';
         }
 
         if (!$isWorkday && count($cleanPunches) === 0) {
-            $this->saveAttendanceRecord($empId, $turnoId, $date, null, null, null, null, 0, 0, 0, 0, 'DESCANSO', 'Día libre de descanso');
+            $this->saveAttendanceRecord(
+                $empId, $turnoId, $date,
+                $employee['hora_entrada'] ?? null,
+                $employee['hora_salida'] ?? null,
+                null, null, null, null,
+                0, 0, 0, 0,
+                'DESCANSO',
+                'Día libre de descanso'
+            );
             return 'DESCANSO';
         }
 
         // Si tiene justificación aprobada y no marcó
         if ($justification && count($cleanPunches) === 0) {
             $estadoJust = $justification['tipo'] === 'VACACIONES' ? 'VACACIONES' : 'JUSTIFICADO';
-            $this->saveAttendanceRecord($empId, $turnoId, $date, null, null, null, null, 0, 0, 0, 0, $estadoJust, $justification['motivo']);
+            $this->saveAttendanceRecord(
+                $empId, $turnoId, $date,
+                $employee['hora_entrada'] ?? null,
+                $employee['hora_salida'] ?? null,
+                null, null, null, null,
+                0, 0, 0, 0,
+                $estadoJust,
+                $justification['motivo'] ?? 'Justificación aprobada'
+            );
             return $estadoJust;
         }
 
@@ -160,26 +184,59 @@ class AttendanceCalculator {
             return 'FALTA';
         }
 
-        // 6. Caso: Tiene marcaciones. Procesar horas de entrada y salida
+        // 6. Caso: Tiene marcaciones. Procesar horas de entrada y salida con emparejamiento inteligente
         $entryPunch = null;
         $exitPunch = null;
         $breakOutPunch = null;
         $breakInPunch = null;
+        $observaciones = [];
 
-        // Emparejamiento Inteligente
-        if (count($cleanPunches) === 1) {
+        $punchCount = count($cleanPunches);
+
+        if ($punchCount === 1) {
             // Solo una marcación en todo el día
             $entryPunch = $cleanPunches[0]['fecha_hora'];
             $exitPunch = null;
-        } else {
-            // Primera marcación es Entrada, Última es Salida
+        } elseif ($punchCount === 2) {
+            // Caso estándar: Entrada y Salida
             $entryPunch = $cleanPunches[0]['fecha_hora'];
-            $exitPunch = $cleanPunches[count($cleanPunches) - 1]['fecha_hora'];
+            $exitPunch = $cleanPunches[1]['fecha_hora'];
+        } elseif ($punchCount === 3) {
+            // 3 marcaciones: Determinar si la 2da y 3ra corresponden al refrigerio o si la 3ra es la salida final
+            $entryPunch = $cleanPunches[0]['fecha_hora'];
+            $p2 = $cleanPunches[1]['fecha_hora'];
+            $p3 = $cleanPunches[2]['fecha_hora'];
+            
+            $ts1 = strtotime($entryPunch);
+            $ts2 = strtotime($p2);
+            $ts3 = strtotime($p3);
+            
+            $gapBreak = ($ts3 - $ts2) / 60; // Minutos entre p2 y p3
+            $gapTotal = ($ts3 - $ts1) / 60; // Minutos entre entrada y p3
 
-            // Si hay 4 o más marcaciones, detectar intermedio de refrigerio
-            if (count($cleanPunches) >= 4) {
-                $breakOutPunch = $cleanPunches[1]['fecha_hora'];
-                $breakInPunch = $cleanPunches[2]['fecha_hora'];
+            // Si p2 y p3 están entre 15 y 120 minutos de distancia y ocurrieron en el intermedio de la jornada
+            if ($gapBreak >= 15 && $gapBreak <= 120 && $gapTotal < 420) {
+                // Es un refrigerio completo (salida y retorno), pero el empleado olvidó la salida final
+                $breakOutPunch = $p2;
+                $breakInPunch = $p3;
+                $exitPunch = null;
+                $observaciones[] = "Registró refrigerio, pero omitió marcación de salida final";
+            } else {
+                // p2 fue salida a refrigerio y p3 fue la salida final del día
+                $breakOutPunch = $p2;
+                $breakInPunch = null;
+                $exitPunch = $p3;
+                $observaciones[] = "Omitió marcación de retorno de refrigerio";
+            }
+        } else {
+            // 4 o más marcaciones
+            $entryPunch = $cleanPunches[0]['fecha_hora'];
+            $breakOutPunch = $cleanPunches[1]['fecha_hora'];
+            $breakInPunch = $cleanPunches[2]['fecha_hora'];
+            $exitPunch = $cleanPunches[$punchCount - 1]['fecha_hora'];
+
+            if ($punchCount > 4) {
+                $observaciones[] = "Total {$punchCount} marcaciones en el día";
             }
         }
 
@@ -189,7 +246,6 @@ class AttendanceCalculator {
         $minutosExtra = 0;
         $minutosSalidaTemprana = 0;
         $estado = 'PRESENTE';
-        $observaciones = [];
 
         $isToday = ($date === date('Y-m-d'));
         $scheduledEntryStr = $employee['hora_entrada'] ? "$date {$employee['hora_entrada']}" : null;
@@ -203,19 +259,20 @@ class AttendanceCalculator {
             $dtEntryGrace = (clone $dtEntryProg)->modify("+{$tolerancia} minutes");
             $dtEntryLimitFalta = (clone $dtEntryProg)->modify("+{$toleranciaFalta} minutes");
 
-            // Evaluar Tardanza
-            if ($dtEntryReal > $dtEntryGrace) {
-                // Se calcula la diferencia exacta desde la hora oficial de entrada
+            // Evaluar Puntualidad vs Tardanza vs Falta por exceso de tardanza
+            if ($dtEntryReal <= $dtEntryGrace) {
+                $estado = 'PRESENTE';
+            } elseif ($dtEntryReal <= $dtEntryLimitFalta) {
                 $diff = $dtEntryReal->getTimestamp() - $dtEntryProg->getTimestamp();
                 $minutosTardanza = (int)floor($diff / 60);
-
-                if ($dtEntryReal > $dtEntryLimitFalta) {
-                    $estado = 'TARDANZA';
-                    $observaciones[] = "Tardanza severa (+{$minutosTardanza} min)";
-                } else {
-                    $estado = 'TARDANZA';
-                    $observaciones[] = "Llegada con tardanza ({$minutosTardanza} min)";
-                }
+                $estado = 'TARDANZA';
+                $observaciones[] = "Llegada con tardanza ({$minutosTardanza} min)";
+            } else {
+                // Superó el límite de tolerancia para falta (ej: > 60 min tras la entrada)
+                $diff = $dtEntryReal->getTimestamp() - $dtEntryProg->getTimestamp();
+                $minutosTardanza = (int)floor($diff / 60);
+                $estado = 'FALTA';
+                $observaciones[] = "Falta por tardanza excesiva (+{$minutosTardanza} min > {$toleranciaFalta} min permitidos)";
             }
         }
 
@@ -278,7 +335,7 @@ class AttendanceCalculator {
                 }
             }
         } elseif ($entryPunch && !$exitPunch) {
-            // Solo marcó entrada y no tiene salida
+            // Solo marcó entrada (o entrada + refrigerio) y no tiene salida
             $dtEntryReal = new DateTime($entryPunch);
             $now = new DateTime();
             
@@ -302,10 +359,18 @@ class AttendanceCalculator {
             }
         }
 
-        // Si tiene justificación de tardanza aprobada
-        if ($justification && $justification['tipo'] === 'TARDANZA' && $estado === 'TARDANZA') {
-            $estado = 'JUSTIFICADO';
-            $observaciones[] = 'Tardanza justificada: ' . $justification['motivo'];
+        // Si tiene justificación de tardanza o falta aprobada
+        if ($justification) {
+            if ($justification['tipo'] === 'TARDANZA' && ($estado === 'TARDANZA' || $estado === 'FALTA')) {
+                $estado = 'JUSTIFICADO';
+                $observaciones[] = 'Tardanza justificada: ' . ($justification['motivo'] ?? 'Autorizado por RRHH');
+            } elseif ($justification['tipo'] === 'FALTA' && $estado === 'FALTA') {
+                $estado = 'JUSTIFICADO';
+                $observaciones[] = 'Inasistencia justificada: ' . ($justification['motivo'] ?? 'Autorizado por RRHH');
+            } elseif (in_array($justification['tipo'], ['PERMISO', 'LICENCIA', 'COMISION', 'VACACIONES'])) {
+                $estado = $justification['tipo'] === 'VACACIONES' ? 'VACACIONES' : 'JUSTIFICADO';
+                $observaciones[] = "Permiso/Comisión autorizada: " . ($justification['motivo'] ?? $justification['tipo']);
+            }
         }
 
         // 8. Guardar en asistencia_diaria

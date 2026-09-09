@@ -14,13 +14,6 @@ class DashboardController {
         // El rol del dashboard es estrictamente el rol asignado al usuario en su sesión
         $activeRoleView = $currentUser['rol'] ?? 'RRHH';
 
-        // Solo procesar si aún no existen registros calculados para hoy
-        $asistenciaExiste = Database::queryOne("SELECT id FROM asistencia_diaria WHERE fecha = ? LIMIT 1", [$today]);
-        if (!$asistenciaExiste) {
-            $calculator = new AttendanceCalculator(ATTENDANCE_DEBOUNCE_MINUTES);
-            $calculator->processDate($today);
-        }
-
         // 1. Estadísticas Generales de Hoy
         $totalEmpleados = (int)(Database::queryOne("SELECT COUNT(*) as c FROM empleados WHERE activo = 1")['c'] ?? 0);
         

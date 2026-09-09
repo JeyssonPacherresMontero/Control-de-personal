@@ -185,6 +185,7 @@ if (!empty($deptoId)) {
                 <div class="card-tools d-flex align-items-center flex-wrap" style="gap: 5px;">
                     <?php if (in_array($userRole, ['ADMIN', 'RRHH'], true)): ?>
                         <form method="POST" action="?route=asistencia&action=recalcular" class="d-inline">
+                            <?= csrf_field() ?>
                             <input type="hidden" name="fecha_inicio" value="<?= htmlspecialchars($fechaInicio) ?>">
                             <input type="hidden" name="fecha_fin" value="<?= htmlspecialchars($fechaFin) ?>">
                             <button type="submit" class="btn btn-outline-primary btn-sm" onclick="return confirm('¿Deseas recalcular la asistencia en este rango de fechas?')">
@@ -231,14 +232,15 @@ if (!empty($deptoId)) {
                     </div>
 
                     <div class="col-md-2 col-sm-6 mb-2">
-                        <label class="form-label-custom"><i class="fa-solid fa-tag mr-1"></i> Estado</label>
+                        <label class="form-label-custom"><i class="fa-solid fa-tag mr-1"></i> Estado / Resumen</label>
                         <select name="estado" class="form-control form-control-sm">
-                            <option value="">-- Todos los Estados --</option>
-                            <option value="PRESENTE" <?= $estado === 'PRESENTE' ? 'selected' : '' ?>>Presente</option>
-                            <option value="TARDANZA" <?= $estado === 'TARDANZA' ? 'selected' : '' ?>>Tardanza</option>
-                            <option value="FALTA" <?= $estado === 'FALTA' ? 'selected' : '' ?>>Falta</option>
-                            <option value="JUSTIFICADO" <?= $estado === 'JUSTIFICADO' ? 'selected' : '' ?>>Justificado</option>
-                            <option value="SALIDA_SIN_MARCAR" <?= $estado === 'SALIDA_SIN_MARCAR' ? 'selected' : '' ?>>Sin Salida</option>
+                            <option value="">-- Todos los Estados (Resumen Completo) --</option>
+                            <option value="PRESENTE" <?= ($estado ?? '') === 'PRESENTE' ? 'selected' : '' ?>>Solo Asistencias Puntuales (Presente)</option>
+                            <option value="TARDANZA" <?= ($estado ?? '') === 'TARDANZA' ? 'selected' : '' ?>>Solo Tardanzas</option>
+                            <option value="FALTA" <?= ($estado ?? '') === 'FALTA' ? 'selected' : '' ?>>Solo Faltas / Inasistencias (Falta)</option>
+                            <option value="JUSTIFICADO" <?= ($estado ?? '') === 'JUSTIFICADO' ? 'selected' : '' ?>>Solo Justificados (Permisos / Vacaciones)</option>
+                            <option value="SALIDA_SIN_MARCAR" <?= ($estado ?? '') === 'SALIDA_SIN_MARCAR' ? 'selected' : '' ?>>Solo Salidas sin Marcar (Incompletas)</option>
+                            <option value="INCIDENCIAS" <?= ($estado ?? '') === 'INCIDENCIAS' ? 'selected' : '' ?>>Todas las Incidencias (Tardanzas + Faltas + Sin Salida)</option>
                         </select>
                     </div>
 
@@ -412,6 +414,7 @@ if (!empty($deptoId)) {
 <div class="modal fade" id="modalEditarAsistencia" tabindex="-1">
     <div class="modal-dialog">
         <form method="POST" action="?route=asistencia&action=editar" class="modal-content">
+            <?= csrf_field() ?>
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title font-weight-bold"><i class="fa-solid fa-pen-to-square mr-2"></i> Ajuste Manual de Asistencia</h5>
                 <button type="button" class="close text-white" data-dismiss="modal">&times;</button>

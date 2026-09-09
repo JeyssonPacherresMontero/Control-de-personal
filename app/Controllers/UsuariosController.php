@@ -26,6 +26,7 @@ class UsuariosController {
     public function guardar(): void {
         AuthController::checkAuth();
         AuthController::requireRole('ADMIN', 'dashboard');
+        \App\Csrf::validateRequest();
 
         $id = (int)($_POST['id'] ?? 0);
         $usuario = trim($_POST['usuario'] ?? '');
@@ -68,86 +69,193 @@ class UsuariosController {
             exit;
         }
 
-        if ($id > 0) {
-            // Actualizar usuario existente
-            if (!empty($password)) {
-                $passHash = password_hash($password, PASSWORD_BCRYPT);
-                Database::execute("
-                    UPDATE usuarios_sistema 
-                    SET usuario = :usr, nombre_completo = :nom, email = :email, 
-                        password = :pass, rol = :rol, permisos = :perms, activo = :act
-                    WHERE id = :id
-                ", [
-                    ':usr'   => $usuario,
-                    ':nom'   => $nombre,
-                    ':email' => $email ?: null,
-                    ':pass'  => $passHash,
-                    ':rol'   => $rol,
-                    ':perms' => $permisosJson,
-                    ':act'   => $activo,
-                    ':id'    => $id
-                ]);
+        try {
+            if ($id > 0) {
+                // Actualizar usuario existente
+                if (!empty($password)) {
+                    if (strlen($password) < 5) {
+                        header('Location: ?route=usuarios&msg=error_pass_corta');
+                        exit;
+                    }
+                    $passHash = password_hash($password, PASSWORD_BCRYPT);
+                    Database::execute("
+                        UPDATE usuarios_sistema 
+                        SET usuario = :usr, nombre_completo = :nom, email = :email, 
+                            password = :pass, rol = :rol, permisos = :perms, activo = :act
+                        WHERE id = :id
+                    ", [
+                        ':usr'   => $usuario,
+                        ':nom'   => $nombre,
+                        ':email' => $email ?: null,
+                        ':pass'  => $passHash,
+                        ':rol'   => $rol,
+                        ':perms' => $permisosJson,
+                        ':act'   => $activo,
+                        ':id'    => $id
+                    ]);
+                } else {
+                    Database::execute("
+                        UPDATE usuarios_sistema 
+                        SET usuario = :usr, nombre_completo = :nom, email = :email, 
+                            rol = :rol, permisos = :perms, activo = :act
+                        WHERE id = :id
+                    ", [
+                        ':usr'   => $usuario,
+                        ':nom'   => $nombre,
+                        ':email' => $email ?: null,
+                        ':rol'   => $rol,
+                        ':perms' => $permisosJson,
+                        ':act'   => $activo,
+                        ':id'    => $id
+                    ]);
+                }
             } else {
+                // Crear nuevo usuario: CONTRASEÑA OBLIGATORIA (No se autogenera)
+                if (empty($password)) {
+                    header('Location: ?route=usuarios&msg=error_password_requerida');
+                    exit;
+                }
+                if (strlen($password) < 5) {
+                    header('Location: ?route=usuarios&msg=error_pass_corta');
+                    exit;
+                }
+
+                $passHash = password_hash($password, PASSWORD_BCRYPT);
+
                 Database::execute("
-                    UPDATE usuarios_sistema 
-                    SET usuario = :usr, nombre_completo = :nom, email = :email, 
-                        rol = :rol, permisos = :perms, activo = :act
-                    WHERE id = :id
+                    INSERT INTO usuarios_sistema 
+                    (usuario, password, nombre_completo, email, rol, permisos, activo)
+                    VALUES (:usr, :pass, :nom, :email, :rol, :perms, :act)
                 ", [
                     ':usr'   => $usuario,
+                    ':pass'  => $passHash,
                     ':nom'   => $nombre,
                     ':email' => $email ?: null,
                     ':rol'   => $rol,
                     ':perms' => $permisosJson,
-                    ':act'   => $activo,
-                    ':id'    => $id
+                    ':act'   => $activo
                 ]);
             }
-        } else {
-            // Crear nuevo usuario
-            if (empty($password)) {
-                $password = 'admin123'; // Clave por defecto si se deja vacía al crear
-            }
-            $passHash = password_hash($password, PASSWORD_BCRYPT);
 
-            Database::execute("
-                INSERT INTO usuarios_sistema 
-                (usuario, password, nombre_completo, email, rol, permisos, activo)
-                VALUES (:usr, :pass, :nom, :email, :rol, :perms, :act)
-            ", [
-                ':usr'   => $usuario,
-                ':pass'  => $passHash,
-                ':nom'   => $nombre,
-                ':email' => $email ?: null,
-                ':rol'   => $rol,
-                ':perms' => $permisosJson,
-                ':act'   => $activo
-            ]);
+            header('Location: ?route=usuarios&msg=guardado');
+            exit;
+        } catch (\PDOException $e) {
+            $errorCode = (string)$e->getCode();
+            $errorInfo = $e->errorInfo[1] ?? 0;
+            if ($errorCode === '23000' || $errorInfo === 1062) {
+                header('Location: ?route=usuarios&msg=usuario_duplicado');
+            } else {
+                header('Location: ?route=usuarios&msg=error_db');
+            }
+            exit;
+        }
+    }
+
+    /**
+     * Permite al Administrador restablecer la contraseña de cualquier usuario
+     */
+    public function restablecerPassword(): void {
+        AuthController::checkAuth();
+        AuthController::requireRole('ADMIN', 'dashboard');
+        \App\Csrf::validateRequest();
+
+        $userId = (int)($_POST['id'] ?? 0);
+        $newPassword = $_POST['new_password'] ?? '';
+
+        $isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') 
+                  || isset($_GET['ajax']) 
+                  || (isset($_SERVER['HTTP_ACCEPT']) && str_contains($_SERVER['HTTP_ACCEPT'], 'application/json'));
+
+        if ($userId <= 0 || empty($newPassword)) {
+            $msg = 'Debes ingresar una contraseña válida.';
+            if ($isAjax) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'error' => $msg]);
+                exit;
+            }
+            header('Location: ?route=usuarios&msg=error_campos');
+            exit;
         }
 
-        header('Location: ?route=usuarios&msg=guardado');
+        if (strlen($newPassword) < 5) {
+            $msg = 'La nueva contraseña debe tener al menos 5 caracteres.';
+            if ($isAjax) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'error' => $msg]);
+                exit;
+            }
+            header('Location: ?route=usuarios&msg=error_pass_corta');
+            exit;
+        }
+
+        $user = Database::queryOne("SELECT id, usuario, nombre_completo FROM usuarios_sistema WHERE id = ?", [$userId]);
+        if (!$user) {
+            $msg = 'Usuario no encontrado en el sistema.';
+            if ($isAjax) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'error' => $msg]);
+                exit;
+            }
+            header('Location: ?route=usuarios&msg=error_usuario_no_existe');
+            exit;
+        }
+
+        $newHash = password_hash($newPassword, PASSWORD_BCRYPT);
+        Database::execute("UPDATE usuarios_sistema SET password = ? WHERE id = ?", [$newHash, $userId]);
+
+        if ($isAjax) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'success' => true,
+                'message' => "La contraseña para el usuario '{$user['usuario']}' ha sido actualizada exitosamente."
+            ]);
+            exit;
+        }
+
+        header('Location: ?route=usuarios&msg=pass_restablecido');
         exit;
     }
 
     public function cambiarEstado(): void {
         AuthController::checkAuth();
         AuthController::requireRole('ADMIN', 'dashboard');
+        \App\Csrf::validateRequest();
 
-        $id = (int)($_GET['id'] ?? 0);
+        $id = (int)($_POST['id'] ?? ($_GET['id'] ?? 0));
         $currentUser = AuthController::user();
+
+        $isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') 
+                  || isset($_GET['ajax']) 
+                  || (isset($_SERVER['HTTP_ACCEPT']) && str_contains($_SERVER['HTTP_ACCEPT'], 'application/json'));
 
         // Evitar que el admin se desactive a sí mismo
         if ($id === (int)($currentUser['id'] ?? 0)) {
+            if ($isAjax) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'error' => 'No puedes desactivar tu propio usuario administrador.']);
+                exit;
+            }
             header('Location: ?route=usuarios&msg=error_auto_desactivar');
             exit;
         }
 
+        $nuevoEstado = 0;
         if ($id > 0) {
             $user = Database::queryOne("SELECT activo FROM usuarios_sistema WHERE id = ?", [$id]);
             if ($user) {
                 $nuevoEstado = $user['activo'] ? 0 : 1;
                 Database::execute("UPDATE usuarios_sistema SET activo = ? WHERE id = ?", [$nuevoEstado, $id]);
             }
+        }
+
+        if ($isAjax) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'success' => true,
+                'nuevo_estado' => $nuevoEstado,
+                'message' => 'Estado del usuario actualizado exitosamente.'
+            ]);
+            exit;
         }
 
         header('Location: ?route=usuarios&msg=estado_actualizado');
@@ -157,6 +265,7 @@ class UsuariosController {
     public function eliminar(): void {
         AuthController::checkAuth();
         AuthController::requireRole('ADMIN', 'dashboard');
+        \App\Csrf::validateRequest();
 
         $id = (int)($_POST['id'] ?? 0);
         $currentUser = AuthController::user();
@@ -175,3 +284,4 @@ class UsuariosController {
         exit;
     }
 }
+

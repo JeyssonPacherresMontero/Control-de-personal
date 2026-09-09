@@ -89,6 +89,7 @@
 <div class="modal fade" id="modalTurno" tabindex="-1">
     <div class="modal-dialog">
         <form method="POST" action="?route=turnos&action=guardar" class="modal-content">
+            <?= csrf_field() ?>
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title font-weight-bold" id="turnoModalTitle">Configuración de Turno</h5>
                 <button type="button" class="close text-white" data-dismiss="modal">&times;</button>

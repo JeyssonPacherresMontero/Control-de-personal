@@ -247,6 +247,21 @@ class AuthController {
 
         $error = null;
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            \App\Csrf::validateRequest();
+
+            // Rate Limiting / Bloqueo por Fuerza Bruta (Máx. 5 intentos por 5 minutos)
+            $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+            $rateKey = 'login_attempts_' . md5($ip);
+            $lockKey = 'login_lockout_' . md5($ip);
+
+            if (isset($_SESSION[$lockKey]) && time() < $_SESSION[$lockKey]) {
+                $secondsLeft = $_SESSION[$lockKey] - time();
+                $minutesLeft = ceil($secondsLeft / 60);
+                $error = "Demasiados intentos fallidos. Por seguridad, espera {$minutesLeft} minuto(s) antes de intentar nuevamente.";
+                require_once APP_ROOT . '/views/auth/login.php';
+                return;
+            }
+
             $username = trim($_POST['usuario'] ?? '');
             $password = $_POST['password'] ?? '';
 
@@ -256,12 +271,19 @@ class AuthController {
                 $user = Database::queryOne("SELECT * FROM usuarios_sistema WHERE usuario = ? AND activo = 1", [$username]);
                 
                 if ($user && password_verify($password, $user['password'])) {
+                    // Éxito: Limpiar intentos fallidos
+                    unset($_SESSION[$rateKey], $_SESSION[$lockKey]);
+
+                    // Regenerar ID de sesión para prevenir Session Fixation
+                    session_regenerate_id(true);
+
                     $_SESSION['user_id'] = $user['id'];
                     $_SESSION['user_username'] = $user['usuario'];
                     $_SESSION['user_name'] = $user['nombre_completo'];
                     $_SESSION['user_role'] = $user['rol'];
                     $_SESSION['user_email'] = $user['email'] ?? '';
                     $_SESSION['user_ultimo_login'] = $user['ultimo_login'] ?? '';
+                    $_SESSION['last_activity'] = time();
 
                     $perms = !empty($user['permisos']) ? json_decode($user['permisos'], true) : null;
                     if (!is_array($perms)) {
@@ -275,7 +297,16 @@ class AuthController {
                     header("Location: ?route=$firstRoute");
                     exit;
                 } else {
-                    $error = "Credenciales incorrectas o usuario inactivo.";
+                    $attempts = (int)($_SESSION[$rateKey] ?? 0) + 1;
+                    $_SESSION[$rateKey] = $attempts;
+
+                    if ($attempts >= 5) {
+                        $_SESSION[$lockKey] = time() + (5 * 60); // 5 minutos de bloqueo
+                        $error = "Has superado el límite de 5 intentos fallidos. Tu acceso ha sido bloqueado temporalmente por 5 minutos.";
+                    } else {
+                        $remaining = 5 - $attempts;
+                        $error = "Credenciales incorrectas o usuario inactivo. (Intentos restantes: {$remaining})";
+                    }
                 }
             }
         }
@@ -285,6 +316,7 @@ class AuthController {
 
     public function cambiarPassword(): void {
         self::checkAuth();
+        \App\Csrf::validateRequest();
         
         $userId = (int)($_SESSION['user_id'] ?? 0);
         $oldPassword = $_POST['current_password'] ?? '';
@@ -343,6 +375,9 @@ class AuthController {
         $newHash = password_hash($newPassword, PASSWORD_BCRYPT);
         Database::execute("UPDATE usuarios_sistema SET password = ? WHERE id = ?", [$newHash, $userId]);
 
+        // Regenerar ID de sesión por seguridad tras cambio de credenciales
+        session_regenerate_id(true);
+
         if ($isAjax) {
             header('Content-Type: application/json');
             echo json_encode(['success' => true, 'message' => 'Tu contraseña ha sido actualizada con éxito.']);
@@ -354,9 +389,18 @@ class AuthController {
     }
 
     public function logout(): void {
+        $_SESSION = [];
+        if (ini_get("session.use_cookies")) {
+            $params = session_get_cookie_params();
+            setcookie(session_name(), '', time() - 42000,
+                $params["path"], $params["domain"],
+                $params["secure"], $params["httponly"]
+            );
+        }
         session_destroy();
         header('Location: ?route=login');
         exit;
     }
 }
+
 

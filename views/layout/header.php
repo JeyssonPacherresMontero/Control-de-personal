@@ -25,6 +25,7 @@ $roleLabel = match($userRole) {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="<?= csrf_token() ?>">
     <title><?= htmlspecialchars(APP_NAME) ?> | Panel de Control</title>
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="<?= jushsal_logo_data_uri('favicon') ?: asset('img/favicon.png') ?>">
@@ -241,101 +242,107 @@ $roleLabel = match($userRole) {
             color: #1d4ed8 !important;
         }
 
-        /* TARJETAS Y CONTENEDORES */
+        /* TARJETAS Y CONTENEDORES ULTRA LIMPIOS */
         .card {
-            border: 1px solid #e2e8f0 !important;
-            border-radius: 10px !important;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02) !important;
+            border: 1px solid #eef2f6 !important;
+            border-radius: 12px !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 1px 2px rgba(0, 0, 0, 0.01) !important;
             background-color: #ffffff;
-            margin-bottom: 1.25rem;
+            margin-bottom: 0.85rem;
+            transition: border-color 0.15s ease;
         }
         .card-header {
             background-color: #ffffff !important;
             border-bottom: 1px solid #f1f5f9 !important;
-            padding: 0.85rem 1.15rem !important;
+            padding: 0.65rem 1rem !important;
         }
         .card-header .card-title {
-            font-size: 0.95rem !important;
+            font-size: 0.88rem !important;
             font-weight: 700 !important;
-            color: #0f172a !important;
+            color: #1e293b !important;
             margin-bottom: 0;
             display: flex;
             align-items: center;
         }
         .card-body {
-            padding: 1.15rem !important;
+            padding: 0.85rem 1rem !important;
         }
 
-        /* KPI / STAT CARDS ESTANDARIZADOS */
+        /* KPI / STAT CARDS MINIMALISTAS Y LIGEROS */
         .kpi-card {
             background: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 10px;
-            padding: 1.1rem 1.15rem;
-            margin-bottom: 1.25rem;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+            border: 1px solid #eef2f6;
+            border-radius: 12px;
+            padding: 0.75rem 0.95rem;
+            margin-bottom: 0.85rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            min-height: 118px;
+            min-height: auto;
             position: relative;
             overflow: hidden;
             transition: transform 0.15s ease, box-shadow 0.15s ease;
         }
         .kpi-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+            border-color: #e2e8f0;
         }
         .kpi-card-header {
             display: flex;
-            align-items: flex-start;
+            align-items: center;
             justify-content: space-between;
         }
         .kpi-title {
-            font-size: 0.78rem;
+            font-size: 0.72rem;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.04em;
+            letter-spacing: 0.03em;
             color: #64748b;
-            margin-bottom: 0.25rem;
+            margin-bottom: 0.15rem;
         }
         .kpi-value {
-            font-size: 1.7rem;
+            font-size: 1.45rem;
             font-weight: 800;
             color: #0f172a;
             line-height: 1.15;
-            margin-bottom: 0.25rem;
+            margin-bottom: 0.1rem;
         }
         .kpi-subtitle {
-            font-size: 0.78rem;
-            color: #64748b;
+            font-size: 0.72rem;
+            color: #94a3b8;
             font-weight: 500;
+            line-height: 1.2;
         }
         .kpi-icon-box {
-            width: 44px;
-            height: 44px;
+            width: 38px;
+            height: 38px;
             border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.25rem;
+            font-size: 1.1rem;
             flex-shrink: 0;
+            margin-left: 0.5rem;
         }
         .kpi-icon-blue { background: #eff6ff; color: #2563eb; }
         .kpi-icon-emerald { background: #ecfdf5; color: #059669; }
         .kpi-icon-amber { background: #fffbeb; color: #d97706; }
         .kpi-icon-rose { background: #fef2f2; color: #dc2626; }
-        .kpi-icon-slate { background: #f1f5f9; color: #475569; }
+        .kpi-icon-slate { background: #f8fafc; color: #475569; }
         .kpi-icon-teal { background: #f0fdfa; color: #0d9488; }
         .kpi-icon-indigo { background: #eef2ff; color: #4f46e5; }
 
         .kpi-footer-link {
             display: inline-flex;
             align-items: center;
-            font-size: 0.77rem;
+            font-size: 0.72rem;
             font-weight: 600;
             color: #2563eb;
-            margin-top: 0.5rem;
+            margin-top: 0.35rem;
+            padding-top: 0.35rem;
+            border-top: 1px dashed #f1f5f9;
             text-decoration: none;
         }
         .kpi-footer-link:hover {
@@ -343,33 +350,33 @@ $roleLabel = match($userRole) {
             text-decoration: underline;
         }
 
-        /* BADGES TIPO PILL REFINADOS */
+        /* BADGES MINIMALISTAS Y ELEGANTES (SIN BORDES PESADOS) */
         .badge-pill-custom {
             display: inline-flex;
             align-items: center;
             gap: 4px;
-            padding: 3px 9px;
-            font-size: 0.75rem;
+            padding: 3px 8px;
+            font-size: 0.72rem;
             font-weight: 600;
-            border-radius: 9999px;
+            border-radius: 6px;
             line-height: 1.3;
         }
-        .badge-pill-presente { background-color: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
-        .badge-pill-tardanza { background-color: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
-        .badge-pill-falta { background-color: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
-        .badge-pill-justificado { background-color: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
-        .badge-pill-sin-salida { background-color: #f5f3ff; color: #5b21b6; border: 1px solid #ddd6fe; }
-        .badge-pill-online { background-color: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
-        .badge-pill-offline { background-color: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
-        .badge-pill-neutral { background-color: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; }
+        .badge-pill-presente { background-color: #ecfdf5; color: #065f46; }
+        .badge-pill-tardanza { background-color: #fffbeb; color: #92400e; }
+        .badge-pill-falta { background-color: #fef2f2; color: #991b1b; }
+        .badge-pill-justificado { background-color: #eff6ff; color: #1e40af; }
+        .badge-pill-sin-salida { background-color: #f5f3ff; color: #5b21b6; }
+        .badge-pill-online { background-color: #ecfdf5; color: #065f46; }
+        .badge-pill-offline { background-color: #fef2f2; color: #991b1b; }
+        .badge-pill-neutral { background-color: #f1f5f9; color: #475569; }
 
         /* ROLES */
-        .badge-role-admin { background-color: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
-        .badge-role-rrhh { background-color: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
-        .badge-role-supervisor { background-color: #f0fdfa; color: #0f766e; border: 1px solid #99f6e4; }
-        .badge-role-consulta { background-color: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+        .badge-role-admin { background-color: #fef2f2; color: #991b1b; }
+        .badge-role-rrhh { background-color: #eff6ff; color: #1e40af; }
+        .badge-role-supervisor { background-color: #f0fdfa; color: #0f766e; }
+        .badge-role-consulta { background-color: #f1f5f9; color: #475569; }
 
-        /* TABLAS MODERNAS */
+        /* TABLAS MODERNAS Y LIGERAS */
         .table {
             color: #334155 !important;
             margin-bottom: 0 !important;
@@ -380,16 +387,16 @@ $roleLabel = match($userRole) {
             font-size: 0.76rem !important;
             font-weight: 700 !important;
             text-transform: uppercase !important;
-            letter-spacing: 0.04em !important;
+            letter-spacing: 0.03em !important;
             border-top: none !important;
             border-bottom: 1px solid #e2e8f0 !important;
-            padding: 0.75rem 0.85rem !important;
+            padding: 0.6rem 0.85rem !important;
             vertical-align: middle !important;
         }
         .table td {
-            padding: 0.65rem 0.85rem !important;
+            padding: 0.55rem 0.85rem !important;
             vertical-align: middle !important;
-            font-size: 0.865rem !important;
+            font-size: 0.85rem !important;
             border-top: 1px solid #f1f5f9 !important;
         }
         .table-hover tbody tr:hover {
@@ -467,14 +474,14 @@ $roleLabel = match($userRole) {
             background: #ffffff;
             border: 1px solid #e2e8f0;
             border-left: 4px solid #1d4ed8 !important;
-            border-radius: 10px;
-            padding: 0.85rem 1.25rem;
-            margin-bottom: 1.25rem;
+            border-radius: 8px;
+            padding: 0.5rem 0.95rem;
+            margin-bottom: 0.75rem;
             display: flex;
             align-items: center;
             justify-content: space-between;
             flex-wrap: wrap;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
         }
 
         /* CLASES DE REPORTE E IMPRESIÓN OFICIAL */
@@ -595,8 +602,8 @@ $roleLabel = match($userRole) {
             <!-- Sync Button: Solo visible si tiene permiso de dispositivos/hardware o ADMIN -->
             <?php if (\App\Controllers\AuthController::hasPermission('dispositivos') || in_array($userRole, ['ADMIN', 'RRHH'], true)): ?>
                 <li class="nav-item mr-2">
-                    <a href="javascript:void(0)" onclick="typeof openSyncModal === 'function' ? openSyncModal() : (typeof syncAllDevices === 'function' ? syncAllDevices('today', this) : window.location.href='?route=dispositivos')" class="btn btn-sm btn-outline-success" title="Sincronización rápida de relojes biométricos">
-                        <i class="fa-solid fa-bolt mr-1"></i> Sincronizar Hoy
+                    <a href="javascript:void(0)" onclick="typeof openSyncModal === 'function' ? openSyncModal() : (typeof syncAllDevices === 'function' ? syncAllDevices('incremental', this) : window.location.href='?route=dispositivos')" class="btn btn-sm btn-outline-success" title="Sincronizar marcaciones de todos los relojes biométricos">
+                        <i class="fa-solid fa-arrows-rotate mr-1"></i> Sincronizar Relojes
                     </a>
                 </li>
             <?php endif; ?>

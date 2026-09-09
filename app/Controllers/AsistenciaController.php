@@ -39,9 +39,18 @@ class AsistenciaController {
             $params[':depto_id'] = $deptoId;
         }
 
-        if ($estado) {
-            $sql .= " AND a.estado = :estado";
-            $params[':estado'] = $estado;
+        if (!empty($estado) && strtolower($estado) !== 'todos') {
+            $estadoUpper = strtoupper($estado);
+            if ($estadoUpper === 'FALTA') {
+                $sql .= " AND (a.estado = 'FALTA' OR a.estado = 'FALTA_INJUSTIFICADA')";
+            } elseif ($estadoUpper === 'JUSTIFICADO') {
+                $sql .= " AND (a.estado = 'JUSTIFICADO' OR a.estado = 'PERMISO' OR a.estado = 'VACACIONES' OR a.estado = 'LICENCIA')";
+            } elseif ($estadoUpper === 'INCIDENCIAS') {
+                $sql .= " AND (a.estado = 'TARDANZA' OR a.estado = 'FALTA' OR a.estado = 'FALTA_INJUSTIFICADA' OR a.estado = 'SALIDA_SIN_MARCAR')";
+            } else {
+                $sql .= " AND a.estado = :estado";
+                $params[':estado'] = $estadoUpper;
+            }
         }
 
         if ($search) {
@@ -80,6 +89,7 @@ class AsistenciaController {
 
     public function recalcular(): void {
         AuthController::checkAuth();
+        \App\Csrf::validateRequest();
 
         $fechaInicio = $_POST['fecha_inicio'] ?? date('Y-m-d');
         $fechaFin = $_POST['fecha_fin'] ?? $fechaInicio;
@@ -93,6 +103,7 @@ class AsistenciaController {
 
     public function editar(): void {
         AuthController::checkAuth();
+        \App\Csrf::validateRequest();
 
         $id = (int)($_POST['id'] ?? 0);
         $estado = $_POST['estado'] ?? 'PRESENTE';

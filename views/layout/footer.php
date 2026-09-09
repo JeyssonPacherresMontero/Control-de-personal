@@ -52,6 +52,7 @@
                         </div>
                         <div class="card-body p-3">
                             <form id="formCambiarPasswordGlobal" onsubmit="submitCambioPassword(event)">
+                                <?= csrf_field() ?>
                                 <div class="form-group mb-2">
                                     <label class="small font-weight-bold text-secondary mb-1">Contraseña Actual</label>
                                     <div class="input-group input-group-sm">
@@ -212,6 +213,31 @@
             }
         });
     }
+
+    // Configuración global de Headers CSRF para jQuery y Fetch API
+    const csrfToken = $('meta[name="csrf-token"]').attr('content') || '<?= csrf_token() ?>';
+    window._csrfToken = csrfToken;
+
+    $.ajaxSetup({
+        headers: {
+            'X-CSRF-TOKEN': csrfToken
+        }
+    });
+
+    const originalFetch = window.fetch;
+    window.fetch = function(url, options = {}) {
+        options.headers = options.headers || {};
+        if (typeof options.headers.set === 'function') {
+            if (!options.headers.get('X-CSRF-TOKEN')) {
+                options.headers.set('X-CSRF-TOKEN', csrfToken);
+            }
+        } else {
+            if (!options.headers['X-CSRF-TOKEN'] && !options.headers['x-csrf-token']) {
+                options.headers['X-CSRF-TOKEN'] = csrfToken;
+            }
+        }
+        return originalFetch(url, options);
+    };
 
     $(document).ready(function () {
         // Limpiar cualquier residuo de modo oscuro previo

@@ -31,6 +31,21 @@
                     <i class="fa-solid fa-circle-check mr-2"></i> Usuario guardado exitosamente con sus permisos de menú.
                     <button type="button" class="close" data-dismiss="alert">&times;</button>
                 </div>
+            <?php elseif ($_GET['msg'] === 'pass_restablecido'): ?>
+                <div class="alert alert-success alert-dismissible fade show mb-3" role="alert">
+                    <i class="fa-solid fa-circle-check mr-2"></i> Contraseña del usuario restablecida exitosamente.
+                    <button type="button" class="close" data-dismiss="alert">&times;</button>
+                </div>
+            <?php elseif ($_GET['msg'] === 'error_password_requerida'): ?>
+                <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+                    <i class="fa-solid fa-triangle-exclamation mr-2"></i> Error: Al crear un nuevo usuario es obligatorio definir una contraseña.
+                    <button type="button" class="close" data-dismiss="alert">&times;</button>
+                </div>
+            <?php elseif ($_GET['msg'] === 'error_pass_corta'): ?>
+                <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+                    <i class="fa-solid fa-triangle-exclamation mr-2"></i> Error: La contraseña debe contener al menos 5 caracteres.
+                    <button type="button" class="close" data-dismiss="alert">&times;</button>
+                </div>
             <?php elseif ($_GET['msg'] === 'usuario_duplicado'): ?>
                 <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
                     <i class="fa-solid fa-triangle-exclamation mr-2"></i> Error: Ya existe un usuario registrado con ese nombre de usuario.
@@ -56,28 +71,28 @@
 
         <!-- MAIN TABLE CARD -->
         <div class="card">
-            <div class="card-header d-flex align-items-center justify-content-between flex-wrap">
-                <h3 class="card-title font-weight-bold">
+            <div class="card-header d-flex align-items-center justify-content-between flex-wrap py-2 px-3">
+                <h3 class="card-title font-weight-bold" style="font-size: 0.9rem;">
                     <i class="fa-solid fa-users-gear mr-2 text-primary"></i> Lista de Cuentas y Permisos de Módulos
                 </h3>
                 <div class="card-tools">
-                    <button type="button" class="btn btn-primary btn-sm" onclick="openNewUserModal()">
+                    <button type="button" class="btn btn-primary btn-xs font-weight-bold" onclick="openNewUserModal()">
                         <i class="fa-solid fa-user-plus mr-1"></i> Crear Nuevo Usuario
                     </button>
                 </div>
             </div>
             <div class="card-body p-0 table-responsive">
-                <table class="table table-hover text-nowrap table-sm mb-0">
+                <table class="table table-hover table-sm mb-0">
                     <thead>
                         <tr>
-                            <th style="width: 50px;">ID</th>
-                            <th>Usuario / Nombre</th>
-                            <th>Rol Asignado</th>
-                            <th>Módulos del Menú Autorizados</th>
-                            <th>Biometría</th>
-                            <th class="text-center">Estado</th>
-                            <th>Último Acceso</th>
-                            <th class="text-center" style="width: 140px;">Acciones</th>
+                            <th style="width: 45px;" class="text-center">ID</th>
+                            <th style="min-width: 170px;">Usuario / Nombre</th>
+                            <th style="width: 120px;">Rol Asignado</th>
+                            <th style="min-width: 200px;">Módulos del Menú Autorizados</th>
+                            <th class="text-center" style="width: 95px;">Biometría</th>
+                            <th class="text-center" style="width: 80px;">Estado</th>
+                            <th style="width: 110px;">Último Acceso</th>
+                            <th class="text-center" style="width: 140px; white-space: nowrap;">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -86,78 +101,103 @@
                                 $userPerms = !empty($u['permisos']) ? json_decode($u['permisos'], true) : [];
                                 $isAdmin = ($u['rol'] === 'ADMIN' || in_array('*', (array)$userPerms, true));
                             ?>
-                            <tr>
-                                <td class="font-monospace text-muted small">#<?= $u['id'] ?></td>
-                                <td>
-                                    <div class="font-weight-bold text-dark">
-                                        <i class="fa-solid fa-circle-user text-primary mr-1"></i>
-                                        <?= htmlspecialchars($u['usuario']) ?>
+                            <tr id="row-user-<?= $u['id'] ?>">
+                                <td class="font-monospace text-muted small text-center py-2">#<?= $u['id'] ?></td>
+                                <td class="py-2">
+                                    <div class="d-flex align-items-center">
+                                        <div class="bg-light rounded-circle d-flex align-items-center justify-content-center mr-2 border flex-shrink-0" style="width: 32px; height: 32px;">
+                                            <i class="fa-solid fa-circle-user text-primary" style="font-size: 1rem;"></i>
+                                        </div>
+                                        <div>
+                                            <div class="font-weight-bold text-dark" style="font-size: 0.85rem; line-height: 1.2;">
+                                                <?= htmlspecialchars($u['usuario']) ?>
+                                            </div>
+                                            <div class="small text-secondary font-weight-bold" style="font-size: 0.76rem;"><?= htmlspecialchars($u['nombre_completo']) ?></div>
+                                            <?php if (!empty($u['email'])): ?>
+                                                <small class="text-muted d-block" style="font-size: 0.72rem;"><i class="fa-regular fa-envelope mr-1"></i><?= htmlspecialchars($u['email']) ?></small>
+                                            <?php endif; ?>
+                                        </div>
                                     </div>
-                                    <div class="small text-secondary font-weight-bold"><?= htmlspecialchars($u['nombre_completo']) ?></div>
-                                    <?php if (!empty($u['email'])): ?>
-                                        <small class="text-muted"><i class="fa-regular fa-envelope mr-1"></i><?= htmlspecialchars($u['email']) ?></small>
-                                    <?php endif; ?>
                                 </td>
-                                <td>
+                                <td class="py-2">
                                     <?php if ($u['rol'] === 'ADMIN'): ?>
-                                        <span class="badge-pill-custom badge-pill-falta font-weight-bold">ADMINISTRADOR</span>
+                                        <span class="badge-pill-custom badge-pill-falta font-weight-bold" style="font-size: 0.7rem;">ADMINISTRADOR</span>
                                     <?php elseif ($u['rol'] === 'RRHH'): ?>
-                                        <span class="badge-pill-custom badge-pill-justificado font-weight-bold">RECURSOS HUMANOS</span>
+                                        <span class="badge-pill-custom badge-pill-justificado font-weight-bold" style="font-size: 0.7rem;">RECURSOS HUMANOS</span>
                                     <?php elseif ($u['rol'] === 'SUPERVISOR'): ?>
-                                        <span class="badge-pill-custom badge-pill-tardanza font-weight-bold">SUPERVISOR</span>
+                                        <span class="badge-pill-custom badge-pill-tardanza font-weight-bold" style="font-size: 0.7rem;">SUPERVISOR</span>
                                     <?php else: ?>
-                                        <span class="badge-pill-custom badge-pill-neutral font-weight-bold"><?= htmlspecialchars($u['rol']) ?></span>
+                                        <span class="badge-pill-custom badge-pill-neutral font-weight-bold" style="font-size: 0.7rem;"><?= htmlspecialchars($u['rol']) ?></span>
                                     <?php endif; ?>
                                 </td>
-                                <td>
+                                <td class="py-2">
                                     <?php if ($isAdmin): ?>
-                                        <span class="badge-pill-custom badge-pill-presente font-weight-bold"><i class="fa-solid fa-unlock-keyhole mr-1"></i> Acceso Total (Todos los Módulos)</span>
+                                        <span class="badge-pill-custom badge-pill-presente font-weight-bold" style="font-size: 0.72rem;"><i class="fa-solid fa-unlock-keyhole mr-1"></i> Acceso Total (Todos)</span>
                                     <?php else: ?>
-                                        <div class="d-flex flex-wrap" style="max-width: 480px; gap: 4px;">
-                                            <?php foreach ($modulosDisponibles as $mKey => $mInfo): ?>
-                                                <?php if (in_array($mKey, (array)$userPerms, true)): ?>
-                                                    <span class="badge-pill-custom badge-pill-neutral" title="<?= htmlspecialchars($mInfo['description']) ?>">
-                                                        <i class="<?= $mInfo['icon'] ?> text-primary mr-1"></i><?= htmlspecialchars($mInfo['name']) ?>
-                                                    </span>
-                                                <?php endif; ?>
-                                            <?php endforeach; ?>
-                                            <?php if (empty($userPerms)): ?>
-                                                <span class="badge-pill-custom badge-pill-tardanza">Sin módulos asignados</span>
+                                        <div class="d-flex flex-wrap" style="gap: 3px; max-width: 320px;">
+                                            <?php 
+                                                $activeCount = 0;
+                                                foreach ($modulosDisponibles as $mKey => $mInfo): 
+                                                     if (in_array($mKey, (array)$userPerms, true)):
+                                                        $activeCount++;
+                                            ?>
+                                                <span class="badge-pill-custom badge-pill-neutral" style="font-size: 0.69rem; padding: 2px 6px;" title="<?= htmlspecialchars($mInfo['description']) ?>">
+                                                    <i class="<?= $mInfo['icon'] ?> text-primary mr-1"></i><?= htmlspecialchars($mInfo['name']) ?>
+                                                </span>
+                                            <?php 
+                                                    endif;
+                                                endforeach; 
+                                                if ($activeCount === 0):
+                                            ?>
+                                                <span class="badge-pill-custom badge-pill-tardanza" style="font-size: 0.7rem;">Sin módulos asignados</span>
                                             <?php endif; ?>
                                         </div>
                                     <?php endif; ?>
                                 </td>
-                                <td>
+                                <td class="text-center py-2">
                                     <?php if ((int)$u['huellas_count'] > 0): ?>
-                                        <span class="badge-pill-custom badge-pill-presente" title="Huellas respaldadas en BDD"><i class="fa-solid fa-fingerprint mr-1"></i> <?= $u['huellas_count'] ?> Huella(s)</span>
+                                        <span class="badge-pill-custom badge-pill-presente" style="font-size: 0.7rem;" title="Huellas respaldadas en BDD"><i class="fa-solid fa-fingerprint mr-1"></i> <?= $u['huellas_count'] ?> Huella(s)</span>
                                     <?php else: ?>
-                                        <span class="badge-pill-custom badge-pill-neutral"><i class="fa-solid fa-fingerprint mr-1"></i> Sin huella</span>
+                                        <span class="badge-pill-custom badge-pill-neutral" style="font-size: 0.7rem;"><i class="fa-solid fa-fingerprint mr-1"></i> Sin huella</span>
                                     <?php endif; ?>
                                 </td>
-                                <td class="text-center">
+                                <td class="text-center py-2" id="user-status-badge-<?= $u['id'] ?>">
                                     <?php if ($u['activo']): ?>
-                                        <span class="badge-pill-custom badge-pill-online"><i class="fa-solid fa-circle" style="font-size: 6px;"></i> Activo</span>
+                                        <span class="badge-pill-custom badge-pill-online" style="font-size: 0.7rem;"><i class="fa-solid fa-circle" style="font-size: 5px;"></i> Activo</span>
                                     <?php else: ?>
-                                        <span class="badge-pill-custom badge-pill-offline"><i class="fa-solid fa-circle" style="font-size: 6px;"></i> Inactivo</span>
+                                        <span class="badge-pill-custom badge-pill-offline" style="font-size: 0.7rem;"><i class="fa-solid fa-circle" style="font-size: 5px;"></i> Inactivo</span>
                                     <?php endif; ?>
                                 </td>
-                                <td>
-                                    <small class="text-muted font-monospace">
+                                <td class="py-2">
+                                    <small class="text-muted font-monospace d-block" style="font-size: 0.74rem;">
                                         <?= !empty($u['ultimo_login']) ? date('d/m/Y H:i', strtotime($u['ultimo_login'])) : 'Nunca' ?>
                                     </small>
                                 </td>
-                                <td class="text-center">
+                                <td class="text-center py-2" style="white-space: nowrap;">
+                                    <!-- Editar Usuario & Permisos -->
                                     <button type="button" class="btn btn-xs btn-outline-primary mr-1" onclick="openEditUserModal(<?= htmlspecialchars(json_encode($u)) ?>)" title="Editar Usuario y Permisos">
                                         <i class="fa-solid fa-pen"></i>
                                     </button>
+
+                                    <!-- Restablecer Contraseña -->
+                                    <button type="button" class="btn btn-xs btn-outline-warning mr-1" onclick="openResetPasswordModal(<?= htmlspecialchars(json_encode(['id' => $u['id'], 'usuario' => $u['usuario'], 'nombre_completo' => $u['nombre_completo']])) ?>)" title="Restablecer / Asignar Nueva Contraseña">
+                                        <i class="fa-solid fa-key"></i>
+                                    </button>
+
+                                    <!-- Biometría Reloj -->
                                     <button type="button" class="btn btn-xs btn-outline-success mr-1" onclick="openBiometricModal(<?= htmlspecialchars(json_encode($u)) ?>)" title="Biometría ZKTeco (Huella / Facial)">
                                         <i class="fa-solid fa-fingerprint"></i>
                                     </button>
+
                                     <?php if ($u['id'] !== ($currentUser['id'] ?? 0)): ?>
-                                        <a href="?route=usuarios&action=cambiar_estado&id=<?= $u['id'] ?>" class="btn btn-xs btn-outline-secondary mr-1" title="<?= $u['activo'] ? 'Desactivar Usuario' : 'Activar Usuario' ?>" onclick="return confirm('¿Deseas cambiar el estado de este usuario?')">
+                                        <!-- Cambiar Estado (Activar/Desactivar) vía POST seguro -->
+                                        <button type="button" class="btn btn-xs btn-outline-secondary mr-1" id="btn-toggle-status-<?= $u['id'] ?>" title="<?= $u['activo'] ? 'Desactivar Usuario' : 'Activar Usuario' ?>" onclick="toggleUserStatus(<?= $u['id'] ?>, '<?= htmlspecialchars($u['usuario'], ENT_QUOTES) ?>', <?= $u['activo'] ? 1 : 0 ?>)">
                                             <i class="fa-solid <?= $u['activo'] ? 'fa-user-slash text-warning' : 'fa-user-check text-success' ?>"></i>
-                                        </a>
+                                        </button>
+
+                                        <!-- Eliminar Usuario -->
                                         <form method="POST" action="?route=usuarios&action=eliminar" style="display:inline;" onsubmit="return confirm('¿Estás seguro de eliminar este usuario definitivamente?');">
+                                            <?= csrf_field() ?>
                                             <input type="hidden" name="id" value="<?= $u['id'] ?>">
                                             <button type="submit" class="btn btn-xs btn-default border text-danger" title="Eliminar Usuario">
                                                 <i class="fa-solid fa-trash"></i>
@@ -178,7 +218,8 @@
 <!-- MODAL CREAR / EDITAR USUARIO & PERMISOS DE MENÚ -->
 <div class="modal fade" id="modalUsuario" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
-        <form method="POST" action="?route=usuarios&action=guardar" class="modal-content shadow-lg">
+        <form method="POST" action="?route=usuarios&action=guardar" class="modal-content shadow-lg" id="formUsuario">
+            <?= csrf_field() ?>
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title font-weight-bold" id="usrModalTitle">
                     <i class="fa-solid fa-user-gear mr-2"></i> Crear / Editar Usuario
@@ -220,9 +261,16 @@
                             </div>
                             <div class="col-md-4">
                                 <div class="form-group mb-2">
-                                    <label class="small font-weight-bold text-secondary">Contraseña</label>
-                                    <input type="password" name="password" id="usr_password" class="form-control form-control-sm" placeholder="Dejar en blanco para mantener">
-                                    <small class="text-muted" id="usr_pass_hint">Nueva clave para el usuario</small>
+                                    <label class="small font-weight-bold text-secondary" id="usr_pass_label">Contraseña <span class="text-danger" id="usr_pass_required_star">*</span></label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="password" name="password" id="usr_password" class="form-control" placeholder="Ingresa contraseña">
+                                        <div class="input-group-append">
+                                            <button class="btn btn-outline-secondary" type="button" onclick="togglePassVisibility('usr_password', this)" title="Ver/Ocultar contraseña">
+                                                <i class="fa-solid fa-eye"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <small class="text-muted" id="usr_pass_hint">Contraseña obligatoria para el nuevo usuario</small>
                                 </div>
                             </div>
                             <div class="col-md-4">
@@ -237,6 +285,7 @@
                                 </div>
                             </div>
                         </div>
+
 
                         <div class="row mt-2">
                             <div class="col-12">
@@ -409,6 +458,69 @@
     </div>
 </div>
 
+<!-- MODAL RESTABLECER CONTRASEÑA DE USUARIO (EXCLUSIVO ADMINISTRADOR) -->
+<div class="modal fade" id="modalRestablecerPass" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 480px;">
+        <div class="modal-content shadow-lg border-0" style="border-radius: 12px; overflow: hidden;">
+            <div class="modal-header bg-warning py-3 px-4 d-flex align-items-center justify-content-between">
+                <h5 class="modal-title font-weight-bold text-dark mb-0 d-flex align-items-center" style="font-size: 1.05rem;">
+                    <i class="fa-solid fa-key mr-2"></i> Restablecer Contraseña de Usuario
+                </h5>
+                <button type="button" class="close text-dark" data-dismiss="modal" aria-label="Close" style="outline: none;">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body p-4 bg-light">
+                <input type="hidden" id="reset_user_id">
+
+                <!-- DATOS DEL USUARIO SELECCIONADO -->
+                <div class="card mb-3 border bg-white shadow-none" style="border-radius: 8px;">
+                    <div class="card-body p-3">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-warning text-dark rounded-circle d-flex align-items-center justify-content-center mr-3 font-weight-bold" style="width: 42px; height: 42px; font-size: 1.1rem; flex-shrink: 0;">
+                                <i class="fa-solid fa-user-lock"></i>
+                            </div>
+                            <div class="overflow-hidden">
+                                <h6 class="font-weight-bold text-dark mb-0 text-truncate" id="reset_display_nombre">Nombre del Usuario</h6>
+                                <div class="text-muted small font-monospace" id="reset_display_usuario">usuario: -</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FORMULARIO DE RESTABLECIMIENTO -->
+                <div class="card border bg-white shadow-none mb-0" style="border-radius: 8px;">
+                    <div class="card-body p-3">
+                        <div class="form-group mb-2">
+                            <label class="small font-weight-bold text-secondary mb-1">Nueva Contraseña para el Usuario <span class="text-danger">*</span></label>
+                            <div class="input-group input-group-sm mb-2">
+                                <input type="password" id="reset_new_pass" class="form-control font-monospace" placeholder="Mínimo 5 caracteres" required>
+                                <div class="input-group-append">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="togglePassVisibility('reset_new_pass', this)" title="Ver/Ocultar contraseña">
+                                        <i class="fa-solid fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <small class="text-muted d-block mb-2">Define una contraseña manual o utiliza el generador automático.</small>
+
+                            <!-- BOTÓN GENERAR CONTRASEÑA ALEATORIA -->
+                            <button type="button" class="btn btn-outline-primary btn-xs btn-block py-1 mb-2" onclick="generateRandomPass()">
+                                <i class="fa-solid fa-wand-magic-sparkles mr-1 text-warning"></i> Generar Contraseña Aleatoria Segura
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-white d-flex justify-content-between py-2 px-4 border-top">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancelar</button>
+                <button type="button" id="btnConfirmResetPass" class="btn btn-warning btn-sm font-weight-bold" onclick="submitResetPassword()">
+                    <i class="fa-solid fa-check mr-1"></i> Guardar Nueva Contraseña
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 function openNewUserModal() {
     document.getElementById('usrModalTitle').innerHTML = '<i class="fa-solid fa-user-plus mr-2"></i> Crear Nuevo Usuario';
@@ -419,7 +531,9 @@ function openNewUserModal() {
     document.getElementById('usr_email').value = '';
     document.getElementById('usr_password').value = '';
     document.getElementById('usr_password').required = true;
-    document.getElementById('usr_pass_hint').innerText = 'Contraseña inicial para el usuario (Obligatoria al crear)';
+    document.getElementById('usr_password').placeholder = 'Contraseña requerida (min. 5 caracteres)';
+    document.getElementById('usr_pass_hint').innerText = 'Contraseña obligatoria para el nuevo usuario (No se asignará por defecto)';
+    document.getElementById('usr_pass_required_star').style.display = 'inline';
     document.getElementById('usr_rol').value = 'RRHH';
     document.getElementById('usr_activo').checked = true;
 
@@ -437,7 +551,9 @@ function openEditUserModal(u) {
     document.getElementById('usr_email').value = u.email || '';
     document.getElementById('usr_password').value = '';
     document.getElementById('usr_password').required = false;
+    document.getElementById('usr_password').placeholder = 'Dejar en blanco para conservar actual';
     document.getElementById('usr_pass_hint').innerText = 'Dejar en blanco si deseas mantener la clave actual';
+    document.getElementById('usr_pass_required_star').style.display = 'none';
     document.getElementById('usr_rol').value = u.rol;
     document.getElementById('usr_activo').checked = (parseInt(u.activo) === 1);
 
@@ -461,6 +577,150 @@ function openEditUserModal(u) {
 
     onRoleChange(u.rol);
     $('#modalUsuario').modal('show');
+}
+
+// RESTABLECER CONTRASEÑA DE CUALQUIER USUARIO
+function openResetPasswordModal(user) {
+    document.getElementById('reset_user_id').value = user.id;
+    document.getElementById('reset_display_nombre').innerText = user.nombre_completo || user.usuario;
+    document.getElementById('reset_display_usuario').innerText = 'Cuenta: @' + user.usuario;
+    document.getElementById('reset_new_pass').value = '';
+    document.getElementById('reset_new_pass').type = 'password';
+    $('#modalRestablecerPass').modal('show');
+}
+
+function generateRandomPass() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%&*';
+    let pass = '';
+    for (let i = 0; i < 10; i++) {
+        pass += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    const input = document.getElementById('reset_new_pass');
+    input.value = pass;
+    input.type = 'text'; // Mostrar para que el admin la pueda leer y copiar
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(pass).then(function() {
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'info',
+                title: 'Contraseña generada y copiada al portapapeles',
+                showConfirmButton: false,
+                timer: 2000
+            });
+        }).catch(function(){});
+    }
+}
+
+function submitResetPassword() {
+    const userId = document.getElementById('reset_user_id').value;
+    const newPass = document.getElementById('reset_new_pass').value.trim();
+
+    if (!newPass || newPass.length < 5) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Contraseña no válida',
+            text: 'La nueva contraseña debe tener al menos 5 caracteres.',
+            confirmButtonColor: '#1d4ed8'
+        });
+        return;
+    }
+
+    const btn = document.getElementById('btnConfirmResetPass');
+    const origHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Guardando...';
+
+    const fd = new FormData();
+    fd.append('id', userId);
+    fd.append('new_password', newPass);
+
+    fetch('?route=usuarios&action=restablecer_password', {
+        method: 'POST',
+        body: fd,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: '¡Contraseña Actualizada!',
+                html: `
+                    <p class="mb-2">${data.message || 'La contraseña se ha actualizado correctamente.'}</p>
+                    <div class="alert alert-secondary p-2 font-monospace small mb-0">
+                        <strong>Nueva clave:</strong> ${newPass}
+                    </div>
+                `,
+                confirmButtonColor: '#1d4ed8'
+            }).then(function() {
+                $('#modalRestablecerPass').modal('hide');
+            });
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: data.error || 'No se pudo restablecer la contraseña.',
+                confirmButtonColor: '#1d4ed8'
+            });
+        }
+    })
+    .catch(function(err) {
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+        Swal.fire('Error', 'Fallo al comunicarse con el servidor.', 'error');
+    });
+}
+
+// CAMBIAR ESTADO DE USUARIO (ACTIVAR / DESACTIVAR) VÍA POST
+function toggleUserStatus(userId, username, currentStatus) {
+    const actionText = currentStatus ? 'desactivar' : 'activar';
+    const confirmBtnColor = currentStatus ? '#dc2626' : '#16a34a';
+
+    Swal.fire({
+        title: `¿Deseas ${actionText} a ${username}?`,
+        text: currentStatus ? 'El usuario no podrá iniciar sesión en el sistema mientras esté inactivo.' : 'El usuario volverá a tener acceso con sus credenciales habituales.',
+        icon: currentStatus ? 'warning' : 'question',
+        showCancelButton: true,
+        confirmButtonColor: confirmBtnColor,
+        cancelButtonColor: '#64748b',
+        confirmButtonText: `Sí, ${actionText}`,
+        cancelButtonText: 'Cancelar'
+    }).then(function(result) {
+        if (result.isConfirmed) {
+            const fd = new FormData();
+            fd.append('id', userId);
+
+            fetch('?route=usuarios&action=cambiar_estado', {
+                method: 'POST',
+                body: fd,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Estado Actualizado!',
+                        text: data.message || 'Estado del usuario modificado con éxito.',
+                        timer: 1500,
+                        showConfirmButton: false
+                    }).then(function() {
+                        window.location.reload();
+                    });
+                } else {
+                    Swal.fire('Error', data.error || 'No se pudo cambiar el estado.', 'error');
+                }
+            })
+            .catch(function() {
+                Swal.fire('Error', 'Fallo de red al intentar cambiar el estado.', 'error');
+            });
+        }
+    });
 }
 
 function onRoleChange(role) {
@@ -648,3 +908,4 @@ function syncTemplatesToDB() {
 </script>
 
 <?php require_once APP_ROOT . '/views/layout/footer.php'; ?>
+

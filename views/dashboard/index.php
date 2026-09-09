@@ -1,30 +1,30 @@
 <?php require_once APP_ROOT . '/views/layout/header.php'; ?>
 
 <!-- Content Header (Page header) -->
-<div class="content-header pb-2">
+<div class="content-header pb-1 pt-2">
     <div class="container-fluid">
-        <!-- Banner Institucional JUSHSAL -->
+        <!-- Banner Institucional JUSHSAL Compacto -->
         <div class="banner-jushsal">
             <div class="d-flex align-items-center">
-                <img src="<?= jushsal_logo_data_uri('icon') ?: asset('img/logo_icon.png') ?>" alt="JUSHSAL" class="mr-3" style="width: 44px; height: 44px; object-fit: contain;">
+                <img src="<?= jushsal_logo_data_uri('icon') ?: asset('img/logo_icon.png') ?>" alt="JUSHSAL" class="mr-2" style="width: 34px; height: 34px; object-fit: contain;">
                 <div>
-                    <div class="font-weight-bold text-dark" style="font-size: 1.05rem; letter-spacing: 0.3px;">
+                    <div class="font-weight-bold text-dark" style="font-size: 0.95rem; letter-spacing: 0.2px;">
                         JUSHSAL <span class="font-weight-normal text-muted small d-none d-md-inline">&bull; Junta de Usuarios del Sector Hidráulico Menor San Lorenzo</span>
                     </div>
-                    <div class="text-secondary small">
+                    <div class="text-secondary small" style="font-size: 0.76rem; line-height: 1.1;">
                         Sistema Integral de Control de Personal y Asistencia Laboral
                     </div>
                 </div>
             </div>
             <div class="d-none d-lg-flex align-items-center text-muted small">
-                <span class="badge-pill-custom badge-pill-neutral mr-2"><i class="fa-solid fa-droplet text-primary mr-1"></i> Sector Hidráulico San Lorenzo</span>
-                <span class="badge-pill-custom badge-pill-neutral"><i class="fa-regular fa-clock mr-1 text-primary"></i> <?= date('d/m/Y') ?></span>
+                <span class="badge-pill-custom badge-pill-neutral mr-2" style="font-size: 0.72rem;"><i class="fa-solid fa-droplet text-primary mr-1"></i> San Lorenzo</span>
+                <span class="badge-pill-custom badge-pill-neutral" style="font-size: 0.72rem;"><i class="fa-regular fa-clock mr-1 text-primary"></i> <?= date('d/m/Y') ?></span>
             </div>
         </div>
 
-        <div class="row mb-3 align-items-center">
-            <div class="col-md-7 col-sm-12 mb-2 mb-md-0">
-                <h1 class="m-0 font-weight-bold text-dark" style="font-size: 1.45rem;">
+        <div class="row mb-2 align-items-center">
+            <div class="col-md-7 col-sm-12 mb-1 mb-md-0">
+                <h1 class="m-0 font-weight-bold text-dark" style="font-size: 1.25rem;">
                     <?php if ($activeRoleView === 'ADMIN'): ?>
                         <i class="fa-solid fa-server mr-2 text-primary"></i> Tablero de Administración TI y Biometría
                     <?php elseif ($activeRoleView === 'RRHH'): ?>
@@ -35,36 +35,36 @@
                         <i class="fa-solid fa-chart-pie mr-2 text-primary"></i> Tablero Principal de Control
                     <?php endif; ?>
                 </h1>
-                <div class="text-muted small mt-1">
+                <div class="text-muted small" style="font-size: 0.78rem;">
                     <?php if ($activeRoleView === 'ADMIN'): ?>
-                        Monitoreo de infraestructura biométrica ZKTeco, conectividad de red, auditoría de sincronización y estado del sistema.
+                        Monitoreo de infraestructura biométrica ZKTeco, auditoría de sincronización y estado del sistema.
                     <?php elseif ($activeRoleView === 'RRHH'): ?>
-                        Analítica de puntualidad, ausentismo, balance de horas extras acumuladas, ranking de incidencias y justificaciones.
+                        Analítica de puntualidad, ausentismo, horas extras, ranking y justificaciones.
                     <?php elseif ($activeRoleView === 'SUPERVISOR'): ?>
-                        Control en tiempo real del personal en turno, llegadas tarde de la jornada y monitoreo operativo.
+                        Control en tiempo real del personal en turno y monitoreo operativo.
                     <?php else: ?>
                         Resumen general de asistencia y métricas consolidadas del personal.
                     <?php endif; ?>
                 </div>
             </div>
-            <div class="col-md-5 col-sm-12 text-md-right">
+            <div class="col-md-5 col-sm-12 text-md-right mt-1 mt-md-0">
                 <!-- Botones de Acción Rápida Específicos por Rol -->
                 <?php if ($activeRoleView === 'ADMIN'): ?>
-                    <a href="?route=dispositivos" class="btn btn-sm btn-outline-secondary mr-1">
-                        <i class="fa-solid fa-network-wired mr-1"></i> Relojes Biométricos
+                    <a href="?route=dispositivos" class="btn btn-xs btn-outline-secondary mr-1">
+                        <i class="fa-solid fa-network-wired mr-1"></i> Biométricos
                     </a>
-                    <button type="button" class="btn btn-sm btn-success" onclick="openSyncModal()">
-                        <i class="fa-solid fa-arrows-rotate mr-1"></i> Sincronizar Biométricos
+                    <button type="button" class="btn btn-xs btn-success" onclick="openSyncModal()">
+                        <i class="fa-solid fa-arrows-rotate mr-1"></i> Sincronizar
                     </button>
                 <?php elseif ($activeRoleView === 'RRHH'): ?>
-                    <a href="?route=justificaciones" class="btn btn-sm btn-outline-primary mr-1">
+                    <a href="?route=justificaciones" class="btn btn-xs btn-outline-primary mr-1">
                         <i class="fa-solid fa-file-signature mr-1"></i> Justificaciones (<?= $justificacionesPendientes ?>)
                     </a>
-                    <button type="button" class="btn btn-sm btn-success" onclick="openSyncModal()">
-                        <i class="fa-solid fa-bolt mr-1"></i> Sincronizar Hoy
+                    <button type="button" class="btn btn-xs btn-success" onclick="openSyncModal()">
+                        <i class="fa-solid fa-bolt mr-1"></i> Sincronizar
                     </button>
                 <?php elseif ($activeRoleView === 'SUPERVISOR'): ?>
-                    <a href="?route=asistencia&fecha_inicio=<?= $today ?>&fecha_fin=<?= $today ?>" class="btn btn-sm btn-primary">
+                    <a href="?route=asistencia&fecha_inicio=<?= $today ?>&fecha_fin=<?= $today ?>" class="btn btn-xs btn-primary">
                         <i class="fa-solid fa-list-check mr-1"></i> Asistencia de Hoy
                     </a>
                 <?php endif; ?>
@@ -77,19 +77,31 @@
 <section class="content">
     <div class="container-fluid">
 
+        <?php 
+            // Métricas calculadas para porcentajes del resumen de hoy
+            $totalHoyConteo = $presentesHoy + $tardanzasHoy + (int)($statsHoy['faltas'] ?? 0) + (int)($statsHoy['justificados'] ?? 0) + (int)($statsHoy['sin_salida'] ?? 0);
+            $baseTotal = $totalHoyConteo > 0 ? $totalHoyConteo : ($totalEmpleados > 0 ? $totalEmpleados : 1);
+            $porcPresentes = round(($presentesHoy / $baseTotal) * 100, 1);
+            $porcTardanzas = round(($tardanzasHoy / $baseTotal) * 100, 1);
+            $porcFaltas = round(((int)($statsHoy['faltas'] ?? 0) / $baseTotal) * 100, 1);
+            $porcJustificados = round(((int)($statsHoy['justificados'] ?? 0) / $baseTotal) * 100, 1);
+            $porcSinSalida = round(((int)($statsHoy['sin_salida'] ?? 0) / $baseTotal) * 100, 1);
+            $tasaAsistenciaHoy = round((($presentesHoy + $tardanzasHoy) / $baseTotal) * 100);
+        ?>
+
         <?php if ($activeRoleView === 'ADMIN'): ?>
             <!-- =================================================================== -->
             <!-- VISTA: ADMINISTRADOR (TI, RED & BIOMETRÍA)                         -->
             <!-- =================================================================== -->
             
-            <!-- TARJETAS KPIS TI -->
+            <!-- TARJETAS KPIS TI (Compactas en una sola fila) -->
             <div class="row">
-                <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-2">
                     <div class="kpi-card h-100">
                         <div class="kpi-card-header">
                             <div>
                                 <div class="kpi-title">Biométricos En Línea</div>
-                                <div class="kpi-value"><?= $dispositivosOnline ?> <span style="font-size: 1.05rem; color: #64748b; font-weight: 600;">/ <?= count($dispositivos) ?></span></div>
+                                <div class="kpi-value"><?= $dispositivosOnline ?> <span style="font-size: 0.95rem; color: #64748b; font-weight: 600;">/ <?= count($dispositivos) ?></span></div>
                                 <div class="kpi-subtitle"><?= $dispositivosOnline === count($dispositivos) ? '100% de terminales operativas' : 'Revisar terminales inactivas' ?></div>
                             </div>
                             <div class="kpi-icon-box <?= $dispositivosOnline === count($dispositivos) ? 'kpi-icon-emerald' : 'kpi-icon-amber' ?>">
@@ -104,13 +116,13 @@
                     </div>
                 </div>
 
-                <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-2">
                     <div class="kpi-card h-100">
                         <div class="kpi-card-header">
                             <div>
-                                <div class="kpi-title">Efectividad de Sincronización</div>
+                                <div class="kpi-title">Efectividad Sync</div>
                                 <div class="kpi-value"><?= $tasaExitoSync ?>%</div>
-                                <div class="kpi-subtitle"><?= (int)($syncStats['exitos'] ?? 0) ?> exitosos de <?= (int)($syncStats['total_syncs'] ?? 0) ?> ciclos (7 días)</div>
+                                <div class="kpi-subtitle"><?= (int)($syncStats['exitos'] ?? 0) ?> exitosos de <?= (int)($syncStats['total_syncs'] ?? 0) ?> ciclos</div>
                             </div>
                             <div class="kpi-icon-box kpi-icon-blue">
                                 <i class="fa-solid fa-circle-check"></i>
@@ -118,19 +130,19 @@
                         </div>
                         <div>
                             <a href="?route=dispositivos" class="kpi-footer-link">
-                                Ver auditoría de sincronización <i class="fas fa-arrow-right ml-1"></i>
+                                Ver auditoría <i class="fas fa-arrow-right ml-1"></i>
                             </a>
                         </div>
                     </div>
                 </div>
 
-                <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-2">
                     <div class="kpi-card h-100">
                         <div class="kpi-card-header">
                             <div>
                                 <div class="kpi-title">Marcaciones de Hoy</div>
                                 <div class="kpi-value"><?= $totalMarcacionesHoy ?></div>
-                                <div class="kpi-subtitle">Descargadas en base de datos</div>
+                                <div class="kpi-subtitle">Registros descargados en BDD</div>
                             </div>
                             <div class="kpi-icon-box kpi-icon-indigo">
                                 <i class="fa-solid fa-fingerprint"></i>
@@ -144,11 +156,11 @@
                     </div>
                 </div>
 
-                <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-2">
                     <div class="kpi-card h-100">
                         <div class="kpi-card-header">
                             <div>
-                                <div class="kpi-title">Latencia Promedio Sync</div>
+                                <div class="kpi-title">Latencia Promedio</div>
                                 <div class="kpi-value"><?= round((float)($syncStats['promedio_duracion'] ?? 0), 1) ?>s</div>
                                 <div class="kpi-subtitle"><?= $totalUsuarios ?> cuentas de usuario activas</div>
                             </div>
@@ -165,23 +177,24 @@
                 </div>
             </div>
 
-            <!-- FILA 2 TI: ESTADO DETALLADO DE RELOJES Y AUDITORÍA DE LOGS -->
+            <!-- FILA 2 TI: GRID BALANCEADO EN 2 COLUMNAS (TODOS LOS ELEMENTOS EN UNA PANTALLA) -->
             <div class="row">
-                <!-- Relojes Biométricos -->
-                <div class="col-lg-6 mb-3">
-                    <div class="card h-100">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <h3 class="card-title font-weight-bold">
+                <!-- COLUMNA IZQUIERDA (7 COLS): Terminales Biométricas & Feed de Marcaciones en Vivo -->
+                <div class="col-lg-7 mb-2">
+                    <!-- Relojes Biométricos -->
+                    <div class="card mb-2">
+                        <div class="card-header d-flex justify-content-between align-items-center py-2 px-3">
+                            <h3 class="card-title font-weight-bold" style="font-size: 0.88rem;">
                                 <i class="fa-solid fa-server mr-2 text-primary"></i> Terminales Biométricas en Red
                             </h3>
                             <div class="card-tools">
-                                <a href="?route=dispositivos" class="btn btn-sm btn-outline-secondary">
+                                <a href="?route=dispositivos" class="btn btn-xs btn-outline-secondary">
                                     <i class="fa-solid fa-gear mr-1"></i> Administrar
                                 </a>
                             </div>
                         </div>
-                        <div class="card-body p-0 table-responsive">
-                            <table class="table table-hover table-sm">
+                        <div class="card-body p-0 table-responsive" style="max-height: 200px; overflow-y: auto;">
+                            <table class="table table-hover table-sm mb-0">
                                 <thead>
                                     <tr>
                                         <th>Dispositivo</th>
@@ -193,27 +206,27 @@
                                 <tbody>
                                     <?php if (empty($dispositivos)): ?>
                                         <tr>
-                                            <td colspan="4" class="text-center py-4 text-muted">No hay biométricos registrados en el sistema.</td>
+                                            <td colspan="4" class="text-center py-3 text-muted small">No hay biométricos registrados en el sistema.</td>
                                         </tr>
                                     <?php else: ?>
                                         <?php foreach ($dispositivos as $d): ?>
                                             <tr>
-                                                <td class="font-weight-bold text-dark">
+                                                <td class="font-weight-bold text-dark py-1">
                                                     <i class="fa-solid fa-fingerprint text-primary mr-1"></i>
                                                     <?= htmlspecialchars($d['nombre']) ?>
                                                 </td>
-                                                <td class="font-monospace small">
+                                                <td class="font-monospace small py-1">
                                                     <?= htmlspecialchars($d['ip']) ?>:<?= $d['puerto'] ?>
-                                                    <span class="badge-pill-custom badge-pill-neutral ml-1"><?= htmlspecialchars($d['protocolo']) ?></span>
+                                                    <span class="badge-pill-custom badge-pill-neutral ml-1" style="font-size: 0.68rem;"><?= htmlspecialchars($d['protocolo']) ?></span>
                                                 </td>
-                                                <td class="small text-muted">
+                                                <td class="small text-muted py-1">
                                                     <?= htmlspecialchars($d['ubicacion'] ?? 'Sede Principal') ?>
                                                 </td>
-                                                <td class="text-center">
+                                                <td class="text-center py-1">
                                                     <?php if ($d['estado_conexion'] === 'ONLINE'): ?>
-                                                        <span class="badge-pill-custom badge-pill-online"><i class="fa-solid fa-circle" style="font-size: 6px;"></i> En Línea</span>
+                                                        <span class="badge-pill-custom badge-pill-online" style="font-size: 0.7rem;"><i class="fa-solid fa-circle" style="font-size: 5px;"></i> En Línea</span>
                                                     <?php else: ?>
-                                                        <span class="badge-pill-custom badge-pill-offline"><i class="fa-solid fa-circle" style="font-size: 6px;"></i> Desconectado</span>
+                                                        <span class="badge-pill-custom badge-pill-offline" style="font-size: 0.7rem;"><i class="fa-solid fa-circle" style="font-size: 5px;"></i> Desconectado</span>
                                                     <?php endif; ?>
                                                 </td>
                                             </tr>
@@ -223,85 +236,24 @@
                             </table>
                         </div>
                     </div>
-                </div>
 
-                <!-- Auditoría de Logs de Sincronización Recientes -->
-                <div class="col-lg-6 mb-3">
-                    <div class="card h-100">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <h3 class="card-title font-weight-bold">
-                                <i class="fa-solid fa-clock-rotate-left mr-2 text-primary"></i> Historial Reciente de Sincronización
-                            </h3>
-                            <span class="badge-pill-custom badge-pill-neutral">Últimos ciclos</span>
-                        </div>
-                        <div class="card-body p-0 table-responsive">
-                            <table class="table table-hover table-sm">
-                                <thead>
-                                    <tr>
-                                        <th>Fecha y Hora</th>
-                                        <th>Dispositivo</th>
-                                        <th class="text-center">Nuevos</th>
-                                        <th class="text-center">Duración</th>
-                                        <th class="text-center">Estado</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php if (empty($ultimosLogsSync)): ?>
-                                        <tr>
-                                            <td colspan="5" class="text-center py-4 text-muted">Sin registros de sincronización recientes.</td>
-                                        </tr>
-                                    <?php else: ?>
-                                        <?php foreach ($ultimosLogsSync as $log): ?>
-                                            <tr>
-                                                <td class="font-monospace small text-secondary">
-                                                    <?= substr($log['fecha_hora'], 0, 16) ?>
-                                                </td>
-                                                <td class="small font-weight-bold text-dark">
-                                                    <?= htmlspecialchars($log['dispositivo_nombre'] ?? 'Reloj') ?>
-                                                </td>
-                                                <td class="text-center font-weight-bold text-success">
-                                                    +<?= (int)$log['total_insertados'] ?>
-                                                </td>
-                                                <td class="text-center font-monospace small text-muted">
-                                                    <?= round((float)$log['duracion_segundos'], 1) ?>s
-                                                </td>
-                                                <td class="text-center">
-                                                    <?php if ($log['estado'] === 'EXITO'): ?>
-                                                        <span class="badge-pill-custom badge-pill-presente"><i class="fa-solid fa-check mr-1"></i> Éxito</span>
-                                                    <?php else: ?>
-                                                        <span class="badge-pill-custom badge-pill-falta" title="<?= htmlspecialchars($log['mensaje_error'] ?? '') ?>"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Error</span>
-                                                    <?php endif; ?>
-                                                </td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- FILA 3 TI: FEED DE MARCACIONES CRUDAS Y RESUMEN GENERAL -->
-            <div class="row">
-                <!-- Feed en Vivo -->
-                <div class="col-lg-8 mb-3">
-                    <div class="card h-100">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <h3 class="card-title font-weight-bold">
-                                <span class="badge-pill-custom badge-pill-online mr-2">
-                                    <i class="fa-solid fa-circle" style="font-size: 6px;"></i> EN VIVO
+                    <!-- Feed en Vivo de Marcaciones -->
+                    <div class="card mb-2">
+                        <div class="card-header d-flex justify-content-between align-items-center py-2 px-3">
+                            <h3 class="card-title font-weight-bold" style="font-size: 0.88rem;">
+                                <span class="badge-pill-custom badge-pill-online mr-2" style="font-size: 0.68rem;">
+                                    <i class="fa-solid fa-circle" style="font-size: 5px;"></i> EN VIVO
                                 </span>
                                 Últimas Marcaciones Recibidas
                             </h3>
                             <div class="card-tools">
-                                <a href="?route=marcaciones&fecha=<?= $today ?>" class="btn btn-sm btn-outline-secondary">
+                                <a href="?route=marcaciones&fecha=<?= $today ?>" class="btn btn-xs btn-outline-secondary">
                                     <i class="fas fa-list mr-1"></i> Ver todas
                                 </a>
                             </div>
                         </div>
-                        <div class="card-body p-0 table-responsive">
-                            <table class="table table-hover table-sm">
+                        <div class="card-body p-0 table-responsive" style="max-height: 220px; overflow-y: auto;">
+                            <table class="table table-hover table-sm mb-0">
                                 <thead>
                                     <tr>
                                         <th>Hora</th>
@@ -313,28 +265,28 @@
                                 <tbody>
                                     <?php if (empty($ultimasMarcaciones)): ?>
                                         <tr>
-                                            <td colspan="4" class="text-center py-4 text-muted">
-                                                <i class="fa-regular fa-clock fa-2x mb-2 d-block text-secondary"></i>
+                                            <td colspan="4" class="text-center py-3 text-muted small">
+                                                <i class="fa-regular fa-clock mr-1 text-secondary"></i>
                                                 Aún no hay marcaciones registradas para el día de hoy.
                                             </td>
                                         </tr>
                                     <?php else: ?>
                                         <?php foreach ($ultimasMarcaciones as $m): ?>
                                             <tr>
-                                                <td class="font-weight-bold font-monospace text-secondary">
+                                                <td class="font-weight-bold font-monospace text-secondary py-1" style="font-size: 0.78rem;">
                                                     <i class="far fa-clock mr-1 text-muted"></i>
                                                     <?= substr($m['fecha_hora'], 11, 8) ?>
                                                 </td>
-                                                <td>
+                                                <td class="py-1">
                                                     <?php if (!empty($m['nombres'])): ?>
-                                                        <div class="font-weight-bold text-dark"><?= htmlspecialchars($m['apellidos'] . ' ' . $m['nombres']) ?></div>
-                                                        <small class="text-muted">ID Reloj: <?= htmlspecialchars($m['codigo_reloj']) ?></small>
+                                                        <div class="font-weight-bold text-dark" style="font-size: 0.82rem;"><?= htmlspecialchars($m['apellidos'] . ' ' . $m['nombres']) ?></div>
+                                                        <small class="text-muted" style="font-size: 0.72rem;">ID Reloj: <?= htmlspecialchars($m['codigo_reloj']) ?></small>
                                                     <?php else: ?>
-                                                        <span class="badge-pill-custom badge-pill-neutral">ID Reloj: <?= htmlspecialchars($m['codigo_reloj']) ?> (Sin vincular)</span>
+                                                        <span class="badge-pill-custom badge-pill-neutral" style="font-size: 0.7rem;">ID Reloj: <?= htmlspecialchars($m['codigo_reloj']) ?> (Sin vincular)</span>
                                                     <?php endif; ?>
                                                 </td>
-                                                <td>
-                                                    <span class="text-muted small">
+                                                <td class="py-1">
+                                                    <span class="text-muted small" style="font-size: 0.78rem;">
                                                         <?php
                                                             $v = strtolower($m['tipo_verificacion'] ?? '');
                                                             if (str_contains($v, 'facial') || str_contains($v, 'face')) {
@@ -350,13 +302,13 @@
                                                         <?= htmlspecialchars($m['dispositivo_nombre'] ?? 'Reloj') ?>
                                                     </span>
                                                 </td>
-                                                <td>
+                                                <td class="py-1">
                                                     <?php
                                                         $tipo = strtolower($m['tipo'] ?? '');
-                                                        if ($tipo === 'entrada') echo '<span class="badge-pill-custom badge-pill-presente"><i class="fa-solid fa-arrow-right-to-bracket mr-1"></i> Entrada</span>';
-                                                        elseif ($tipo === 'salida') echo '<span class="badge-pill-custom badge-pill-justificado"><i class="fa-solid fa-arrow-right-from-bracket mr-1"></i> Salida</span>';
-                                                        elseif (str_contains($tipo, 'refrigerio')) echo '<span class="badge-pill-custom badge-pill-neutral"><i class="fa-solid fa-utensils mr-1"></i> Refrigerio</span>';
-                                                        else echo '<span class="badge-pill-custom badge-pill-neutral">Marcación</span>';
+                                                        if ($tipo === 'entrada') echo '<span class="badge-pill-custom badge-pill-presente" style="font-size: 0.7rem;"><i class="fa-solid fa-arrow-right-to-bracket mr-1"></i> Entrada</span>';
+                                                        elseif ($tipo === 'salida') echo '<span class="badge-pill-custom badge-pill-justificado" style="font-size: 0.7rem;"><i class="fa-solid fa-arrow-right-from-bracket mr-1"></i> Salida</span>';
+                                                        elseif (str_contains($tipo, 'refrigerio')) echo '<span class="badge-pill-custom badge-pill-neutral" style="font-size: 0.7rem;"><i class="fa-solid fa-utensils mr-1"></i> Refrigerio</span>';
+                                                        else echo '<span class="badge-pill-custom badge-pill-neutral" style="font-size: 0.7rem;">Marcación</span>';
                                                     ?>
                                                 </td>
                                             </tr>
@@ -368,23 +320,99 @@
                     </div>
                 </div>
 
-                <!-- Resumen de Asistencia de Hoy TI -->
-                <div class="col-lg-4 mb-3">
-                    <div class="card h-100">
-                        <div class="card-header">
-                            <h3 class="card-title font-weight-bold">
+                <!-- COLUMNA DERECHA (5 COLS): Resumen Asistencia Hoy (Gráfico Enriquecido) & Auditoría Sync -->
+                <div class="col-lg-5 mb-2">
+                    <!-- Resumen de Asistencia Hoy (GRÁFICO POTENCIADO) -->
+                    <div class="card mb-2">
+                        <div class="card-header d-flex justify-content-between align-items-center py-2 px-3">
+                            <h3 class="card-title font-weight-bold" style="font-size: 0.88rem;">
                                 <i class="fa-solid fa-chart-pie mr-2 text-primary"></i> Resumen de Asistencia Hoy
                             </h3>
+                            <span class="badge-pill-custom badge-pill-neutral" style="font-size: 0.7rem;">
+                                <i class="fa-solid fa-users mr-1 text-primary"></i> <?= $totalHoyConteo ?> marcados
+                            </span>
                         </div>
-                        <div class="card-body d-flex flex-column justify-content-between">
-                            <div style="height: 200px; position: relative;">
+                        <div class="card-body p-3">
+                            <!-- Canvas con donut chart -->
+                            <div style="height: 165px; position: relative;" class="mb-2">
                                 <canvas id="distribucionChart"></canvas>
                             </div>
-                            <div class="d-flex justify-content-around text-center mt-3 small pt-2 border-top">
-                                <div><i class="fas fa-circle text-success mr-1"></i> Presentes: <b><?= $presentesHoy ?></b></div>
-                                <div><i class="fas fa-circle text-warning mr-1"></i> Tardanzas: <b><?= $tardanzasHoy ?></b></div>
-                                <div><i class="fas fa-circle text-danger mr-1"></i> Faltas: <b><?= (int)($statsHoy['faltas'] ?? 0) ?></b></div>
+
+                            <!-- Desglose de Métricas Claro y Detallado con Porcentajes -->
+                            <div class="pt-2 border-top">
+                                <div class="d-flex justify-content-between align-items-center py-1 border-bottom" style="font-size: 0.79rem;">
+                                    <span class="text-dark"><i class="fa-solid fa-circle text-success mr-1" style="font-size: 8px;"></i> <strong>Presentes</strong> (A tiempo)</span>
+                                    <span class="font-weight-bold text-dark"><?= $presentesHoy ?> <span class="badge badge-light border text-success ml-1"><?= $porcPresentes ?>%</span></span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center py-1 border-bottom" style="font-size: 0.79rem;">
+                                    <span class="text-dark"><i class="fa-solid fa-circle text-warning mr-1" style="font-size: 8px;"></i> <strong>Tardanzas</strong></span>
+                                    <span class="font-weight-bold text-dark"><?= $tardanzasHoy ?> <span class="badge badge-light border text-warning ml-1"><?= $porcTardanzas ?>%</span></span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center py-1 border-bottom" style="font-size: 0.79rem;">
+                                    <span class="text-dark"><i class="fa-solid fa-circle text-danger mr-1" style="font-size: 8px;"></i> <strong>Inasistencias</strong> (Faltas)</span>
+                                    <span class="font-weight-bold text-dark"><?= (int)($statsHoy['faltas'] ?? 0) ?> <span class="badge badge-light border text-danger ml-1"><?= $porcFaltas ?>%</span></span>
+                                </div>
+                                <?php if (((int)($statsHoy['justificados'] ?? 0) > 0) || ((int)($statsHoy['sin_salida'] ?? 0) > 0)): ?>
+                                    <div class="d-flex justify-content-between align-items-center py-1" style="font-size: 0.79rem;">
+                                        <span class="text-secondary"><i class="fa-solid fa-circle text-primary mr-1" style="font-size: 8px;"></i> Justificados / En Curso</span>
+                                        <span class="font-weight-bold text-dark"><?= (int)($statsHoy['justificados'] ?? 0) + (int)($statsHoy['sin_salida'] ?? 0) ?> <span class="badge badge-light border text-primary ml-1"><?= round($porcJustificados + $porcSinSalida, 1) ?>%</span></span>
+                                    </div>
+                                <?php endif; ?>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Historial Reciente de Sincronización -->
+                    <div class="card mb-2">
+                        <div class="card-header d-flex justify-content-between align-items-center py-2 px-3">
+                            <h3 class="card-title font-weight-bold" style="font-size: 0.88rem;">
+                                <i class="fa-solid fa-clock-rotate-left mr-2 text-primary"></i> Auditoría de Sincronización
+                            </h3>
+                            <span class="badge-pill-custom badge-pill-neutral" style="font-size: 0.68rem;">Últimos ciclos</span>
+                        </div>
+                        <div class="card-body p-0 table-responsive" style="max-height: 190px; overflow-y: auto;">
+                            <table class="table table-hover table-sm mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Hora</th>
+                                        <th>Dispositivo</th>
+                                        <th class="text-center">Nuevos</th>
+                                        <th class="text-center">Duración</th>
+                                        <th class="text-center">Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php if (empty($ultimosLogsSync)): ?>
+                                        <tr>
+                                            <td colspan="5" class="text-center py-3 text-muted small">Sin registros de sincronización recientes.</td>
+                                        </tr>
+                                    <?php else: ?>
+                                        <?php foreach ($ultimosLogsSync as $log): ?>
+                                            <tr>
+                                                <td class="font-monospace small text-secondary py-1" style="font-size: 0.75rem;">
+                                                    <?= substr($log['fecha_hora'], 11, 5) ?>
+                                                </td>
+                                                <td class="small font-weight-bold text-dark py-1">
+                                                    <?= htmlspecialchars($log['dispositivo_nombre'] ?? 'Reloj') ?>
+                                                </td>
+                                                <td class="text-center font-weight-bold text-success py-1" style="font-size: 0.78rem;">
+                                                    +<?= (int)$log['total_insertados'] ?>
+                                                </td>
+                                                <td class="text-center font-monospace small text-muted py-1" style="font-size: 0.75rem;">
+                                                    <?= round((float)$log['duracion_segundos'], 1) ?>s
+                                                </td>
+                                                <td class="text-center py-1">
+                                                    <?php if ($log['estado'] === 'EXITO'): ?>
+                                                        <span class="badge-pill-custom badge-pill-presente" style="font-size: 0.68rem;"><i class="fa-solid fa-check mr-1"></i> Éxito</span>
+                                                    <?php else: ?>
+                                                        <span class="badge-pill-custom badge-pill-falta" style="font-size: 0.68rem;" title="<?= htmlspecialchars($log['mensaje_error'] ?? '') ?>"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Error</span>
+                                                    <?php endif; ?>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -397,7 +425,7 @@
 
             <!-- TARJETAS KPIS RRHH -->
             <div class="row">
-                <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-2">
                     <div class="kpi-card h-100">
                         <div class="kpi-card-header">
                             <div>
@@ -417,7 +445,7 @@
                     </div>
                 </div>
 
-                <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-2">
                     <div class="kpi-card h-100">
                         <div class="kpi-card-header">
                             <div>
@@ -431,13 +459,13 @@
                         </div>
                         <div>
                             <a href="?route=asistencia&fecha_inicio=<?= $today ?>&fecha_fin=<?= $today ?>&estado=TARDANZA" class="kpi-footer-link">
-                                Ver detalle de tardanzas <i class="fas fa-arrow-right ml-1"></i>
+                                Ver tardanzas <i class="fas fa-arrow-right ml-1"></i>
                             </a>
                         </div>
                     </div>
                 </div>
 
-                <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-2">
                     <div class="kpi-card h-100">
                         <div class="kpi-card-header">
                             <div>
@@ -457,12 +485,12 @@
                     </div>
                 </div>
 
-                <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-2">
                     <div class="kpi-card h-100">
                         <div class="kpi-card-header">
                             <div>
                                 <div class="kpi-title">Horas Extras del Mes</div>
-                                <div class="kpi-value text-primary"><?= $horasExtraMes ?> <span style="font-size: 1rem; color: #64748b; font-weight: 600;">hrs</span></div>
+                                <div class="kpi-value text-primary"><?= $horasExtraMes ?> <span style="font-size: 0.95rem; color: #64748b; font-weight: 600;">hrs</span></div>
                                 <div class="kpi-subtitle"><?= (int)($statsMes['total_minutos_extra_mes'] ?? 0) ?> min acumulados</div>
                             </div>
                             <div class="kpi-icon-box kpi-icon-blue">
@@ -471,63 +499,40 @@
                         </div>
                         <div>
                             <a href="?route=asistencia&fecha_inicio=<?= $monthStart ?>&fecha_fin=<?= $today ?>" class="kpi-footer-link">
-                                Revisar acumulado del mes <i class="fas fa-arrow-right ml-1"></i>
+                                Revisar acumulado <i class="fas fa-arrow-right ml-1"></i>
                             </a>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- GRÁFICOS ANALÍTICOS RRHH -->
+            <!-- GRÁFICOS Y ANÁLISIS RRHH (2 COLUMNAS BALANCEADAS) -->
             <div class="row">
-                <div class="col-lg-8 mb-3">
-                    <div class="card h-100">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <h3 class="card-title font-weight-bold">
+                <div class="col-lg-7 mb-2">
+                    <!-- Tendencia 7 Días -->
+                    <div class="card mb-2">
+                        <div class="card-header d-flex justify-content-between align-items-center py-2 px-3">
+                            <h3 class="card-title font-weight-bold" style="font-size: 0.88rem;">
                                 <i class="fa-solid fa-chart-line mr-2 text-primary"></i> Tendencia de Asistencia (Últimos 7 Días)
                             </h3>
-                            <span class="badge-pill-custom badge-pill-neutral">Últimos 7 días</span>
+                            <span class="badge-pill-custom badge-pill-neutral" style="font-size: 0.68rem;">Últimos 7 días</span>
                         </div>
-                        <div class="card-body">
-                            <div style="height: 250px; position: relative;">
+                        <div class="card-body p-3">
+                            <div style="height: 190px; position: relative;">
                                 <canvas id="tendenciaChart"></canvas>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="col-lg-4 mb-3">
-                    <div class="card h-100">
-                        <div class="card-header">
-                            <h3 class="card-title font-weight-bold">
-                                <i class="fa-solid fa-chart-pie mr-2 text-primary"></i> Distribución de Asistencia Hoy
-                            </h3>
-                        </div>
-                        <div class="card-body d-flex flex-column justify-content-between">
-                            <div style="height: 200px; position: relative;">
-                                <canvas id="distribucionChart"></canvas>
-                            </div>
-                            <div class="d-flex justify-content-around text-center mt-3 small pt-2 border-top">
-                                <div><i class="fas fa-circle text-success mr-1"></i> Presentes: <b><?= $presentesHoy ?></b></div>
-                                <div><i class="fas fa-circle text-warning mr-1"></i> Tardanzas: <b><?= $tardanzasHoy ?></b></div>
-                                <div><i class="fas fa-circle text-danger mr-1"></i> Faltas: <b><?= (int)($statsHoy['faltas'] ?? 0) ?></b></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- CUMPLIMIENTO POR ÁREAS Y RANKING DE IMPUNTUALIDAD -->
-            <div class="row">
-                <div class="col-lg-7 mb-3">
-                    <div class="card h-100">
-                        <div class="card-header">
-                            <h3 class="card-title font-weight-bold">
+                    <!-- Cumplimiento por Áreas -->
+                    <div class="card mb-2">
+                        <div class="card-header py-2 px-3">
+                            <h3 class="card-title font-weight-bold" style="font-size: 0.88rem;">
                                 <i class="fa-solid fa-building-user mr-2 text-primary"></i> Cumplimiento por Departamentos (Hoy)
                             </h3>
                         </div>
-                        <div class="card-body p-0 table-responsive">
-                            <table class="table table-hover table-sm">
+                        <div class="card-body p-0 table-responsive" style="max-height: 200px; overflow-y: auto;">
+                            <table class="table table-hover table-sm mb-0">
                                 <thead>
                                     <tr>
                                         <th>Departamento / Área</th>
@@ -547,16 +552,16 @@
                                             $barColor = $porc >= 90 ? 'bg-success' : ($porc >= 70 ? 'bg-warning' : 'bg-danger');
                                         ?>
                                         <tr>
-                                            <td class="font-weight-bold text-dark"><?= htmlspecialchars($ds['depto_nombre'] ?? 'General') ?></td>
-                                            <td class="text-center font-weight-bold"><?= $tot ?></td>
-                                            <td class="text-center text-success font-weight-bold"><?= $pres ?></td>
-                                            <td class="text-center text-warning font-weight-bold"><?= (int)$ds['tardanzas'] ?></td>
-                                            <td class="text-center text-danger font-weight-bold"><?= (int)$ds['faltas'] ?></td>
-                                            <td style="min-width: 140px;">
-                                                <div class="progress mb-1" style="height: 6px; border-radius: 9999px;">
+                                            <td class="font-weight-bold text-dark py-1" style="font-size: 0.82rem;"><?= htmlspecialchars($ds['depto_nombre'] ?? 'General') ?></td>
+                                            <td class="text-center font-weight-bold py-1"><?= $tot ?></td>
+                                            <td class="text-center text-success font-weight-bold py-1"><?= $pres ?></td>
+                                            <td class="text-center text-warning font-weight-bold py-1"><?= (int)$ds['tardanzas'] ?></td>
+                                            <td class="text-center text-danger font-weight-bold py-1"><?= (int)$ds['faltas'] ?></td>
+                                            <td style="min-width: 120px;" class="py-1">
+                                                <div class="progress mb-1" style="height: 5px; border-radius: 9999px;">
                                                     <div class="progress-bar <?= $barColor ?>" style="width: <?= $porc ?>%; border-radius: 9999px;"></div>
                                                 </div>
-                                                <small class="font-weight-bold text-muted"><?= $porc ?>%</small>
+                                                <small class="font-weight-bold text-muted" style="font-size: 0.72rem;"><?= $porc ?>%</small>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
@@ -566,18 +571,55 @@
                     </div>
                 </div>
 
-                <div class="col-lg-5 mb-3">
-                    <!-- Top Tardanzas Recurrentes del Mes -->
-                    <div class="card h-100">
-                        <div class="card-header">
-                            <h3 class="card-title font-weight-bold">
+                <div class="col-lg-5 mb-2">
+                    <!-- Resumen de Asistencia Hoy RRHH (GRÁFICO POTENCIADO) -->
+                    <div class="card mb-2">
+                        <div class="card-header d-flex justify-content-between align-items-center py-2 px-3">
+                            <h3 class="card-title font-weight-bold" style="font-size: 0.88rem;">
+                                <i class="fa-solid fa-chart-pie mr-2 text-primary"></i> Distribución de Asistencia Hoy
+                            </h3>
+                            <span class="badge-pill-custom badge-pill-neutral" style="font-size: 0.7rem;">
+                                <i class="fa-solid fa-users mr-1 text-primary"></i> <?= $totalHoyConteo ?> marcados
+                            </span>
+                        </div>
+                        <div class="card-body p-3">
+                            <div style="height: 165px; position: relative;" class="mb-2">
+                                <canvas id="distribucionChart"></canvas>
+                            </div>
+                            <div class="pt-2 border-top">
+                                <div class="d-flex justify-content-between align-items-center py-1 border-bottom" style="font-size: 0.79rem;">
+                                    <span class="text-dark"><i class="fa-solid fa-circle text-success mr-1" style="font-size: 8px;"></i> <strong>Presentes</strong></span>
+                                    <span class="font-weight-bold text-dark"><?= $presentesHoy ?> <span class="badge badge-light border text-success ml-1"><?= $porcPresentes ?>%</span></span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center py-1 border-bottom" style="font-size: 0.79rem;">
+                                    <span class="text-dark"><i class="fa-solid fa-circle text-warning mr-1" style="font-size: 8px;"></i> <strong>Tardanzas</strong></span>
+                                    <span class="font-weight-bold text-dark"><?= $tardanzasHoy ?> <span class="badge badge-light border text-warning ml-1"><?= $porcTardanzas ?>%</span></span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center py-1 border-bottom" style="font-size: 0.79rem;">
+                                    <span class="text-dark"><i class="fa-solid fa-circle text-danger mr-1" style="font-size: 8px;"></i> <strong>Faltas</strong></span>
+                                    <span class="font-weight-bold text-dark"><?= (int)($statsHoy['faltas'] ?? 0) ?> <span class="badge badge-light border text-danger ml-1"><?= $porcFaltas ?>%</span></span>
+                                </div>
+                                <?php if (((int)($statsHoy['justificados'] ?? 0) > 0) || ((int)($statsHoy['sin_salida'] ?? 0) > 0)): ?>
+                                    <div class="d-flex justify-content-between align-items-center py-1" style="font-size: 0.79rem;">
+                                        <span class="text-secondary"><i class="fa-solid fa-circle text-primary mr-1" style="font-size: 8px;"></i> Justificados / En Turno</span>
+                                        <span class="font-weight-bold text-dark"><?= (int)($statsHoy['justificados'] ?? 0) + (int)($statsHoy['sin_salida'] ?? 0) ?> <span class="badge badge-light border text-primary ml-1"><?= round($porcJustificados + $porcSinSalida, 1) ?>%</span></span>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ranking de Impuntualidad -->
+                    <div class="card mb-2">
+                        <div class="card-header py-2 px-3">
+                            <h3 class="card-title font-weight-bold" style="font-size: 0.88rem;">
                                 <i class="fa-solid fa-chart-simple mr-2 text-primary"></i> Ranking de Impuntualidad (Mes Actual)
                             </h3>
                         </div>
-                        <div class="card-body p-0">
+                        <div class="card-body p-0" style="max-height: 200px; overflow-y: auto;">
                             <?php if (empty($topTardanzasMes)): ?>
-                                <div class="text-center py-4 text-muted small">
-                                    <i class="fa-solid fa-circle-check text-success fa-2x mb-2 d-block"></i>
+                                <div class="text-center py-3 text-muted small">
+                                    <i class="fa-solid fa-circle-check text-success mr-1"></i>
                                     ¡Excelente! No hay tardanzas acumuladas en el mes.
                                 </div>
                             <?php else: ?>
@@ -586,12 +628,12 @@
                                         <div class="list-group-item d-flex justify-content-between align-items-center py-2 px-3 border-0 border-bottom">
                                             <div>
                                                 <div class="font-weight-bold text-dark small"><?= htmlspecialchars($tm['apellidos'] . ' ' . $tm['nombres']) ?></div>
-                                                <div class="text-muted small">
+                                                <div class="text-muted small" style="font-size: 0.74rem;">
                                                     <?= htmlspecialchars($tm['depto_nombre'] ?? 'Área') ?> &bull; <?= $tm['veces_tarde'] ?> incidencias
                                                 </div>
                                             </div>
                                             <div>
-                                                <span class="badge-pill-custom badge-pill-tardanza"><?= $tm['total_minutos'] ?> min</span>
+                                                <span class="badge-pill-custom badge-pill-tardanza" style="font-size: 0.7rem;"><?= $tm['total_minutos'] ?> min</span>
                                             </div>
                                         </div>
                                     <?php endforeach; ?>
@@ -609,7 +651,7 @@
 
             <!-- TARJETAS KPIS SUPERVISIÓN -->
             <div class="row">
-                <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-2">
                     <div class="kpi-card h-100">
                         <div class="kpi-card-header">
                             <div>
@@ -629,7 +671,7 @@
                     </div>
                 </div>
 
-                <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-2">
                     <div class="kpi-card h-100">
                         <div class="kpi-card-header">
                             <div>
@@ -649,7 +691,7 @@
                     </div>
                 </div>
 
-                <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-2">
                     <div class="kpi-card h-100">
                         <div class="kpi-card-header">
                             <div>
@@ -669,7 +711,7 @@
                     </div>
                 </div>
 
-                <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-2">
                     <div class="kpi-card h-100">
                         <div class="kpi-card-header">
                             <div>
@@ -693,23 +735,23 @@
             <!-- FEED EN VIVO Y CUMPLIMIENTO OPERATIVO -->
             <div class="row">
                 <!-- Feed en Vivo -->
-                <div class="col-lg-7 mb-3">
-                    <div class="card h-100">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <h3 class="card-title font-weight-bold">
-                                <span class="badge-pill-custom badge-pill-online mr-2">
-                                    <i class="fa-solid fa-circle" style="font-size: 6px;"></i> EN VIVO
+                <div class="col-lg-7 mb-2">
+                    <div class="card mb-2">
+                        <div class="card-header d-flex justify-content-between align-items-center py-2 px-3">
+                            <h3 class="card-title font-weight-bold" style="font-size: 0.88rem;">
+                                <span class="badge-pill-custom badge-pill-online mr-2" style="font-size: 0.68rem;">
+                                    <i class="fa-solid fa-circle" style="font-size: 5px;"></i> EN VIVO
                                 </span>
                                 Marcaciones en Tiempo Real del Personal
                             </h3>
                             <div class="card-tools">
-                                <a href="?route=marcaciones&fecha=<?= $today ?>" class="btn btn-sm btn-outline-secondary">
+                                <a href="?route=marcaciones&fecha=<?= $today ?>" class="btn btn-xs btn-outline-secondary">
                                     <i class="fas fa-list mr-1"></i> Ver todas
                                 </a>
                             </div>
                         </div>
-                        <div class="card-body p-0 table-responsive">
-                            <table class="table table-hover table-sm">
+                        <div class="card-body p-0 table-responsive" style="max-height: 380px; overflow-y: auto;">
+                            <table class="table table-hover table-sm mb-0">
                                 <thead>
                                     <tr>
                                         <th>Hora</th>
@@ -721,41 +763,29 @@
                                 <tbody>
                                     <?php if (empty($ultimasMarcaciones)): ?>
                                         <tr>
-                                            <td colspan="4" class="text-center py-4 text-muted">
+                                            <td colspan="4" class="text-center py-3 text-muted small">
                                                 Aún no hay marcaciones para el día de hoy.
                                             </td>
                                         </tr>
                                     <?php else: ?>
                                         <?php foreach ($ultimasMarcaciones as $m): ?>
                                             <tr>
-                                                <td class="font-weight-bold font-monospace text-secondary">
+                                                <td class="font-weight-bold font-monospace text-secondary py-1" style="font-size: 0.78rem;">
                                                     <?= substr($m['fecha_hora'], 11, 8) ?>
                                                 </td>
-                                                <td class="font-weight-bold text-dark">
+                                                <td class="font-weight-bold text-dark py-1" style="font-size: 0.82rem;">
                                                     <?= htmlspecialchars($m['apellidos'] . ' ' . $m['nombres']) ?>
                                                 </td>
-                                                <td class="small text-muted">
-                                                    <?php
-                                                        $v = strtolower($m['tipo_verificacion'] ?? '');
-                                                        if (str_contains($v, 'facial') || str_contains($v, 'face')) {
-                                                            echo '<i class="fa-solid fa-camera text-info mr-1" title="Reconocimiento Facial"></i>';
-                                                        } elseif (str_contains($v, 'tarjeta') || str_contains($v, 'card')) {
-                                                            echo '<i class="fa-solid fa-id-card text-success mr-1" title="Tarjeta RFID"></i>';
-                                                        } elseif (str_contains($v, 'clave') || str_contains($v, 'pin')) {
-                                                            echo '<i class="fa-solid fa-key text-warning mr-1" title="Contraseña / PIN"></i>';
-                                                        } else {
-                                                            echo '<i class="fa-solid fa-fingerprint text-primary mr-1" title="Huella Dactilar"></i>';
-                                                        }
-                                                    ?>
+                                                <td class="small text-muted py-1" style="font-size: 0.78rem;">
                                                     <?= htmlspecialchars($m['dispositivo_nombre'] ?? 'Reloj') ?>
                                                 </td>
-                                                <td>
+                                                <td class="py-1">
                                                     <?php
                                                         $tipo = strtolower($m['tipo'] ?? '');
-                                                        if ($tipo === 'entrada') echo '<span class="badge-pill-custom badge-pill-presente"><i class="fa-solid fa-arrow-right-to-bracket mr-1"></i> Entrada</span>';
-                                                        elseif ($tipo === 'salida') echo '<span class="badge-pill-custom badge-pill-justificado"><i class="fa-solid fa-arrow-right-from-bracket mr-1"></i> Salida</span>';
-                                                        elseif (str_contains($tipo, 'refrigerio')) echo '<span class="badge-pill-custom badge-pill-neutral"><i class="fa-solid fa-utensils mr-1"></i> Refrigerio</span>';
-                                                        else echo '<span class="badge-pill-custom badge-pill-neutral">Marcación</span>';
+                                                        if ($tipo === 'entrada') echo '<span class="badge-pill-custom badge-pill-presente" style="font-size: 0.7rem;"><i class="fa-solid fa-arrow-right-to-bracket mr-1"></i> Entrada</span>';
+                                                        elseif ($tipo === 'salida') echo '<span class="badge-pill-custom badge-pill-justificado" style="font-size: 0.7rem;"><i class="fa-solid fa-arrow-right-from-bracket mr-1"></i> Salida</span>';
+                                                        elseif (str_contains($tipo, 'refrigerio')) echo '<span class="badge-pill-custom badge-pill-neutral" style="font-size: 0.7rem;"><i class="fa-solid fa-utensils mr-1"></i> Refrigerio</span>';
+                                                        else echo '<span class="badge-pill-custom badge-pill-neutral" style="font-size: 0.7rem;">Marcación</span>';
                                                     ?>
                                                 </td>
                                             </tr>
@@ -767,18 +797,49 @@
                     </div>
                 </div>
 
-                <!-- Mayores Tardanzas de Hoy -->
-                <div class="col-lg-5 mb-3">
-                    <div class="card h-100">
-                        <div class="card-header">
-                            <h3 class="card-title font-weight-bold">
+                <!-- Resumen Asistencia & Mayores Tardanzas -->
+                <div class="col-lg-5 mb-2">
+                    <div class="card mb-2">
+                        <div class="card-header d-flex justify-content-between align-items-center py-2 px-3">
+                            <h3 class="card-title font-weight-bold" style="font-size: 0.88rem;">
+                                <i class="fa-solid fa-chart-pie mr-2 text-primary"></i> Resumen de Asistencia Hoy
+                            </h3>
+                            <span class="badge-pill-custom badge-pill-neutral" style="font-size: 0.7rem;">
+                                <?= $totalHoyConteo ?> marcados
+                            </span>
+                        </div>
+                        <div class="card-body p-3">
+                            <div style="height: 165px; position: relative;" class="mb-2">
+                                <canvas id="distribucionChart"></canvas>
+                            </div>
+                            <div class="pt-2 border-top">
+                                <div class="d-flex justify-content-between align-items-center py-1 border-bottom" style="font-size: 0.79rem;">
+                                    <span class="text-dark"><i class="fa-solid fa-circle text-success mr-1" style="font-size: 8px;"></i> <strong>Presentes</strong></span>
+                                    <span class="font-weight-bold text-dark"><?= $presentesHoy ?> <span class="badge badge-light border text-success ml-1"><?= $porcPresentes ?>%</span></span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center py-1 border-bottom" style="font-size: 0.79rem;">
+                                    <span class="text-dark"><i class="fa-solid fa-circle text-warning mr-1" style="font-size: 8px;"></i> <strong>Tardanzas</strong></span>
+                                    <span class="font-weight-bold text-dark"><?= $tardanzasHoy ?> <span class="badge badge-light border text-warning ml-1"><?= $porcTardanzas ?>%</span></span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center py-1" style="font-size: 0.79rem;">
+                                    <span class="text-dark"><i class="fa-solid fa-circle text-danger mr-1" style="font-size: 8px;"></i> <strong>Faltas</strong></span>
+                                    <span class="font-weight-bold text-dark"><?= (int)($statsHoy['faltas'] ?? 0) ?> <span class="badge badge-light border text-danger ml-1"><?= $porcFaltas ?>%</span></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mayores Tardanzas de Hoy -->
+                    <div class="card mb-2">
+                        <div class="card-header py-2 px-3">
+                            <h3 class="card-title font-weight-bold" style="font-size: 0.88rem;">
                                 <i class="fa-solid fa-triangle-exclamation mr-2 text-warning"></i> Mayores Tardanzas de Hoy
                             </h3>
                         </div>
-                        <div class="card-body p-0">
+                        <div class="card-body p-0" style="max-height: 180px; overflow-y: auto;">
                             <?php if (empty($topTardanzasHoy)): ?>
-                                <div class="text-center py-4 text-muted small">
-                                    <i class="fa-solid fa-circle-check text-success fa-2x mb-2 d-block"></i>
+                                <div class="text-center py-3 text-muted small">
+                                    <i class="fa-solid fa-circle-check text-success mr-1"></i>
                                     ¡Cero tardanzas registradas el día de hoy!
                                 </div>
                             <?php else: ?>
@@ -787,11 +848,11 @@
                                         <div class="list-group-item d-flex justify-content-between align-items-center py-2 px-3 border-0 border-bottom">
                                             <div>
                                                 <div class="font-weight-bold text-dark small"><?= htmlspecialchars($t['apellidos'] . ' ' . $t['nombres']) ?></div>
-                                                <div class="text-muted small">
+                                                <div class="text-muted small" style="font-size: 0.74rem;">
                                                     <?= htmlspecialchars($t['depto_nombre'] ?? 'Área General') ?> &bull; Ingreso: <?= substr($t['hora_entrada_real'], 11, 5) ?>
                                                 </div>
                                             </div>
-                                            <span class="badge-pill-custom badge-pill-tardanza">+<?= $t['minutos_tardanza'] ?> min</span>
+                                            <span class="badge-pill-custom badge-pill-tardanza" style="font-size: 0.7rem;">+<?= $t['minutos_tardanza'] ?> min</span>
                                         </div>
                                     <?php endforeach; ?>
                                 </div>
@@ -806,7 +867,7 @@
             <!-- VISTA: SOLO CONSULTA / GENERAL                                     -->
             <!-- =================================================================== -->
             <div class="row">
-                <div class="col-lg-4 col-12 mb-3">
+                <div class="col-lg-4 col-12 mb-2">
                     <div class="kpi-card h-100">
                         <div class="kpi-card-header">
                             <div>
@@ -820,7 +881,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-lg-4 col-12 mb-3">
+                <div class="col-lg-4 col-12 mb-2">
                     <div class="kpi-card h-100">
                         <div class="kpi-card-header">
                             <div>
@@ -834,7 +895,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-lg-4 col-12 mb-3">
+                <div class="col-lg-4 col-12 mb-2">
                     <div class="kpi-card h-100">
                         <div class="kpi-card-header">
                             <div>
@@ -851,26 +912,41 @@
             </div>
 
             <div class="row">
-                <div class="col-lg-8 mb-3">
-                    <div class="card h-100">
-                        <div class="card-header">
-                            <h3 class="card-title font-weight-bold"><i class="fa-solid fa-chart-line mr-2 text-primary"></i> Tendencia de Asistencia (Últimos 7 Días)</h3>
+                <div class="col-lg-7 mb-2">
+                    <div class="card mb-2">
+                        <div class="card-header py-2 px-3">
+                            <h3 class="card-title font-weight-bold" style="font-size: 0.88rem;"><i class="fa-solid fa-chart-line mr-2 text-primary"></i> Tendencia de Asistencia (Últimos 7 Días)</h3>
                         </div>
-                        <div class="card-body">
-                            <div style="height: 250px; position: relative;">
+                        <div class="card-body p-3">
+                            <div style="height: 200px; position: relative;">
                                 <canvas id="tendenciaChart"></canvas>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="col-lg-4 mb-3">
-                    <div class="card h-100">
-                        <div class="card-header">
-                            <h3 class="card-title font-weight-bold"><i class="fa-solid fa-chart-pie mr-2 text-primary"></i> Distribución de Hoy</h3>
+                <div class="col-lg-5 mb-2">
+                    <div class="card mb-2">
+                        <div class="card-header d-flex justify-content-between align-items-center py-2 px-3">
+                            <h3 class="card-title font-weight-bold" style="font-size: 0.88rem;"><i class="fa-solid fa-chart-pie mr-2 text-primary"></i> Distribución de Asistencia Hoy</h3>
+                            <span class="badge-pill-custom badge-pill-neutral" style="font-size: 0.7rem;"><?= $totalHoyConteo ?> marcados</span>
                         </div>
-                        <div class="card-body">
-                            <div style="height: 210px; position: relative;">
+                        <div class="card-body p-3">
+                            <div style="height: 165px; position: relative;" class="mb-2">
                                 <canvas id="distribucionChart"></canvas>
+                            </div>
+                            <div class="pt-2 border-top">
+                                <div class="d-flex justify-content-between align-items-center py-1 border-bottom" style="font-size: 0.79rem;">
+                                    <span class="text-dark"><i class="fa-solid fa-circle text-success mr-1" style="font-size: 8px;"></i> <strong>Presentes</strong></span>
+                                    <span class="font-weight-bold text-dark"><?= $presentesHoy ?> <span class="badge badge-light border text-success ml-1"><?= $porcPresentes ?>%</span></span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center py-1 border-bottom" style="font-size: 0.79rem;">
+                                    <span class="text-dark"><i class="fa-solid fa-circle text-warning mr-1" style="font-size: 8px;"></i> <strong>Tardanzas</strong></span>
+                                    <span class="font-weight-bold text-dark"><?= $tardanzasHoy ?> <span class="badge badge-light border text-warning ml-1"><?= $porcTardanzas ?>%</span></span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center py-1 border-bottom" style="font-size: 0.79rem;">
+                                    <span class="text-dark"><i class="fa-solid fa-circle text-danger mr-1" style="font-size: 8px;"></i> <strong>Faltas</strong></span>
+                                    <span class="font-weight-bold text-dark"><?= (int)($statsHoy['faltas'] ?? 0) ?> <span class="badge badge-light border text-danger ml-1"><?= $porcFaltas ?>%</span></span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -890,24 +966,33 @@
                 <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
             </div>
             <div class="modal-body py-4">
-                <p class="text-secondary small mb-3">Selecciona el modo de sincronización deseado para los relojes ZKTeco:</p>
+                <p class="text-secondary small mb-3">Selecciona el modo de sincronización para los relojes ZKTeco:</p>
                 
                 <div class="list-group">
-                    <!-- Opción 1: Rápido Hoy -->
-                    <a href="javascript:void(0)" onclick="executeSyncMode('today')" class="list-group-item list-group-item-action d-flex align-items-center p-3 mb-2 border rounded">
-                        <div class="mr-3 text-success"><i class="fa-solid fa-bolt fa-2x"></i></div>
+                    <!-- Opción 1: Incremental Inteligente (Recomendado) -->
+                    <a href="javascript:void(0)" onclick="executeSyncMode('incremental')" class="list-group-item list-group-item-action d-flex align-items-center p-3 mb-2 border rounded">
+                        <div class="mr-3 text-success"><i class="fa-solid fa-arrows-rotate fa-2x"></i></div>
                         <div>
-                            <div class="font-weight-bold text-dark">Sincronizar Solo Hoy (Ultra Rápido) <span class="badge badge-success ml-1">Recomendado</span></div>
-                            <small class="text-muted">Procesa solo las marcaciones de hoy. No satura memoria con registros históricos (Toma ~1 segundo).</small>
+                            <div class="font-weight-bold text-dark">Sincronización Inteligente (Pendientes) <span class="badge badge-success ml-1">Recomendado</span></div>
+                            <small class="text-muted">Descarga todas las marcaciones nuevas desde la última fecha registrada hasta hoy sin omitir ningún día.</small>
                         </div>
                     </a>
 
-                    <!-- Opción 2: Histórico Completo -->
+                    <!-- Opción 2: Rápido Hoy -->
+                    <a href="javascript:void(0)" onclick="executeSyncMode('today')" class="list-group-item list-group-item-action d-flex align-items-center p-3 mb-2 border rounded">
+                        <div class="mr-3 text-warning"><i class="fa-solid fa-bolt fa-2x"></i></div>
+                        <div>
+                            <div class="font-weight-bold text-dark">Sincronizar Solo Hoy (Rápido)</div>
+                            <small class="text-muted">Procesa únicamente las marcaciones del día de hoy.</small>
+                        </div>
+                    </a>
+
+                    <!-- Opción 3: Histórico Completo -->
                     <a href="javascript:void(0)" onclick="executeSyncMode('full')" class="list-group-item list-group-item-action d-flex align-items-center p-3 border rounded">
                         <div class="mr-3 text-primary"><i class="fa-solid fa-database fa-2x"></i></div>
                         <div>
                             <div class="font-weight-bold text-dark">Sincronización Histórica Completa</div>
-                            <small class="text-muted">Descarga todos los registros almacenados en el reloj. Ideal para auditorías iniciales.</small>
+                            <small class="text-muted">Descarga todos los registros almacenados en la memoria del reloj.</small>
                         </div>
                     </a>
                 </div>
@@ -930,6 +1015,30 @@
 <!-- SCRIPTS DE CHART.JS -->
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    // Plugin personalizado para dibujar el porcentaje y texto central dentro del anillo del gráfico
+    const centerDoughnutPlugin = {
+        id: 'centerDoughnutPlugin',
+        afterDraw(chart) {
+            if (chart.config.type !== 'doughnut') return;
+            const { ctx, chartArea: { top, bottom, left, right } } = chart;
+            ctx.save();
+            const centerX = (left + right) / 2;
+            const centerY = (top + bottom) / 2;
+            
+            const rate = <?= (int)$tasaAsistenciaHoy ?>;
+            ctx.font = "bold 22px 'Plus Jakarta Sans', sans-serif";
+            ctx.fillStyle = '#0f172a';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(rate + '%', centerX, centerY - 7);
+            
+            ctx.font = "700 9px 'Plus Jakarta Sans', sans-serif";
+            ctx.fillStyle = '#64748b';
+            ctx.fillText('ASISTENCIA', centerX, centerY + 13);
+            ctx.restore();
+        }
+    };
+
     // 1. Gráfico de Tendencia 7 Días
     const ctxTendencia = document.getElementById('tendenciaChart')?.getContext('2d');
     if (ctxTendencia) {
@@ -945,6 +1054,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         backgroundColor: 'rgba(16, 185, 129, 0.12)',
                         borderWidth: 2,
                         pointBackgroundColor: '#10b981',
+                        pointRadius: 3,
                         fill: true,
                         tension: 0.3
                     },
@@ -955,6 +1065,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         backgroundColor: 'rgba(245, 158, 11, 0.12)',
                         borderWidth: 2,
                         pointBackgroundColor: '#f59e0b',
+                        pointRadius: 3,
                         fill: true,
                         tension: 0.3
                     },
@@ -965,6 +1076,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         backgroundColor: 'rgba(244, 63, 94, 0.12)',
                         borderWidth: 2,
                         pointBackgroundColor: '#f43f5e',
+                        pointRadius: 3,
                         fill: true,
                         tension: 0.3
                     }
@@ -976,45 +1088,79 @@ document.addEventListener('DOMContentLoaded', function () {
                 plugins: {
                     legend: {
                         position: 'top',
-                        labels: { boxWidth: 12, font: { size: 12, family: "'Plus Jakarta Sans', sans-serif" } }
+                        labels: { boxWidth: 10, font: { size: 11, family: "'Plus Jakarta Sans', sans-serif" } }
+                    },
+                    tooltip: {
+                        backgroundColor: '#0f172a',
+                        titleFont: { size: 12, family: "'Plus Jakarta Sans', sans-serif" },
+                        bodyFont: { size: 11, family: "'Plus Jakarta Sans', sans-serif" },
+                        padding: 8,
+                        cornerRadius: 6
                     }
                 },
                 scales: {
                     y: {
                         beginAtZero: true,
-                        ticks: { precision: 0 }
+                        ticks: { precision: 0, font: { size: 10 } }
+                    },
+                    x: {
+                        ticks: { font: { size: 10 } }
                     }
                 }
             }
         });
     }
 
-    // 2. Gráfico de Dona: Distribución Hoy
+    // 2. Gráfico de Dona: Distribución Hoy con porcentaje y tooltip enriquecido
     const ctxDist = document.getElementById('distribucionChart')?.getContext('2d');
     if (ctxDist) {
+        const presentesVal = <?= (int)($statsHoy['presentes'] ?? 0) ?>;
+        const tardanzasVal = <?= (int)($statsHoy['tardanzas'] ?? 0) ?>;
+        const faltasVal = <?= (int)($statsHoy['faltas'] ?? 0) ?>;
+        const justificadosVal = <?= (int)($statsHoy['justificados'] ?? 0) ?>;
+        const sinSalidaVal = <?= (int)($statsHoy['sin_salida'] ?? 0) ?>;
+        const totalSum = presentesVal + tardanzasVal + faltasVal + justificadosVal + sinSalidaVal;
+
+        // Si no hay datos registrados, mostrar un placeholder gris suave
+        const chartData = (totalSum === 0) ? [1] : [presentesVal, tardanzasVal, faltasVal, justificadosVal, sinSalidaVal];
+        const chartColors = (totalSum === 0) ? ['#e2e8f0'] : ['#10b981', '#f59e0b', '#f43f5e', '#3b82f6', '#94a3b8'];
+        const chartLabels = (totalSum === 0) ? ['Sin registros'] : ['Presentes', 'Tardanzas', 'Faltas', 'Justificados', 'Sin Salida'];
+
         new Chart(ctxDist, {
             type: 'doughnut',
             data: {
-                labels: ['Presentes', 'Tardanzas', 'Faltas', 'Justificados', 'Sin Salida'],
+                labels: chartLabels,
                 datasets: [{
-                    data: [
-                        <?= (int)($statsHoy['presentes'] ?? 0) ?>,
-                        <?= (int)($statsHoy['tardanzas'] ?? 0) ?>,
-                        <?= (int)($statsHoy['faltas'] ?? 0) ?>,
-                        <?= (int)($statsHoy['justificados'] ?? 0) ?>,
-                        <?= (int)($statsHoy['sin_salida'] ?? 0) ?>
-                    ],
-                    backgroundColor: ['#10b981', '#f59e0b', '#f43f5e', '#3b82f6', '#94a3b8'],
-                    borderWidth: 2
+                    data: chartData,
+                    backgroundColor: chartColors,
+                    borderWidth: 2,
+                    borderColor: '#ffffff',
+                    hoverOffset: 4
                 }]
             },
+            plugins: [centerDoughnutPlugin],
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { display: false }
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#0f172a',
+                        titleFont: { size: 12, family: "'Plus Jakarta Sans', sans-serif" },
+                        bodyFont: { size: 11, family: "'Plus Jakarta Sans', sans-serif" },
+                        padding: 8,
+                        cornerRadius: 6,
+                        callbacks: {
+                            label: function(context) {
+                                if (totalSum === 0) return ' Sin registros hoy';
+                                const val = context.raw || 0;
+                                const pct = totalSum > 0 ? Math.round((val / totalSum) * 100) : 0;
+                                return ` ${context.label}: ${val} (${pct}%)`;
+                            }
+                        }
+                    }
                 },
-                cutout: '72%'
+                cutout: '70%'
             }
         });
     }
@@ -1024,11 +1170,13 @@ function openSyncModal() {
     $('#modalSincronizacion').modal('show');
 }
 
-function executeSyncMode(mode) {
+function executeSyncMode(mode = 'incremental') {
     $('#modalSincronizacion').modal('hide');
     
+    const syncTitle = (mode === 'today') ? 'Sincronizando Marcaciones de Hoy...' : ((mode === 'full') ? 'Sincronizando Histórico Completo...' : 'Sincronizando Marcaciones Pendientes...');
+
     Swal.fire({
-        title: mode === 'today' ? 'Sincronizando Marcaciones de Hoy...' : 'Sincronizando Histórico Completo...',
+        title: syncTitle,
         html: `
             <div class="text-center py-2">
                 <i class="fa-solid fa-arrows-rotate fa-spin fa-3x text-success mb-3"></i>
@@ -1044,14 +1192,36 @@ function executeSyncMode(mode) {
     });
 
     let seconds = 0;
+    let errorsCount = 0;
     const timer = setInterval(() => {
         seconds++;
         const timerEl = document.getElementById('swal-timer');
         if (timerEl) timerEl.innerText = `Tiempo transcurrido: ${seconds}s`;
+
+        if (seconds > 120) {
+            clearInterval(timer);
+            Swal.fire({
+                icon: 'info',
+                title: 'Proceso en segundo plano',
+                text: 'La sincronización sigue ejecutándose. El panel se actualizará.',
+                confirmButtonText: 'Actualizar'
+            }).then(() => {
+                window.location.reload();
+            });
+        }
     }, 1000);
 
-    fetch(`?route=dispositivos&action=sincronizar&mode=${mode}&ajax=1`, {
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    const formData = new FormData();
+    formData.append('mode', mode);
+    formData.append('_csrf_token', window._csrfToken || '');
+
+    fetch(`?route=dispositivos&action=sincronizar&ajax=1`, {
+        method: 'POST',
+        headers: { 
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': window._csrfToken || ''
+        },
+        body: formData
     })
     .then(res => res.json())
     .then(data => {
@@ -1060,8 +1230,12 @@ function executeSyncMode(mode) {
             fetch('?route=dispositivos&action=sync_status', {
                 headers: { 'X-Requested-With': 'XMLHttpRequest' }
             })
-            .then(r => r.json())
+            .then(r => {
+                if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                return r.json();
+            })
             .then(statusData => {
+                errorsCount = 0;
                 if (!statusData.running) {
                     clearInterval(poll);
                     clearInterval(timer);
@@ -1086,6 +1260,22 @@ function executeSyncMode(mode) {
                             window.location.reload();
                         });
                     }
+                }
+            })
+            .catch(e => {
+                console.warn("Poll sync error:", e);
+                errorsCount++;
+                if (errorsCount >= 5) {
+                    clearInterval(poll);
+                    clearInterval(timer);
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Sincronización Iniciada',
+                        text: 'El proceso se está completando en el servidor.',
+                        confirmButtonText: 'Actualizar'
+                    }).then(() => {
+                        window.location.reload();
+                    });
                 }
             });
         }, 2000);

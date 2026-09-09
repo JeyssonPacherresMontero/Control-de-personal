@@ -119,7 +119,7 @@ CREATE TABLE IF NOT EXISTS `marcaciones` (
     `procesado` TINYINT(1) DEFAULT 0 COMMENT '0: Pendiente de cálculo, 1: Procesado en asistencia_diaria',
     `creado_en` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT `fk_marcaciones_empleado` FOREIGN KEY (`id_empleado`) REFERENCES `empleados` (`id`) ON DELETE CASCADE,
-    CONSTRAINT `fk_marcaciones_dispositivo` FOREIGN KEY (`id_dispositivo`) REFERENCES `dispositivos` (`id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_marcaciones_dispositivo` FOREIGN KEY (`id_dispositivo`) REFERENCES `dispositivos` (`id`) ON DELETE RESTRICT,
     -- Clave Única para evitar duplicados en re-intentos de sincronización
     UNIQUE KEY `uniq_marcacion` (`codigo_reloj`, `fecha_hora`, `id_dispositivo`),
     INDEX `idx_marcaciones_fecha_hora` (`fecha_hora`),
@@ -243,7 +243,17 @@ CREATE TABLE IF NOT EXISTS `plantillas_biometricas` (
     `actualizado_en` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT `fk_plantillas_dispositivo` FOREIGN KEY (`id_dispositivo_origen`) REFERENCES `dispositivos` (`id`) ON DELETE SET NULL,
     UNIQUE KEY `uniq_biometria_usuario` (`codigo_reloj`, `tipo`, `dedo_indice`),
-    INDEX `idx_biometria_codigo` (`codigo_reloj`)
+-- 15. TABLA: CONTROL DE RATE LIMITING Y BLOQUEO DE LOGIN (SEGURIDAD OWASP)
+CREATE TABLE IF NOT EXISTS `login_intentos` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `ip` VARCHAR(45) NOT NULL,
+    `usuario` VARCHAR(100) NULL,
+    `intentos` INT DEFAULT 1,
+    `ultimo_intento` DATETIME NOT NULL,
+    `bloqueado_hasta` DATETIME NULL,
+    UNIQUE KEY `uniq_login_ip` (`ip`),
+    INDEX `idx_login_usuario` (`usuario`),
+    INDEX `idx_login_bloqueo` (`bloqueado_hasta`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 SET FOREIGN_KEY_CHECKS = 1;

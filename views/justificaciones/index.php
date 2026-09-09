@@ -102,11 +102,13 @@
                                         <?php if ($j['estado'] === 'PENDIENTE'): ?>
                                             <div class="btn-group btn-group-sm" style="gap: 3px;">
                                                 <form method="POST" action="?route=justificaciones&action=resolver" class="d-inline">
+                                                    <?= csrf_field() ?>
                                                     <input type="hidden" name="id" value="<?= $j['id'] ?>">
                                                     <input type="hidden" name="estado" value="APROBADO">
                                                     <button type="submit" class="btn btn-outline-success btn-xs px-2" title="Aprobar Solicitud"><i class="fa-solid fa-check"></i></button>
                                                 </form>
                                                 <form method="POST" action="?route=justificaciones&action=resolver" class="d-inline">
+                                                    <?= csrf_field() ?>
                                                     <input type="hidden" name="id" value="<?= $j['id'] ?>">
                                                     <input type="hidden" name="estado" value="RECHAZADO">
                                                     <button type="submit" class="btn btn-outline-danger btn-xs px-2" title="Rechazar Solicitud"><i class="fa-solid fa-xmark"></i></button>
@@ -132,6 +134,7 @@
 <div class="modal fade" id="modalJustificacion" tabindex="-1">
     <div class="modal-dialog">
         <form method="POST" action="?route=justificaciones&action=guardar" class="modal-content">
+            <?= csrf_field() ?>
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title font-weight-bold"><i class="fa-solid fa-file-signature mr-2"></i> Nueva Justificación / Permiso</h5>
                 <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
