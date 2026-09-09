@@ -17,7 +17,7 @@ class JustificacionesController {
             FROM justificaciones j
             JOIN empleados e ON j.id_empleado = e.id
             LEFT JOIN departamentos d ON e.departamento_id = d.id
-            WHERE (j.fecha_inicio BETWEEN :f1 AND :f2 OR j.fecha_fin BETWEEN :f1 AND :f2)
+            WHERE (j.fecha_inicio <= :f2 AND j.fecha_fin >= :f1)
         ";
         $params = [
             ':f1' => $fechaInicio,

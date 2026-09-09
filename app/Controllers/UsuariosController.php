@@ -36,23 +36,48 @@ class UsuariosController {
         $rol = $_POST['rol'] ?? 'RRHH';
         $activo = isset($_POST['activo']) ? 1 : 0;
         
+        // Regla de Seguridad Estricta: Solo puede existir un único Administrador en el sistema.
+        // No se permite crear nuevos usuarios con rol ADMIN ni promover usuarios existentes a ADMIN.
+        if ($id <= 0) {
+            // Creación: Rol forzado a roles no-admin
+            if ($rol === 'ADMIN' || !in_array($rol, ['RRHH', 'SUPERVISOR', 'CONSULTA'], true)) {
+                $rol = 'RRHH';
+            }
+        } else {
+            // Edición de usuario existente
+            $targetUser = Database::queryOne("SELECT id, rol FROM usuarios_sistema WHERE id = ?", [$id]);
+            if (!$targetUser) {
+                header('Location: ?route=usuarios&msg=error_no_existe');
+                exit;
+            }
+            if ($targetUser['rol'] === 'ADMIN') {
+                // El administrador principal preserva su rol y acceso total
+                $rol = 'ADMIN';
+            } else {
+                // Ningún otro usuario puede asignarse rol ADMIN
+                if ($rol === 'ADMIN' || !in_array($rol, ['RRHH', 'SUPERVISOR', 'CONSULTA'], true)) {
+                    $rol = in_array($targetUser['rol'], ['RRHH', 'SUPERVISOR', 'CONSULTA'], true) ? $targetUser['rol'] : 'RRHH';
+                }
+            }
+        }
+
         // Permisos seleccionados desde los checkboxes
         $permisosSeleccionados = $_POST['permisos'] ?? [];
         if (!is_array($permisosSeleccionados)) {
             $permisosSeleccionados = [];
         }
 
-        // Si el rol es ADMIN, forzar acceso total
+        // Si el rol es ADMIN (únicamente el administrador original), forzar acceso total
         if ($rol === 'ADMIN') {
             $permisosJson = json_encode(['*']);
         } else {
-            // Limpiar valores y asegurar que sean módulos válidos
-            $modulosValidos = array_keys(AuthController::getAvailableModules());
+            // Limpiar valores y asegurar que sean módulos válidos (excluyendo 'usuarios' que es exclusivo del Admin)
+            $modulosValidos = array_diff(array_keys(AuthController::getAvailableModules()), ['usuarios']);
             $permisosFiltrados = array_values(array_intersect($permisosSeleccionados, $modulosValidos));
             
-            // Si no seleccionó ningún módulo, asignar al menos asistencia por defecto
+            // Si no seleccionó ningún módulo, asignar los módulos por defecto de su rol
             if (empty($permisosFiltrados)) {
-                $permisosFiltrados = ['asistencia'];
+                $permisosFiltrados = AuthController::getDefaultPermissionsForRole($rol);
             }
             $permisosJson = json_encode($permisosFiltrados);
         }
@@ -228,25 +253,30 @@ class UsuariosController {
                   || isset($_GET['ajax']) 
                   || (isset($_SERVER['HTTP_ACCEPT']) && str_contains($_SERVER['HTTP_ACCEPT'], 'application/json'));
 
-        // Evitar que el admin se desactive a sí mismo
-        if ($id === (int)($currentUser['id'] ?? 0)) {
+        $targetUser = Database::queryOne("SELECT id, usuario, rol, activo FROM usuarios_sistema WHERE id = ?", [$id]);
+        if (!$targetUser) {
             if ($isAjax) {
                 header('Content-Type: application/json; charset=utf-8');
-                echo json_encode(['success' => false, 'error' => 'No puedes desactivar tu propio usuario administrador.']);
+                echo json_encode(['success' => false, 'error' => 'Usuario no encontrado.']);
                 exit;
             }
-            header('Location: ?route=usuarios&msg=error_auto_desactivar');
+            header('Location: ?route=usuarios&msg=error_no_existe');
             exit;
         }
 
-        $nuevoEstado = 0;
-        if ($id > 0) {
-            $user = Database::queryOne("SELECT activo FROM usuarios_sistema WHERE id = ?", [$id]);
-            if ($user) {
-                $nuevoEstado = $user['activo'] ? 0 : 1;
-                Database::execute("UPDATE usuarios_sistema SET activo = ? WHERE id = ?", [$nuevoEstado, $id]);
+        // El Administrador principal no puede ser desactivado
+        if ($targetUser['rol'] === 'ADMIN') {
+            if ($isAjax) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'error' => 'La cuenta de Administrador principal está protegida y no puede ser desactivada.']);
+                exit;
             }
+            header('Location: ?route=usuarios&msg=error_admin_protegido');
+            exit;
         }
+
+        $nuevoEstado = $targetUser['activo'] ? 0 : 1;
+        Database::execute("UPDATE usuarios_sistema SET activo = ? WHERE id = ?", [$nuevoEstado, $id]);
 
         if ($isAjax) {
             header('Content-Type: application/json; charset=utf-8');
@@ -270,15 +300,19 @@ class UsuariosController {
         $id = (int)($_POST['id'] ?? 0);
         $currentUser = AuthController::user();
 
-        // Evitar que el admin se elimine a sí mismo
-        if ($id === (int)($currentUser['id'] ?? 0)) {
-            header('Location: ?route=usuarios&msg=error_auto_eliminar');
+        $targetUser = Database::queryOne("SELECT id, usuario, rol FROM usuarios_sistema WHERE id = ?", [$id]);
+        if (!$targetUser) {
+            header('Location: ?route=usuarios&msg=error_no_existe');
             exit;
         }
 
-        if ($id > 0) {
-            Database::execute("DELETE FROM usuarios_sistema WHERE id = ?", [$id]);
+        // El Administrador principal nunca puede ser eliminado
+        if ($targetUser['rol'] === 'ADMIN' || $id === (int)($currentUser['id'] ?? 0)) {
+            header('Location: ?route=usuarios&msg=error_admin_protegido');
+            exit;
         }
+
+        Database::execute("DELETE FROM usuarios_sistema WHERE id = ?", [$id]);
 
         header('Location: ?route=usuarios&msg=eliminado');
         exit;

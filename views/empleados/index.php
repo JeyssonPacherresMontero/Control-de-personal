@@ -24,26 +24,26 @@
 <section class="content">
     <div class="container-fluid">
 
-        <!-- FILTER CARD -->
-        <div class="card mb-3">
-            <div class="card-header d-flex align-items-center justify-content-between flex-wrap">
-                <h3 class="card-title font-weight-bold">
+        <!-- FILTER AND ACTIONS CARD -->
+        <div class="card mb-3 no-print">
+            <div class="card-header d-flex align-items-center justify-content-between flex-wrap py-2 px-3">
+                <h3 class="card-title font-weight-bold text-dark mb-0 d-flex align-items-center" style="font-size: 0.92rem;">
                     <i class="fa-solid fa-filter mr-2 text-primary"></i> Filtros de Búsqueda de Personal
                 </h3>
                 <?php if (in_array($userRole, ['ADMIN', 'RRHH'], true)): ?>
-                    <div class="card-tools">
+                    <div class="card-tools my-1">
                         <button class="btn btn-primary btn-sm" onclick="openNewEmpleadoModal()">
                             <i class="fa-solid fa-user-plus mr-1"></i> Registrar Empleado
                         </button>
                     </div>
                 <?php endif; ?>
             </div>
-            <div class="card-body">
+            <div class="card-body py-3 px-3">
                 <form method="GET" action="" class="row align-items-end">
                     <input type="hidden" name="route" value="empleados">
 
                     <div class="col-md-4 col-sm-6 mb-2">
-                        <label class="form-label-custom"><i class="fa-solid fa-building mr-1"></i> Departamento / Área</label>
+                        <label class="form-label-custom"><i class="fa-solid fa-building mr-1"></i> Departamento</label>
                         <select name="departamento_id" class="form-control form-control-sm">
                             <option value="">-- Todos los Departamentos --</option>
                             <?php foreach ($departamentos as $d): ?>
@@ -53,12 +53,12 @@
                     </div>
 
                     <div class="col-md-6 col-sm-6 mb-2">
-                        <label class="form-label-custom"><i class="fa-solid fa-magnifying-glass mr-1"></i> Buscar por Nombre, DNI o ID Biométrico</label>
+                        <label class="form-label-custom"><i class="fa-solid fa-magnifying-glass mr-1"></i> Buscar por Nombre, DNI o ID</label>
                         <input type="text" name="search" class="form-control form-control-sm" placeholder="Ej: Perez, 70112233, 101..." value="<?= htmlspecialchars($search ?? '') ?>">
                     </div>
 
                     <div class="col-md-2 col-sm-12 mb-2">
-                        <button type="submit" class="btn btn-primary btn-sm btn-block">
+                        <button type="submit" class="btn btn-primary btn-sm btn-block" style="height: 34px;">
                             <i class="fa-solid fa-filter mr-1"></i> Filtrar
                         </button>
                     </div>
@@ -72,28 +72,28 @@
                 <table class="table table-hover datatable text-nowrap table-sm">
                     <thead>
                         <tr>
-                            <th>ID Biométrico</th>
-                            <th>DNI / Documento</th>
+                            <th class="text-center" style="width: 110px;">ID Reloj</th>
+                            <th class="text-center" style="width: 100px;">DNI</th>
                             <th>Apellidos y Nombres</th>
-                            <th>Departamento / Cargo</th>
-                            <th>Turno Asignado</th>
-                            <th>Biometría</th>
+                            <th>Departamento y Cargo</th>
+                            <th class="text-center">Turno</th>
+                            <th class="text-center">Biometría</th>
                             <th>Contacto</th>
-                            <th class="text-center">Estado</th>
+                            <th class="text-center" style="width: 90px;">Estado</th>
                             <?php if (in_array($userRole, ['ADMIN', 'RRHH'], true)): ?>
-                                <th class="text-center">Acciones</th>
+                                <th class="text-center" style="width: 95px;">Acciones</th>
                             <?php endif; ?>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($empleados as $e): ?>
                             <tr>
-                                <td>
-                                    <span class="badge-pill-custom badge-pill-neutral font-monospace">
+                                <td class="text-center">
+                                    <span class="badge-pill-custom badge-pill-neutral font-monospace font-weight-bold">
                                         ID: <?= htmlspecialchars($e['codigo_reloj']) ?>
                                     </span>
                                 </td>
-                                <td class="font-monospace font-weight-bold text-dark"><?= htmlspecialchars($e['dni']) ?></td>
+                                <td class="text-center font-monospace font-weight-bold text-dark"><?= htmlspecialchars($e['dni']) ?></td>
                                 <td>
                                     <div class="font-weight-bold text-dark"><?= htmlspecialchars($e['apellidos'] . ' ' . $e['nombres']) ?></div>
                                     <small class="text-muted">Ingreso: <?= !empty($e['fecha_ingreso']) ? $e['fecha_ingreso'] : 'No registrado' ?></small>
@@ -102,12 +102,12 @@
                                     <div class="text-dark font-weight-bold"><?= htmlspecialchars($e['departamento_nombre'] ?? 'Sin Departamento') ?></div>
                                     <small class="text-muted"><?= htmlspecialchars($e['cargo_nombre'] ?? 'Sin Cargo') ?></small>
                                 </td>
-                                <td>
+                                <td class="text-center">
                                     <span class="badge-pill-custom badge-pill-neutral">
                                         <i class="far fa-clock mr-1 text-primary"></i><?= htmlspecialchars($e['turno_nombre'] ?? 'Sin Turno') ?>
                                     </span>
                                 </td>
-                                <td>
+                                <td class="text-center">
                                     <?php if ((int)($e['huellas_count'] ?? 0) > 0): ?>
                                         <span class="badge-pill-custom badge-pill-presente" title="Huellas respaldadas en BDD"><i class="fa-solid fa-fingerprint mr-1"></i> <?= $e['huellas_count'] ?> Huella(s)</span>
                                     <?php else: ?>
@@ -130,7 +130,7 @@
                                         <button class="btn btn-xs btn-outline-primary mr-1" onclick="openEditEmpleadoModal(<?= htmlspecialchars(json_encode($e)) ?>)" title="Editar">
                                             <i class="fa-solid fa-pen"></i>
                                         </button>
-                                        <button class="btn btn-xs btn-outline-success" onclick="openEmpBiometricModal(<?= htmlspecialchars(json_encode($e)) ?>)" title="Biometría ZKTeco (Huella / Facial)">
+                                        <button class="btn btn-xs btn-outline-success" onclick="openEmpBiometricModal(<?= htmlspecialchars(json_encode($e)) ?>)" title="Biometría ZKTeco">
                                             <i class="fa-solid fa-fingerprint"></i>
                                         </button>
                                     </td>
@@ -146,7 +146,7 @@
 </section>
 
 <?php if (in_array($userRole, ['ADMIN', 'RRHH'], true)): ?>
-<!-- MODAL CREAR / EDITAR EMPLEADO -->
+<!-- MODAL GESTIÓN DE EMPLEADO -->
 <div class="modal fade" id="modalEmpleado" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <form method="POST" action="?route=empleados&action=guardar" class="modal-content">
@@ -168,12 +168,12 @@
                                 </button>
                             </div>
                             <input type="text" name="codigo_reloj" id="emp_codigo_reloj" class="form-control form-control-sm font-monospace font-weight-bold" placeholder="Ej: 1, 2, 101..." required>
-                            <small class="text-muted">Número correlativo o ID con el que se registra en el reloj</small>
+                            <small class="text-muted">Número correlativo registrado en el reloj</small>
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="form-group">
-                            <label class="small font-weight-bold text-secondary">Número de DNI / Documento <span class="text-danger">*</span></label>
+                            <label class="small font-weight-bold text-secondary">Número de DNI <span class="text-danger">*</span></label>
                             <input type="text" name="dni" id="emp_dni" class="form-control form-control-sm font-monospace" placeholder="8 dígitos" required>
                         </div>
                     </div>
@@ -203,7 +203,7 @@
                     </div>
                     <div class="col-md-6">
                         <div class="form-group">
-                            <label class="small font-weight-bold text-secondary">Teléfono / Celular</label>
+                            <label class="small font-weight-bold text-secondary">Teléfono</label>
                             <input type="text" name="telefono" id="emp_telefono" class="form-control form-control-sm" placeholder="+51 987 654 321">
                         </div>
                     </div>
@@ -212,7 +212,7 @@
                 <div class="row">
                     <div class="col-md-4">
                         <div class="form-group">
-                            <label class="small font-weight-bold text-secondary">Departamento / Área</label>
+                            <label class="small font-weight-bold text-secondary">Departamento</label>
                             <select name="departamento_id" id="emp_departamento_id" class="form-control form-control-sm">
                                 <option value="">-- Sin Asignar --</option>
                                 <?php foreach ($departamentos as $d): ?>
@@ -223,7 +223,7 @@
                     </div>
                     <div class="col-md-4">
                         <div class="form-group">
-                            <label class="small font-weight-bold text-secondary">Cargo / Puesto</label>
+                            <label class="small font-weight-bold text-secondary">Cargo o Puesto</label>
                             <select name="cargo_id" id="emp_cargo_id" class="form-control form-control-sm">
                                 <option value="">-- Sin Asignar --</option>
                                 <?php foreach ($cargos as $c): ?>
@@ -377,7 +377,7 @@
                     <label class="small font-weight-bold text-secondary">Acciones de Captura y Sincronización:</label>
                     
                     <button type="button" class="btn btn-outline-primary btn-block btn-sm mb-2 text-left" onclick="sendEmpToClock()">
-                        <i class="fa-solid fa-upload mr-2 text-primary"></i> <strong>1. Registrar / Enviar Empleado al Reloj</strong>
+                        <i class="fa-solid fa-upload mr-2 text-primary"></i> <strong>1. Registrar y Enviar Empleado al Reloj</strong>
                         <div class="small text-muted pl-4">Crea el ID y nombre del empleado en la memoria del reloj biométrico.</div>
                     </button>
 

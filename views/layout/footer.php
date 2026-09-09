@@ -2,7 +2,7 @@
     <!-- /.content-wrapper -->
 
     <!-- MODAL GLOBAL MI PERFIL Y SEGURIDAD -->
-    <div class="modal fade" id="modalMiPerfilGlobal" tabindex="-1" role="dialog" aria-labelledby="modalMiPerfilTitle" aria-hidden="true">
+    <div class="modal fade" id="modalMiPerfilGlobal" tabindex="-1" role="dialog" aria-labelledby="modalMiPerfilTitle" aria-modal="true" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 520px;">
             <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
                 <div class="modal-header bg-white border-bottom py-3 px-4 d-flex align-items-center justify-content-between">

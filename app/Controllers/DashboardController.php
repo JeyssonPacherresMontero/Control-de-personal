@@ -168,10 +168,10 @@ class DashboardController {
             ? round((($syncStats['exitos'] ?? 0) / $syncStats['total_syncs']) * 100, 1) 
             : 100;
 
-        // Total marcaciones hoy
+        // Total marcaciones hoy (Optimizado con índice B-Tree)
         $totalMarcacionesHoy = (int)(Database::queryOne("
-            SELECT COUNT(*) as c FROM marcaciones WHERE DATE(fecha_hora) = ?
-        ", [$today])['c'] ?? 0);
+            SELECT COUNT(*) as c FROM marcaciones WHERE fecha_hora >= ? AND fecha_hora <= ?
+        ", [$today . ' 00:00:00', $today . ' 23:59:59'])['c'] ?? 0);
 
         // 7. Últimas 10 marcaciones en vivo
         $ultimasMarcaciones = Database::query("

@@ -50,6 +50,72 @@ define('COMPANY_FAVICON', 'public/img/favicon.png');
 define('APP_URL', $_ENV['APP_URL'] ?? 'http://localhost:8080/control_personal');
 define('APP_ROOT', dirname(__DIR__));
 define('ATTENDANCE_DEBOUNCE_MINUTES', (int)($_ENV['ATTENDANCE_DEBOUNCE_MINUTES'] ?? 3));
+define('APP_DEBUG', filter_var($_ENV['APP_DEBUG'] ?? false, FILTER_VALIDATE_BOOLEAN));
+
+// Manejo Global de Errores y Excepciones para Producción
+if (!defined('APP_ERROR_HANDLER_REGISTERED')) {
+    define('APP_ERROR_HANDLER_REGISTERED', true);
+
+    $storageLogsDir = APP_ROOT . '/storage/logs';
+    if (!file_exists($storageLogsDir)) {
+        @mkdir($storageLogsDir, 0777, true);
+    }
+
+    ini_set('log_errors', '1');
+    ini_set('error_log', $storageLogsDir . '/php_error.log');
+
+    if (!APP_DEBUG) {
+        error_reporting(E_ALL & ~E_NOTICE & ~E_DEPRECATED & ~E_STRICT);
+        ini_set('display_errors', '0');
+        ini_set('display_startup_errors', '0');
+    } else {
+        error_reporting(E_ALL);
+        ini_set('display_errors', '1');
+        ini_set('display_startup_errors', '1');
+    }
+
+    set_exception_handler(function (\Throwable $e) {
+        $logEntry = sprintf(
+            "[%s] Uncaught Exception: %s in %s:%d\nStack trace:\n%s\n\n",
+            date('Y-m-d H:i:s'),
+            $e->getMessage(),
+            $e->getFile(),
+            $e->getLine(),
+            $e->getTraceAsString()
+        );
+        @error_log($logEntry);
+
+        $isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') 
+                  || isset($_GET['ajax']) 
+                  || (isset($_SERVER['HTTP_ACCEPT']) && str_contains($_SERVER['HTTP_ACCEPT'], 'application/json'));
+
+        if (!headers_sent()) {
+            http_response_code(500);
+        }
+
+        if ($isAjax) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'success' => false,
+                'error' => APP_DEBUG ? $e->getMessage() : 'Ocurrió un error interno al procesar la solicitud.'
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        if (APP_DEBUG) {
+            echo "<div style='font-family: monospace; background: #fee2e2; color: #991b1b; padding: 20px; border: 2px solid #ef4444; border-radius: 8px; margin: 20px;'>";
+            echo "<h2 style='margin-top: 0;'>Excepción no capturada</h2>";
+            echo "<p><b>Mensaje:</b> " . htmlspecialchars($e->getMessage()) . "</p>";
+            echo "<p><b>Archivo:</b> " . htmlspecialchars($e->getFile()) . " en la línea " . $e->getLine() . "</p>";
+            echo "<pre style='background: white; padding: 10px; border-radius: 4px; overflow: auto;'>" . htmlspecialchars($e->getTraceAsString()) . "</pre>";
+            echo "</div>";
+            exit;
+        }
+
+        echo "<!DOCTYPE html><html lang='es'><head><meta charset='utf-8'><title>Error del Servidor</title><style>body{font-family: sans-serif; background: #f8fafc; color: #334155; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0;}.card{background: white; padding: 35px 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.06); text-align: center; max-width: 480px;}h1{color: #e11d48; margin-top: 0;}a{display: inline-block; margin-top: 15px; background: #0284c7; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold;}</style></head><body><div class='card'><h1>500 - Error del Sistema</h1><p>Ha ocurrido una situación inesperada al procesar tu solicitud. El incidente ha sido registrado para revisión técnica.</p><a href='?route=dashboard'>Volver al Tablero Principal</a></div></body></html>";
+        exit;
+    });
+}
 
 /**
  * Obtener Data URI (base64) del logo institucional para garantizar

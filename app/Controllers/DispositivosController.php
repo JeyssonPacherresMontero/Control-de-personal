@@ -231,6 +231,7 @@ class DispositivosController {
 
     public function syncStatus(): void {
         AuthController::checkAuth();
+        session_write_close(); // Liberar bloqueo de sesión para permitir navegación concurrente fluida
         header('Content-Type: application/json; charset=utf-8');
 
         $lockFile = APP_ROOT . '/storage/sync.lock';
@@ -494,6 +495,7 @@ class DispositivosController {
      */
     public function obtenerBiometriaUsuario(): void {
         AuthController::checkAuth();
+        session_write_close(); // Liberar bloqueo de sesión para lecturas concurrentes
 
         $userId = trim($_GET['user_id'] ?? '');
         if (empty($userId)) {

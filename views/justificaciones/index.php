@@ -24,15 +24,20 @@
 <section class="content">
     <div class="container-fluid">
 
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="text-dark font-weight-bold mb-0" style="font-size: 1.1rem;">
-                <i class="fa-solid fa-list mr-2 text-primary"></i> Solicitudes y Registros de Permiso
-            </h5>
-            <?php if (in_array($userRole, ['ADMIN', 'RRHH', 'SUPERVISOR'], true)): ?>
-                <button class="btn btn-primary btn-sm" data-toggle="modal" data-target="#modalJustificacion">
-                    <i class="fa-solid fa-plus mr-1"></i> Registrar Justificación
-                </button>
-            <?php endif; ?>
+        <!-- ACTIONS TOOLBAR -->
+        <div class="actions-toolbar no-print">
+            <div class="actions-toolbar-group">
+                <h5 class="text-dark font-weight-bold mb-0" style="font-size: 1.05rem;">
+                    <i class="fa-solid fa-file-signature mr-2 text-primary"></i> Solicitudes y Registros de Permiso
+                </h5>
+            </div>
+            <div class="actions-toolbar-group">
+                <?php if (in_array($userRole, ['ADMIN', 'RRHH', 'SUPERVISOR'], true)): ?>
+                    <button class="btn btn-primary btn-sm" data-toggle="modal" data-target="#modalJustificacion">
+                        <i class="fa-solid fa-plus mr-1"></i> Registrar Justificación
+                    </button>
+                <?php endif; ?>
+            </div>
         </div>
 
         <!-- MAIN TABLE CARD -->
@@ -41,41 +46,41 @@
                 <table class="table table-hover datatable text-nowrap table-sm">
                     <thead>
                         <tr>
-                            <th>N°</th>
+                            <th class="text-center" style="width: 70px;">N°</th>
                             <th>Empleado</th>
-                            <th>Tipo de Permiso</th>
-                            <th>Rango de Fechas</th>
-                            <th>Motivo / Sustento</th>
+                            <th class="text-center">Tipo de Permiso</th>
+                            <th class="text-center">Rango de Fechas</th>
+                            <th>Motivo y Sustento</th>
                             <th class="text-center">Estado</th>
-                            <th>Aprobado Por</th>
+                            <th class="text-center">Aprobado Por</th>
                             <?php if (in_array($userRole, ['ADMIN', 'RRHH'], true)): ?>
-                                <th class="text-center">Acciones</th>
+                                <th class="text-center" style="width: 90px;">Acciones</th>
                             <?php endif; ?>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($justificaciones as $j): ?>
                             <tr>
-                                <td class="text-muted font-monospace small">#<?= $j['id'] ?></td>
+                                <td class="text-center text-muted font-monospace small">#<?= $j['id'] ?></td>
                                 <td>
                                     <div class="font-weight-bold text-dark"><?= htmlspecialchars($j['apellidos'] . ' ' . $j['nombres']) ?></div>
                                     <small class="text-muted"><?= htmlspecialchars($j['departamento_nombre'] ?? 'Sin Área') ?> &bull; DNI: <?= htmlspecialchars($j['dni']) ?></small>
                                 </td>
-                                <td>
+                                <td class="text-center">
                                      <?php
                                          $tipoLabel = match($j['tipo']) {
                                              'TARDANZA' => 'Tardanza Justificada',
                                              'FALTA' => 'Inasistencia Justificada',
-                                             'PERMISO_MEDICO' => 'Descanso / Cita Médica',
+                                             'PERMISO_MEDICO' => 'Descanso Médico',
                                              'COMISION_SERVICIO' => 'Comisión de Servicio',
                                              'VACACIONES' => 'Vacaciones',
-                                             'LICENCIA_MATERNIDAD_PATERNIDAD' => 'Licencia Maternidad/Paternidad',
+                                             'LICENCIA_MATERNIDAD_PATERNIDAD' => 'Licencia por Maternidad o Paternidad',
                                              default => htmlspecialchars($j['tipo'])
                                          };
                                      ?>
                                      <span class="badge-pill-custom badge-pill-neutral font-weight-bold"><?= $tipoLabel ?></span>
                                  </td>
-                                <td>
+                                <td class="text-center">
                                     <span class="font-weight-bold text-dark font-monospace small"><?= $j['fecha_inicio'] ?></span> 
                                     <?php if ($j['fecha_inicio'] !== $j['fecha_fin']): ?>
                                         <span class="text-muted small">al</span> <span class="font-weight-bold text-dark font-monospace small"><?= $j['fecha_fin'] ?></span>
@@ -94,8 +99,8 @@
                                         <span class="badge-pill-custom badge-pill-tardanza"><i class="fa-solid fa-clock mr-1"></i> Pendiente</span>
                                     <?php endif; ?>
                                 </td>
-                                <td>
-                                    <small class="text-muted"><?= htmlspecialchars($j['aprobado_por'] ?? 'Sistema') ?></small>
+                                <td class="text-center">
+                                    <small class="text-muted font-weight-bold"><?= htmlspecialchars($j['aprobado_por'] ?? 'Sistema') ?></small>
                                 </td>
                                 <?php if (in_array($userRole, ['ADMIN', 'RRHH'], true)): ?>
                                     <td class="text-center">
@@ -136,7 +141,7 @@
         <form method="POST" action="?route=justificaciones&action=guardar" class="modal-content">
             <?= csrf_field() ?>
             <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title font-weight-bold"><i class="fa-solid fa-file-signature mr-2"></i> Nueva Justificación / Permiso</h5>
+                <h5 class="modal-title font-weight-bold"><i class="fa-solid fa-file-signature mr-2"></i> Nueva Justificación</h5>
                 <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
             </div>
             <div class="modal-body">
@@ -155,10 +160,10 @@
                     <select name="tipo" class="form-control form-control-sm" required>
                         <option value="TARDANZA">Tardanza Justificada</option>
                         <option value="FALTA">Inasistencia Justificada</option>
-                        <option value="PERMISO_MEDICO">Descanso Médico / Cita Médica</option>
-                        <option value="COMISION_SERVICIO">Comisión de Servicio / Trabajo de Campo</option>
+                        <option value="PERMISO_MEDICO">Descanso Médico</option>
+                        <option value="COMISION_SERVICIO">Comisión de Servicio</option>
                         <option value="VACACIONES">Vacaciones</option>
-                        <option value="LICENCIA_MATERNIDAD_PATERNIDAD">Licencia Maternidad / Paternidad</option>
+                        <option value="LICENCIA_MATERNIDAD_PATERNIDAD">Licencia por Maternidad o Paternidad</option>
                         <option value="OTRO">Otro Motivo</option>
                     </select>
                 </div>
@@ -178,9 +183,9 @@
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label class="small font-weight-bold text-secondary">Motivo / Explicación Detallada</label>
-                    <textarea name="motivo" class="form-control form-control-sm" rows="3" placeholder="Detalle el sustento de la justificación..." required></textarea>
+                <div class="form-group mb-0">
+                    <label class="small font-weight-bold text-secondary">Motivo Detallado</label>
+                    <textarea name="motivo" class="form-control form-control-sm" rows="3" placeholder="Ingresa el motivo o justificación..." required></textarea>
                 </div>
             </div>
             <div class="modal-footer justify-content-between">

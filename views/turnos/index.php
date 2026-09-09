@@ -24,13 +24,18 @@
 <section class="content">
     <div class="container-fluid">
 
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="text-dark font-weight-bold mb-0" style="font-size: 1.1rem;">
-                <i class="fa-solid fa-clock-rotate-left mr-2 text-primary"></i> Horarios Laborales Registrados
-            </h5>
-            <button class="btn btn-primary btn-sm" onclick="openNewTurnoModal()">
-                <i class="fa-solid fa-plus mr-1"></i> Crear Nuevo Turno
-            </button>
+        <!-- ACTIONS TOOLBAR -->
+        <div class="actions-toolbar no-print">
+            <div class="actions-toolbar-group">
+                <h5 class="text-dark font-weight-bold mb-0" style="font-size: 1.05rem;">
+                    <i class="fa-solid fa-business-time mr-2 text-primary"></i> Horarios Laborales Registrados
+                </h5>
+            </div>
+            <div class="actions-toolbar-group">
+                <button class="btn btn-primary btn-sm" onclick="openNewTurnoModal()">
+                    <i class="fa-solid fa-plus mr-1"></i> Crear Nuevo Turno
+                </button>
+            </div>
         </div>
 
         <div class="row">
@@ -72,7 +77,7 @@
 
                             <div class="d-flex justify-content-between align-items-center pt-2 border-top">
                                 <span class="small text-muted"><i class="fa-solid fa-users mr-1 text-primary"></i> <b><?= $t['total_empleados'] ?></b> trabajadores</span>
-                                <button class="btn btn-outline-secondary btn-sm" onclick="openEditTurnoModal(<?= htmlspecialchars(json_encode($t)) ?>)">
+                                <button class="btn btn-outline-primary btn-sm" onclick="openEditTurnoModal(<?= htmlspecialchars(json_encode($t)) ?>)">
                                      <i class="fa-solid fa-pen mr-1"></i> Editar Horario
                                 </button>
                             </div>
@@ -85,7 +90,7 @@
     </div>
 </section>
 
-<!-- MODAL CREAR / EDITAR TURNO -->
+<!-- MODAL CONFIGURACIÓN DE TURNO -->
 <div class="modal fade" id="modalTurno" tabindex="-1">
     <div class="modal-dialog">
         <form method="POST" action="?route=turnos&action=guardar" class="modal-content">
@@ -105,7 +110,7 @@
                 <div class="row">
                     <div class="col-6">
                         <div class="form-group">
-                            <label class="small font-weight-bold text-success"><i class="fa-solid fa-arrow-right-to-bracket mr-1"></i> Hora de Ingreso / Entrada</label>
+                            <label class="small font-weight-bold text-success"><i class="fa-solid fa-arrow-right-to-bracket mr-1"></i> Hora de Ingreso</label>
                             <input type="time" name="hora_entrada" id="tur_entrada" class="form-control form-control-sm" required oninput="updateTolerancePreview()">
                         </div>
                     </div>

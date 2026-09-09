@@ -243,6 +243,9 @@ CREATE TABLE IF NOT EXISTS `plantillas_biometricas` (
     `actualizado_en` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT `fk_plantillas_dispositivo` FOREIGN KEY (`id_dispositivo_origen`) REFERENCES `dispositivos` (`id`) ON DELETE SET NULL,
     UNIQUE KEY `uniq_biometria_usuario` (`codigo_reloj`, `tipo`, `dedo_indice`),
+    INDEX `idx_biometria_codigo` (`codigo_reloj`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- 15. TABLA: CONTROL DE RATE LIMITING Y BLOQUEO DE LOGIN (SEGURIDAD OWASP)
 CREATE TABLE IF NOT EXISTS `login_intentos` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,

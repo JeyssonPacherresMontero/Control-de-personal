@@ -26,24 +26,24 @@
             <div class="col-md-7 col-sm-12 mb-1 mb-md-0">
                 <h1 class="m-0 font-weight-bold text-dark" style="font-size: 1.25rem;">
                     <?php if ($activeRoleView === 'ADMIN'): ?>
-                        <i class="fa-solid fa-server mr-2 text-primary"></i> Tablero de Administración TI y Biometría
+                        <i class="fa-solid fa-server mr-2 text-primary"></i> Panel de Administración
                     <?php elseif ($activeRoleView === 'RRHH'): ?>
-                        <i class="fa-solid fa-users-gear mr-2 text-primary"></i> Tablero de Gestión de Recursos Humanos
+                        <i class="fa-solid fa-users-gear mr-2 text-primary"></i> Panel de Recursos Humanos
                     <?php elseif ($activeRoleView === 'SUPERVISOR'): ?>
-                        <i class="fa-solid fa-user-tie mr-2 text-primary"></i> Tablero de Supervisión Operativa
+                        <i class="fa-solid fa-user-tie mr-2 text-primary"></i> Panel de Supervisión
                     <?php else: ?>
-                        <i class="fa-solid fa-chart-pie mr-2 text-primary"></i> Tablero Principal de Control
+                        <i class="fa-solid fa-chart-pie mr-2 text-primary"></i> Panel Principal
                     <?php endif; ?>
                 </h1>
                 <div class="text-muted small" style="font-size: 0.78rem;">
                     <?php if ($activeRoleView === 'ADMIN'): ?>
-                        Monitoreo de infraestructura biométrica ZKTeco, auditoría de sincronización y estado del sistema.
+                        Monitoreo biométrico, sincronización y estado del sistema.
                     <?php elseif ($activeRoleView === 'RRHH'): ?>
-                        Analítica de puntualidad, ausentismo, horas extras, ranking y justificaciones.
+                        Puntualidad, ausentismo y horas trabajadas del personal.
                     <?php elseif ($activeRoleView === 'SUPERVISOR'): ?>
-                        Control en tiempo real del personal en turno y monitoreo operativo.
+                        Control en tiempo real del personal en turno.
                     <?php else: ?>
-                        Resumen general de asistencia y métricas consolidadas del personal.
+                        Resumen general de asistencia y métricas del personal.
                     <?php endif; ?>
                 </div>
             </div>
@@ -53,14 +53,14 @@
                     <a href="?route=dispositivos" class="btn btn-xs btn-outline-secondary mr-1">
                         <i class="fa-solid fa-network-wired mr-1"></i> Biométricos
                     </a>
-                    <button type="button" class="btn btn-xs btn-success" onclick="openSyncModal()">
+                    <button type="button" class="btn btn-xs btn-primary" onclick="openSyncModal()">
                         <i class="fa-solid fa-arrows-rotate mr-1"></i> Sincronizar
                     </button>
                 <?php elseif ($activeRoleView === 'RRHH'): ?>
                     <a href="?route=justificaciones" class="btn btn-xs btn-outline-primary mr-1">
                         <i class="fa-solid fa-file-signature mr-1"></i> Justificaciones (<?= $justificacionesPendientes ?>)
                     </a>
-                    <button type="button" class="btn btn-xs btn-success" onclick="openSyncModal()">
+                    <button type="button" class="btn btn-xs btn-primary" onclick="openSyncModal()">
                         <i class="fa-solid fa-bolt mr-1"></i> Sincronizar
                     </button>
                 <?php elseif ($activeRoleView === 'SUPERVISOR'): ?>
@@ -91,7 +91,7 @@
 
         <?php if ($activeRoleView === 'ADMIN'): ?>
             <!-- =================================================================== -->
-            <!-- VISTA: ADMINISTRADOR (TI, RED & BIOMETRÍA)                         -->
+            <!-- VISTA: ADMINISTRADOR                                                -->
             <!-- =================================================================== -->
             
             <!-- TARJETAS KPIS TI (Compactas en una sola fila) -->
@@ -101,8 +101,8 @@
                         <div class="kpi-card-header">
                             <div>
                                 <div class="kpi-title">Biométricos En Línea</div>
-                                <div class="kpi-value"><?= $dispositivosOnline ?> <span style="font-size: 0.95rem; color: #64748b; font-weight: 600;">/ <?= count($dispositivos) ?></span></div>
-                                <div class="kpi-subtitle"><?= $dispositivosOnline === count($dispositivos) ? '100% de terminales operativas' : 'Revisar terminales inactivas' ?></div>
+                                <div class="kpi-value"><?= $dispositivosOnline ?> <span style="font-size: 0.95rem; color: #64748b; font-weight: 600;">de <?= count($dispositivos) ?></span></div>
+                                <div class="kpi-subtitle"><?= $dispositivosOnline === count($dispositivos) ? 'Todas las terminales operativas' : 'Revisar terminales inactivas' ?></div>
                             </div>
                             <div class="kpi-icon-box <?= $dispositivosOnline === count($dispositivos) ? 'kpi-icon-emerald' : 'kpi-icon-amber' ?>">
                                 <i class="fa-solid fa-network-wired"></i>
@@ -198,7 +198,7 @@
                                 <thead>
                                     <tr>
                                         <th>Dispositivo</th>
-                                        <th>Dirección IP / Puerto</th>
+                                        <th>Dirección IP y Puerto</th>
                                         <th>Ubicación</th>
                                         <th class="text-center">Estado</th>
                                     </tr>
@@ -257,7 +257,7 @@
                                 <thead>
                                     <tr>
                                         <th>Hora</th>
-                                        <th>Empleado / ID</th>
+                                        <th>Empleado e ID</th>
                                         <th>Punto de Control</th>
                                         <th>Tipo Marcación</th>
                                     </tr>
@@ -294,7 +294,7 @@
                                                             } elseif (str_contains($v, 'tarjeta') || str_contains($v, 'card')) {
                                                                 echo '<i class="fa-solid fa-id-card text-success mr-1" title="Tarjeta RFID"></i>';
                                                             } elseif (str_contains($v, 'clave') || str_contains($v, 'pin')) {
-                                                                echo '<i class="fa-solid fa-key text-warning mr-1" title="Contraseña / PIN"></i>';
+                                                                echo '<i class="fa-solid fa-key text-warning mr-1" title="Contraseña o PIN"></i>';
                                                             } else {
                                                                 echo '<i class="fa-solid fa-fingerprint text-primary mr-1" title="Huella Dactilar"></i>';
                                                             }
@@ -354,7 +354,7 @@
                                 </div>
                                 <?php if (((int)($statsHoy['justificados'] ?? 0) > 0) || ((int)($statsHoy['sin_salida'] ?? 0) > 0)): ?>
                                     <div class="d-flex justify-content-between align-items-center py-1" style="font-size: 0.79rem;">
-                                        <span class="text-secondary"><i class="fa-solid fa-circle text-primary mr-1" style="font-size: 8px;"></i> Justificados / En Curso</span>
+                                        <span class="text-secondary"><i class="fa-solid fa-circle text-primary mr-1" style="font-size: 8px;"></i> Justificados o En Curso</span>
                                         <span class="font-weight-bold text-dark"><?= (int)($statsHoy['justificados'] ?? 0) + (int)($statsHoy['sin_salida'] ?? 0) ?> <span class="badge badge-light border text-primary ml-1"><?= round($porcJustificados + $porcSinSalida, 1) ?>%</span></span>
                                     </div>
                                 <?php endif; ?>
@@ -535,7 +535,7 @@
                             <table class="table table-hover table-sm mb-0">
                                 <thead>
                                     <tr>
-                                        <th>Departamento / Área</th>
+                                        <th>Departamento o Área</th>
                                         <th class="text-center">Personal</th>
                                         <th class="text-center">Presentes</th>
                                         <th class="text-center">Tardanzas</th>
@@ -601,7 +601,7 @@
                                 </div>
                                 <?php if (((int)($statsHoy['justificados'] ?? 0) > 0) || ((int)($statsHoy['sin_salida'] ?? 0) > 0)): ?>
                                     <div class="d-flex justify-content-between align-items-center py-1" style="font-size: 0.79rem;">
-                                        <span class="text-secondary"><i class="fa-solid fa-circle text-primary mr-1" style="font-size: 8px;"></i> Justificados / En Turno</span>
+                                        <span class="text-secondary"><i class="fa-solid fa-circle text-primary mr-1" style="font-size: 8px;"></i> Justificados o En Turno</span>
                                         <span class="font-weight-bold text-dark"><?= (int)($statsHoy['justificados'] ?? 0) + (int)($statsHoy['sin_salida'] ?? 0) ?> <span class="badge badge-light border text-primary ml-1"><?= round($porcJustificados + $porcSinSalida, 1) ?>%</span></span>
                                     </div>
                                 <?php endif; ?>
@@ -717,7 +717,7 @@
                             <div>
                                 <div class="kpi-title">Sin Salida Registrada</div>
                                 <div class="kpi-value text-primary"><?= (int)($statsHoy['sin_salida'] ?? 0) ?></div>
-                                <div class="kpi-subtitle">Jornada en curso / pendiente</div>
+                                <div class="kpi-subtitle">Jornada en curso o pendiente</div>
                             </div>
                             <div class="kpi-icon-box kpi-icon-indigo">
                                 <i class="fa-solid fa-clock"></i>

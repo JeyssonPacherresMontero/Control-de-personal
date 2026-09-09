@@ -249,17 +249,23 @@ class AuthController {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             \App\Csrf::validateRequest();
 
-            // Rate Limiting / Bloqueo por Fuerza Bruta (Máx. 5 intentos por 5 minutos)
+            // Rate Limiting persistente en Base de Datos (Máx. 5 intentos por IP / 5 minutos)
             $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
-            $rateKey = 'login_attempts_' . md5($ip);
-            $lockKey = 'login_lockout_' . md5($ip);
-
-            if (isset($_SESSION[$lockKey]) && time() < $_SESSION[$lockKey]) {
-                $secondsLeft = $_SESSION[$lockKey] - time();
-                $minutesLeft = ceil($secondsLeft / 60);
-                $error = "Demasiados intentos fallidos. Por seguridad, espera {$minutesLeft} minuto(s) antes de intentar nuevamente.";
-                require_once APP_ROOT . '/views/auth/login.php';
-                return;
+            $attemptRow = null;
+            try {
+                $attemptRow = Database::queryOne("SELECT * FROM login_intentos WHERE ip = ?", [$ip]);
+                if ($attemptRow && !empty($attemptRow['bloqueado_hasta'])) {
+                    $blockedUntil = strtotime($attemptRow['bloqueado_hasta']);
+                    if (time() < $blockedUntil) {
+                        $secondsLeft = $blockedUntil - time();
+                        $minutesLeft = max(1, (int)ceil($secondsLeft / 60));
+                        $error = "Demasiados intentos fallidos. Tu dirección IP ha sido bloqueada temporalmente por {$minutesLeft} minuto(s).";
+                        require_once APP_ROOT . '/views/auth/login.php';
+                        return;
+                    }
+                }
+            } catch (\Exception $e) {
+                // Silencioso ante fallos de tabla para no bloquear el inicio de sesión
             }
 
             $username = trim($_POST['usuario'] ?? '');
@@ -271,8 +277,12 @@ class AuthController {
                 $user = Database::queryOne("SELECT * FROM usuarios_sistema WHERE usuario = ? AND activo = 1", [$username]);
                 
                 if ($user && password_verify($password, $user['password'])) {
-                    // Éxito: Limpiar intentos fallidos
-                    unset($_SESSION[$rateKey], $_SESSION[$lockKey]);
+                    // Éxito: Limpiar intentos fallidos en BD
+                    try {
+                        Database::execute("DELETE FROM login_intentos WHERE ip = ?", [$ip]);
+                    } catch (\Exception $e) {
+                        // Silencioso
+                    }
 
                     // Regenerar ID de sesión para prevenir Session Fixation
                     session_regenerate_id(true);
@@ -291,21 +301,44 @@ class AuthController {
                     }
                     $_SESSION['user_permissions'] = $perms;
 
-                    Database::execute("UPDATE usuarios_sistema SET ultimo_login = NOW() WHERE id = ?", [$user['id']]);
+                    try {
+                        Database::execute("UPDATE usuarios_sistema SET ultimo_login = NOW() WHERE id = ?", [$user['id']]);
+                    } catch (\Exception $e) {
+                        // Silencioso
+                    }
 
                     $firstRoute = self::getFirstAccessibleRoute();
                     header("Location: ?route=$firstRoute");
                     exit;
                 } else {
-                    $attempts = (int)($_SESSION[$rateKey] ?? 0) + 1;
-                    $_SESSION[$rateKey] = $attempts;
+                    $currentAttempts = $attemptRow ? ((int)$attemptRow['intentos'] + 1) : 1;
+                    $lockUntil = null;
 
-                    if ($attempts >= 5) {
-                        $_SESSION[$lockKey] = time() + (5 * 60); // 5 minutos de bloqueo
+                    if ($currentAttempts >= 5) {
+                        $lockUntil = date('Y-m-d H:i:s', time() + (5 * 60)); // 5 minutos de bloqueo
                         $error = "Has superado el límite de 5 intentos fallidos. Tu acceso ha sido bloqueado temporalmente por 5 minutos.";
                     } else {
-                        $remaining = 5 - $attempts;
+                        $remaining = 5 - $currentAttempts;
                         $error = "Credenciales incorrectas o usuario inactivo. (Intentos restantes: {$remaining})";
+                    }
+
+                    try {
+                        Database::execute("
+                            INSERT INTO login_intentos (ip, usuario, intentos, ultimo_intento, bloqueado_hasta)
+                            VALUES (:ip, :usr, :att, NOW(), :lock)
+                            ON DUPLICATE KEY UPDATE 
+                                usuario = VALUES(usuario),
+                                intentos = VALUES(intentos),
+                                ultimo_intento = NOW(),
+                                bloqueado_hasta = VALUES(bloqueado_hasta)
+                        ", [
+                            ':ip'   => $ip,
+                            ':usr'  => $username,
+                            ':att'  => $currentAttempts,
+                            ':lock' => $lockUntil
+                        ]);
+                    } catch (\Exception $e) {
+                        // Silencioso
                     }
                 }
             }

@@ -403,6 +403,50 @@ $roleLabel = match($userRole) {
             background-color: #f8fafc !important;
         }
 
+        /* DATATABLES REFINEMENT */
+        .dataTables_wrapper .dataTables_paginate .paginate_button {
+            border-radius: 6px !important;
+            padding: 0.35rem 0.65rem !important;
+            font-size: 0.82rem !important;
+            font-weight: 600 !important;
+            border: 1px solid #e2e8f0 !important;
+            background: #ffffff !important;
+            color: #475569 !important;
+            margin: 0 2px !important;
+            transition: all 0.15s ease !important;
+        }
+        .dataTables_wrapper .dataTables_paginate .paginate_button.current, 
+        .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+            background: #1d4ed8 !important;
+            color: #ffffff !important;
+            border-color: #1d4ed8 !important;
+        }
+        .dataTables_wrapper .dataTables_paginate .paginate_button:hover:not(.current):not(.disabled) {
+            background: #f1f5f9 !important;
+            color: #1d4ed8 !important;
+            border-color: #cbd5e1 !important;
+        }
+        .dataTables_wrapper .dataTables_filter input {
+            border-radius: 6px !important;
+            border: 1px solid #cbd5e1 !important;
+            padding: 0.3rem 0.65rem !important;
+            font-size: 0.85rem !important;
+            margin-left: 0.4rem !important;
+            transition: all 0.15s ease !important;
+        }
+        .dataTables_wrapper .dataTables_filter input:focus {
+            border-color: #3b82f6 !important;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12) !important;
+            outline: none !important;
+        }
+        .dataTables_wrapper .dataTables_length select {
+            border-radius: 6px !important;
+            border: 1px solid #cbd5e1 !important;
+            padding: 0.25rem 0.5rem !important;
+            font-size: 0.85rem !important;
+            margin: 0 0.3rem !important;
+        }
+
         /* FORMULARIOS Y FILTROS */
         .form-control, .custom-select {
             border: 1px solid #cbd5e1 !important;
@@ -428,45 +472,197 @@ $roleLabel = match($userRole) {
             align-items: center;
         }
 
-        /* BOTONES */
+        /* BREADCRUMB ELEGANTE SIN SLASH */
+        .breadcrumb-item + .breadcrumb-item::before {
+            content: "›" !important;
+            padding: 0 0.45rem !important;
+            color: #94a3b8 !important;
+            font-size: 1rem !important;
+            font-weight: 700 !important;
+            line-height: 1 !important;
+        }
+
+        /* BOTONES Y TOOLBARS UI/UX MEJORADOS */
         .btn {
-            border-radius: 6px !important;
+            border-radius: 7px !important;
             font-weight: 600 !important;
-            font-size: 0.84rem !important;
+            font-size: 0.835rem !important;
             display: inline-flex !important;
             align-items: center;
             justify-content: center;
-            gap: 5px;
-            transition: all 0.15s ease-in-out;
+            gap: 6px;
+            transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+            white-space: nowrap;
+        }
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+        }
+        .btn:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
         }
         .btn-sm {
-            padding: 0.35rem 0.75rem !important;
+            padding: 0.4rem 0.85rem !important;
             font-size: 0.825rem !important;
+        }
+        .btn-xs {
+            padding: 0.25rem 0.55rem !important;
+            font-size: 0.75rem !important;
+            border-radius: 5px !important;
         }
         .btn-primary {
             background-color: #1d4ed8 !important;
             border-color: #1d4ed8 !important;
+            color: #ffffff !important;
         }
         .btn-primary:hover {
             background-color: #1e40af !important;
             border-color: #1e40af !important;
+            color: #ffffff !important;
+        }
+        .btn-success {
+            background-color: #059669 !important;
+            border-color: #059669 !important;
+            color: #ffffff !important;
+        }
+        .btn-success:hover {
+            background-color: #047857 !important;
+            border-color: #047857 !important;
+            color: #ffffff !important;
+        }
+        .btn-outline-secondary {
+            background-color: #ffffff !important;
+            border-color: #cbd5e1 !important;
+            color: #334155 !important;
+        }
+        .btn-outline-secondary:hover {
+            background-color: #f1f5f9 !important;
+            border-color: #94a3b8 !important;
+            color: #0f172a !important;
+        }
+        .btn-outline-primary {
+            background-color: #ffffff !important;
+            border-color: #bfdbfe !important;
+            color: #1d4ed8 !important;
+        }
+        .btn-outline-primary:hover {
+            background-color: #eff6ff !important;
+            border-color: #1d4ed8 !important;
+            color: #1e40af !important;
+        }
+        .btn-soft-primary {
+            background-color: #eff6ff !important;
+            border: 1px solid #bfdbfe !important;
+            color: #1d4ed8 !important;
+        }
+        .btn-soft-primary:hover {
+            background-color: #dbeafe !important;
+            border-color: #93c5fd !important;
+            color: #1e40af !important;
+        }
+        .btn-soft-info {
+            background-color: #f0fdfa !important;
+            border: 1px solid #99f6e4 !important;
+            color: #0f766e !important;
+        }
+        .btn-soft-info:hover {
+            background-color: #ccfbf1 !important;
+            border-color: #5eead4 !important;
+            color: #115e59 !important;
         }
 
-        /* MODALES */
+        /* TOOLBARS DE ACCIONES ESPACIADAS Y CENTRADAS */
+        .actions-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 1rem;
+            padding: 0.75rem 1rem;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+        }
+        .actions-toolbar-group {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        /* MODALES CENTRADOS PERFECTOS */
+        .modal {
+            text-align: center;
+            padding: 0 !important;
+        }
+        .modal:before {
+            content: '';
+            display: inline-block;
+            height: 100%;
+            vertical-align: middle;
+            margin-right: -4px;
+        }
+        .modal-dialog {
+            display: inline-block !important;
+            text-align: left !important;
+            vertical-align: middle !important;
+            margin: 1.75rem auto !important;
+            max-width: 95%;
+        }
+        @media (min-width: 576px) {
+            .modal-dialog {
+                max-width: 500px;
+            }
+            .modal-dialog.modal-sm {
+                max-width: 380px;
+            }
+            .modal-dialog.modal-lg {
+                max-width: 780px;
+            }
+            .modal-dialog.modal-xl {
+                max-width: 1050px;
+            }
+        }
         .modal-content {
-            border-radius: 12px !important;
+            border-radius: 14px !important;
             border: 1px solid #e2e8f0 !important;
-            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1) !important;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.2) !important;
             overflow: hidden;
         }
         .modal-header {
-            padding: 1rem 1.25rem !important;
+            padding: 0.95rem 1.25rem !important;
             border-bottom: 1px solid #e2e8f0 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
         }
         .modal-footer {
             background-color: #f8fafc !important;
             border-top: 1px solid #e2e8f0 !important;
             padding: 0.85rem 1.25rem !important;
+            display: flex !important;
+            align-items: center !important;
+        }
+
+        /* ALINEACIÓN Y CENTRADO DE TABLAS */
+        .table th, .table td {
+            vertical-align: middle !important;
+        }
+        .table th.text-center, .table td.text-center {
+            text-align: center !important;
+        }
+        .table td .badge-pill-custom {
+            vertical-align: middle;
+        }
+        .table .btn-group, .table .actions-group {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            vertical-align: middle !important;
         }
 
         /* BANNER INSTITUCIONAL */
@@ -562,6 +758,57 @@ $roleLabel = match($userRole) {
                 size: landscape;
                 margin: 0.8cm;
             }
+        }
+
+        /* CUSTOM SCROLLBARS */
+        ::-webkit-scrollbar {
+            width: 7px;
+            height: 7px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* INTERACTIVE HIT AREAS & TRANSITIONS */
+        .btn, .nav-link, .dropdown-item, .custom-select, .form-control {
+            transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        }
+        .table .btn-xs, .table .btn-sm {
+            min-height: 28px;
+            min-width: 28px;
+            padding: 0.2rem 0.45rem !important;
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px !important;
+        }
+        .table .btn-xs:hover, .table .btn-sm:hover {
+            transform: translateY(-1px);
+        }
+
+        /* LIVE STATUS PULSE INDICATOR */
+        @keyframes statusPulse {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.2); opacity: 1; filter: drop-shadow(0 0 3px rgba(16, 185, 129, 0.6)); }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+        .badge-pill-online i {
+            animation: statusPulse 2s infinite ease-in-out;
+            color: #10b981 !important;
+        }
+
+        /* ACCESSIBILITY FOCUS VISIBLE */
+        a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible {
+            outline: 2px solid #2563eb !important;
+            outline-offset: 2px !important;
+        }
     </style>
 </head>
 <body class="hold-transition sidebar-mini layout-fixed layout-navbar-fixed layout-footer-fixed">
@@ -602,7 +849,7 @@ $roleLabel = match($userRole) {
             <!-- Sync Button: Solo visible si tiene permiso de dispositivos/hardware o ADMIN -->
             <?php if (\App\Controllers\AuthController::hasPermission('dispositivos') || in_array($userRole, ['ADMIN', 'RRHH'], true)): ?>
                 <li class="nav-item mr-2">
-                    <a href="javascript:void(0)" onclick="typeof openSyncModal === 'function' ? openSyncModal() : (typeof syncAllDevices === 'function' ? syncAllDevices('incremental', this) : window.location.href='?route=dispositivos')" class="btn btn-sm btn-outline-success" title="Sincronizar marcaciones de todos los relojes biométricos">
+                    <a href="javascript:void(0)" onclick="typeof openSyncModal === 'function' ? openSyncModal() : (typeof syncAllDevices === 'function' ? syncAllDevices('incremental', this) : window.location.href='?route=dispositivos')" class="btn btn-sm btn-outline-primary" title="Sincronizar marcaciones de todos los relojes biométricos">
                         <i class="fa-solid fa-arrows-rotate mr-1"></i> Sincronizar Relojes
                     </a>
                 </li>

@@ -6,6 +6,14 @@
  * ==========================================================
  */
 
+// Encabezados de Seguridad HTTP (Ciberseguridad OWASP)
+if (!headers_sent()) {
+    header('X-Frame-Options: SAMEORIGIN');
+    header('X-Content-Type-Options: nosniff');
+    header('X-XSS-Protection: 1; mode=block');
+    header('Referrer-Policy: strict-origin-when-cross-origin');
+}
+
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../app/Database.php';
 require_once __DIR__ . '/../app/Services/AttendanceCalculator.php';
@@ -67,8 +75,11 @@ switch ($route) {
             AuthController::requireRole(['ADMIN', 'RRHH'], 'asistencia');
             $controller->recalcular();
         } elseif ($action === 'editar') {
-            AuthController::requireRole(['ADMIN', 'RRHH'], 'asistencia');
+            AuthController::requireRole('ADMIN', 'asistencia');
             $controller->editar();
+        } elseif ($action === 'justificar_admin') {
+            AuthController::requireRole('ADMIN', 'asistencia');
+            $controller->justificarAdmin();
         } elseif ($action === 'historial_eventos') {
             $controller->historialEventos();
         } else {

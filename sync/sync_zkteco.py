@@ -81,7 +81,15 @@ class AttendanceSynchronizer:
         with conn.cursor() as cursor:
             cursor.execute("SELECT id, codigo_reloj FROM empleados WHERE activo = 1")
             rows = cursor.fetchall()
-            return {str(row['codigo_reloj']).strip(): row['id'] for row in rows}
+            mapping = {}
+            for row in rows:
+                code_raw = str(row['codigo_reloj']).strip()
+                emp_id = row['id']
+                mapping[code_raw] = emp_id
+                code_lstrip = code_raw.lstrip('0')
+                if code_lstrip and code_lstrip not in mapping:
+                    mapping[code_lstrip] = emp_id
+            return mapping
 
     def sync_users_from_device(self, device_service, device_id):
         """Descarga usuarios del biométrico e inserta nuevos empleados si no existen"""
@@ -264,8 +272,8 @@ class AttendanceSynchronizer:
                 disp_name = device.get('nombre', 'Reloj ZKTeco')
                 
                 for rec in candidate_records:
-                    user_id_str = rec['user_id']
-                    emp_id = emp_map.get(user_id_str, None)
+                    user_id_str = str(rec['user_id']).strip()
+                    emp_id = emp_map.get(user_id_str) or emp_map.get(user_id_str.lstrip('0'))
                     dt_str = rec['timestamp'].strftime('%Y-%m-%d %H:%M:%S')
                     tipo_verif = rec.get('tipo_verificacion', 'huella')
                     

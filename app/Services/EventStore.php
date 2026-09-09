@@ -184,26 +184,37 @@ class EventStore {
                 break;
 
             case 'ASISTENCIA_MODIFICADA_MANUAL':
-                $badgeClass = 'badge-dark';
+            case 'ASISTENCIA_MODIFICADA_ADMIN':
+                $badgeClass = 'badge-primary';
                 $icon = 'fa-user-pen';
-                $title = 'Ajuste Manual Realizado por Administrador';
-                $description = "El usuario {$createdBy} modificó el estado a [{$data['nuevo_estado']}]";
+                $title = 'Corrección Administrativa de Horario y Asistencia';
+                $entNva = $data['hora_entrada_nueva'] ?? '';
+                $salNva = $data['hora_salida_nueva'] ?? '';
+                $description = "El Administrador {$createdBy} corrigió el registro de asistencia: Entrada [{$entNva}] / Salida [{$salNva}] con estado [{$data['estado_nuevo']}].";
                 $details = [
-                    'Estado Anterior' => $data['estado_anterior'] ?? 'N/A',
-                    'Nuevo Estado' => $data['nuevo_estado'] ?? 'N/A',
-                    'Tardanza Ajustada' => ($data['nuevos_minutos_tardanza'] ?? 0) . ' min',
-                    'Motivo del Ajuste' => $data['motivo'] ?? 'Ajuste justificado por RRHH'
+                    'Hora Entrada Oficial' => $entNva ?: 'Sin marcar',
+                    'Hora Entrada Anterior' => $data['hora_entrada_anterior'] ?? 'N/A',
+                    'Hora Salida Oficial' => $salNva ?: 'Sin marcar',
+                    'Hora Salida Anterior' => $data['hora_salida_anterior'] ?? 'N/A',
+                    'Estado Oficial' => $data['estado_nuevo'] ?? 'N/A',
+                    'Tardanza Computada' => ($data['tardanza_nueva'] ?? 0) . ' min',
+                    'Tiempo Trabajado' => ($data['minutos_trabajados'] ?? 0) . ' min',
+                    'Motivo de Corrección' => $data['motivo'] ?? 'Ajuste administrativo oficial'
                 ];
                 break;
 
             case 'JUSTIFICACION_APLICADA':
+            case 'JUSTIFICACION_ADMIN_REGISTRADA':
                 $badgeClass = 'badge-info';
                 $icon = 'fa-file-signature';
-                $title = 'Justificación / Permiso Aplicado';
-                $description = "Se aplicó {$data['tipo_justificacion']} aprobada por {$data['aprobado_por']}";
+                $title = 'Justificación Oficial Registrada por Administración';
+                $tipoJust = $data['tipo_justificacion'] ?? 'JUSTIFICACIÓN';
+                $description = "Se aplicó {$tipoJust} aprobada oficialmente por {$createdBy}. Estado: [{$data['estado_aplicado']}].";
                 $details = [
-                    'Motivo' => $data['motivo'] ?? '',
-                    'Aprobado por' => $data['aprobado_por'] ?? ''
+                    'Tipo de Justificación' => $tipoJust,
+                    'Estado Aplicado' => $data['estado_aplicado'] ?? 'JUSTIFICADO',
+                    'Motivo/Sustento' => $data['motivo'] ?? '',
+                    'Aprobado por' => $data['aprobado_por'] ?? $createdBy
                 ];
                 break;
 

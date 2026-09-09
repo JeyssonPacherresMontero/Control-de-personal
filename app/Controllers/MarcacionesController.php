@@ -22,11 +22,13 @@ class MarcacionesController {
         $perPage = max(10, min(1000, (int)($_GET['per_page'] ?? 250)));
         $offset = ($page - 1) * $perPage;
 
-        // Construcción de cláusula WHERE
-        $where = " WHERE DATE(m.fecha_hora) BETWEEN :fecha_inicio AND :fecha_fin";
+        // Construcción de cláusula WHERE con rango indexable (Sargable Query Optimization)
+        $dtInicio = $fechaInicio . ' 00:00:00';
+        $dtFin = $fechaFin . ' 23:59:59';
+        $where = " WHERE m.fecha_hora >= :dt_inicio AND m.fecha_hora <= :dt_fin";
         $params = [
-            ':fecha_inicio' => $fechaInicio,
-            ':fecha_fin'    => $fechaFin
+            ':dt_inicio' => $dtInicio,
+            ':dt_fin'    => $dtFin
         ];
 
         if ($dispositivoId) {
@@ -91,6 +93,8 @@ class MarcacionesController {
                 $dRow = Database::queryOne("SELECT nombre, ip FROM dispositivos WHERE id = ?", [$dispositivoId]);
                 if ($dRow) $dispositivoNombre = $dRow['nombre'] . ' (' . $dRow['ip'] . ')';
             }
+
+            session_write_close(); // Liberar bloqueo de sesión durante la descarga de reportes pesados
 
             if ($exportType === 'excel' || $exportType === 'xls') {
                 $this->exportExcel($exportData, $fechaInicio, $fechaFin, $dispositivoNombre, $tipo, $search);

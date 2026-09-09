@@ -61,37 +61,41 @@
                     <i class="fa-solid fa-trash mr-2"></i> Usuario eliminado del sistema.
                     <button type="button" class="close" data-dismiss="alert">&times;</button>
                 </div>
-            <?php elseif ($_GET['msg'] === 'error_auto_eliminar' || $_GET['msg'] === 'error_auto_desactivar'): ?>
+            <?php elseif ($_GET['msg'] === 'error_admin_protegido' || $_GET['msg'] === 'error_auto_eliminar' || $_GET['msg'] === 'error_auto_desactivar'): ?>
                 <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
-                    <i class="fa-solid fa-shield-halved mr-2"></i> Acción no permitida: No puedes desactivar o eliminar tu propio usuario administrador.
+                    <i class="fa-solid fa-shield-halved mr-2"></i> Acción no permitida: El usuario Administrador principal del sistema está protegido y no puede ser eliminado, desactivado ni modificado a otro rol.
                     <button type="button" class="close" data-dismiss="alert">&times;</button>
                 </div>
             <?php endif; ?>
         <?php endif; ?>
 
+        <!-- ACTIONS TOOLBAR -->
+        <div class="actions-toolbar no-print">
+            <div class="actions-toolbar-group">
+                <h5 class="text-dark font-weight-bold mb-0" style="font-size: 1.05rem;">
+                    <i class="fa-solid fa-users-gear mr-2 text-primary"></i> Lista de Cuentas y Permisos de Módulos
+                </h5>
+            </div>
+            <div class="actions-toolbar-group">
+                <button type="button" class="btn btn-primary btn-sm font-weight-bold" onclick="openNewUserModal()">
+                    <i class="fa-solid fa-user-plus mr-1"></i> Crear Nuevo Usuario
+                </button>
+            </div>
+        </div>
+
         <!-- MAIN TABLE CARD -->
         <div class="card">
-            <div class="card-header d-flex align-items-center justify-content-between flex-wrap py-2 px-3">
-                <h3 class="card-title font-weight-bold" style="font-size: 0.9rem;">
-                    <i class="fa-solid fa-users-gear mr-2 text-primary"></i> Lista de Cuentas y Permisos de Módulos
-                </h3>
-                <div class="card-tools">
-                    <button type="button" class="btn btn-primary btn-xs font-weight-bold" onclick="openNewUserModal()">
-                        <i class="fa-solid fa-user-plus mr-1"></i> Crear Nuevo Usuario
-                    </button>
-                </div>
-            </div>
             <div class="card-body p-0 table-responsive">
                 <table class="table table-hover table-sm mb-0">
                     <thead>
                         <tr>
                             <th style="width: 45px;" class="text-center">ID</th>
-                            <th style="min-width: 170px;">Usuario / Nombre</th>
-                            <th style="width: 120px;">Rol Asignado</th>
-                            <th style="min-width: 200px;">Módulos del Menú Autorizados</th>
+                            <th style="min-width: 170px;">Usuario y Nombre</th>
+                            <th style="width: 120px;" class="text-center">Rol Asignado</th>
+                            <th style="min-width: 200px;">Módulos Autorizados</th>
                             <th class="text-center" style="width: 95px;">Biometría</th>
                             <th class="text-center" style="width: 80px;">Estado</th>
-                            <th style="width: 110px;">Último Acceso</th>
+                            <th class="text-center" style="width: 110px;">Último Acceso</th>
                             <th class="text-center" style="width: 140px; white-space: nowrap;">Acciones</th>
                         </tr>
                     </thead>
@@ -119,7 +123,7 @@
                                         </div>
                                     </div>
                                 </td>
-                                <td class="py-2">
+                                <td class="py-2 text-center">
                                     <?php if ($u['rol'] === 'ADMIN'): ?>
                                         <span class="badge-pill-custom badge-pill-falta font-weight-bold" style="font-size: 0.7rem;">ADMINISTRADOR</span>
                                     <?php elseif ($u['rol'] === 'RRHH'): ?>
@@ -132,7 +136,7 @@
                                 </td>
                                 <td class="py-2">
                                     <?php if ($isAdmin): ?>
-                                        <span class="badge-pill-custom badge-pill-presente font-weight-bold" style="font-size: 0.72rem;"><i class="fa-solid fa-unlock-keyhole mr-1"></i> Acceso Total (Todos)</span>
+                                        <span class="badge-pill-custom badge-pill-presente font-weight-bold" style="font-size: 0.72rem;"><i class="fa-solid fa-unlock-keyhole mr-1"></i> Acceso Total</span>
                                     <?php else: ?>
                                         <div class="d-flex flex-wrap" style="gap: 3px; max-width: 320px;">
                                             <?php 
@@ -168,24 +172,24 @@
                                         <span class="badge-pill-custom badge-pill-offline" style="font-size: 0.7rem;"><i class="fa-solid fa-circle" style="font-size: 5px;"></i> Inactivo</span>
                                     <?php endif; ?>
                                 </td>
-                                <td class="py-2">
+                                <td class="py-2 text-center">
                                     <small class="text-muted font-monospace d-block" style="font-size: 0.74rem;">
                                         <?= !empty($u['ultimo_login']) ? date('d/m/Y H:i', strtotime($u['ultimo_login'])) : 'Nunca' ?>
                                     </small>
                                 </td>
                                 <td class="text-center py-2" style="white-space: nowrap;">
                                     <!-- Editar Usuario & Permisos -->
-                                    <button type="button" class="btn btn-xs btn-outline-primary mr-1" onclick="openEditUserModal(<?= htmlspecialchars(json_encode($u)) ?>)" title="Editar Usuario y Permisos">
+                                    <button type="button" class="btn btn-xs btn-outline-primary mr-1" onclick="openEditUserModal(<?= htmlspecialchars(json_encode($u)) ?>)" title="Editar Usuario">
                                         <i class="fa-solid fa-pen"></i>
                                     </button>
 
                                     <!-- Restablecer Contraseña -->
-                                    <button type="button" class="btn btn-xs btn-outline-warning mr-1" onclick="openResetPasswordModal(<?= htmlspecialchars(json_encode(['id' => $u['id'], 'usuario' => $u['usuario'], 'nombre_completo' => $u['nombre_completo']])) ?>)" title="Restablecer / Asignar Nueva Contraseña">
+                                    <button type="button" class="btn btn-xs btn-outline-warning mr-1" onclick="openResetPasswordModal(<?= htmlspecialchars(json_encode(['id' => $u['id'], 'usuario' => $u['usuario'], 'nombre_completo' => $u['nombre_completo']])) ?>)" title="Restablecer Contraseña">
                                         <i class="fa-solid fa-key"></i>
                                     </button>
 
                                     <!-- Biometría Reloj -->
-                                    <button type="button" class="btn btn-xs btn-outline-success mr-1" onclick="openBiometricModal(<?= htmlspecialchars(json_encode($u)) ?>)" title="Biometría ZKTeco (Huella / Facial)">
+                                    <button type="button" class="btn btn-xs btn-outline-success mr-1" onclick="openBiometricModal(<?= htmlspecialchars(json_encode($u)) ?>)" title="Biometría ZKTeco">
                                         <i class="fa-solid fa-fingerprint"></i>
                                     </button>
 
@@ -199,7 +203,7 @@
                                         <form method="POST" action="?route=usuarios&action=eliminar" style="display:inline;" onsubmit="return confirm('¿Estás seguro de eliminar este usuario definitivamente?');">
                                             <?= csrf_field() ?>
                                             <input type="hidden" name="id" value="<?= $u['id'] ?>">
-                                            <button type="submit" class="btn btn-xs btn-default border text-danger" title="Eliminar Usuario">
+                                            <button type="submit" class="btn btn-xs btn-outline-danger" title="Eliminar Usuario">
                                                 <i class="fa-solid fa-trash"></i>
                                             </button>
                                         </form>
@@ -215,14 +219,14 @@
     </div>
 </section>
 
-<!-- MODAL CREAR / EDITAR USUARIO & PERMISOS DE MENÚ -->
+<!-- MODAL GESTIÓN DE USUARIO -->
 <div class="modal fade" id="modalUsuario" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
         <form method="POST" action="?route=usuarios&action=guardar" class="modal-content shadow-lg" id="formUsuario">
             <?= csrf_field() ?>
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title font-weight-bold" id="usrModalTitle">
-                    <i class="fa-solid fa-user-gear mr-2"></i> Crear / Editar Usuario
+                    <i class="fa-solid fa-user-gear mr-2"></i> Gestión de Usuario
                 </h5>
                 <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
             </div>
@@ -276,12 +280,14 @@
                             <div class="col-md-4">
                                 <div class="form-group mb-2">
                                     <label class="small font-weight-bold text-secondary">Rol Asignado <span class="text-danger">*</span></label>
-                                    <select name="rol" id="usr_rol" class="form-control form-control-sm" onchange="onRoleChange(this.value)">
-                                        <option value="ADMIN">ADMIN - Administrador (Acceso Total)</option>
+                                    <select name="rol" id="usr_rol" class="form-control form-control-sm font-weight-bold" onchange="onRoleChange(this.value)">
                                         <option value="RRHH" selected>RRHH - Recursos Humanos</option>
                                         <option value="SUPERVISOR">SUPERVISOR - Supervisor de Área</option>
-                                        <option value="CONSULTA">CONSULTA - Solo Consulta / Operador</option>
+                                        <option value="CONSULTA">CONSULTA - Solo Consulta u Operador</option>
                                     </select>
+                                    <div id="usr_admin_badge" class="badge badge-danger px-2 py-1 mt-1 font-weight-bold" style="display: none;">
+                                        <i class="fa-solid fa-lock mr-1"></i> Administrador Principal (Único)
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -435,7 +441,7 @@
                     <label class="small font-weight-bold text-secondary">Acciones de Captura y Sincronización:</label>
                     
                     <button type="button" class="btn btn-outline-primary btn-block btn-sm mb-2 text-left" onclick="sendUserToClock()">
-                        <i class="fa-solid fa-upload mr-2 text-primary"></i> <strong>1. Registrar / Enviar Usuario al Reloj</strong>
+                        <i class="fa-solid fa-upload mr-2 text-primary"></i> <strong>1. Registrar y Enviar Usuario al Reloj</strong>
                         <div class="small text-muted pl-4">Crea el nombre y número de usuario en la memoria del reloj biométrico.</div>
                     </button>
 
@@ -534,7 +540,14 @@ function openNewUserModal() {
     document.getElementById('usr_password').placeholder = 'Contraseña requerida (min. 5 caracteres)';
     document.getElementById('usr_pass_hint').innerText = 'Contraseña obligatoria para el nuevo usuario (No se asignará por defecto)';
     document.getElementById('usr_pass_required_star').style.display = 'inline';
-    document.getElementById('usr_rol').value = 'RRHH';
+    
+    // Configuración de Rol: Exclusivo no-admin
+    const rolSelect = document.getElementById('usr_rol');
+    rolSelect.style.display = 'block';
+    rolSelect.disabled = false;
+    rolSelect.value = 'RRHH';
+    document.getElementById('usr_admin_badge').style.display = 'none';
+
     document.getElementById('usr_activo').checked = true;
 
     // Preset inicial por defecto
@@ -554,7 +567,20 @@ function openEditUserModal(u) {
     document.getElementById('usr_password').placeholder = 'Dejar en blanco para conservar actual';
     document.getElementById('usr_pass_hint').innerText = 'Dejar en blanco si deseas mantener la clave actual';
     document.getElementById('usr_pass_required_star').style.display = 'none';
-    document.getElementById('usr_rol').value = u.rol;
+    
+    const rolSelect = document.getElementById('usr_rol');
+    const adminBadge = document.getElementById('usr_admin_badge');
+
+    if (u.rol === 'ADMIN') {
+        rolSelect.style.display = 'none';
+        adminBadge.style.display = 'inline-block';
+    } else {
+        rolSelect.style.display = 'block';
+        rolSelect.disabled = false;
+        rolSelect.value = inArray(u.rol, ['RRHH', 'SUPERVISOR', 'CONSULTA']) ? u.rol : 'RRHH';
+        adminBadge.style.display = 'none';
+    }
+
     document.getElementById('usr_activo').checked = (parseInt(u.activo) === 1);
 
     // Cargar permisos desde JSON
@@ -577,6 +603,10 @@ function openEditUserModal(u) {
 
     onRoleChange(u.rol);
     $('#modalUsuario').modal('show');
+}
+
+function inArray(needle, haystack) {
+    return Array.isArray(haystack) && haystack.indexOf(needle) !== -1;
 }
 
 // RESTABLECER CONTRASEÑA DE CUALQUIER USUARIO

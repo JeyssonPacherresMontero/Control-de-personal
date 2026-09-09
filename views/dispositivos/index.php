@@ -24,18 +24,20 @@
 <section class="content">
     <div class="container-fluid">
 
-        <!-- ACTIONS ROW -->
-        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
-            <div class="mb-2 mb-md-0">
-                <h5 class="text-dark font-weight-bold mb-0" style="font-size: 1.1rem;">
-                    <i class="fa-solid fa-server mr-2 text-primary"></i> Terminales Biométricas en Red
-                </h5>
-                <div class="text-muted small">Gestión de dispositivos ZKTeco, conectividad IP y protocolos de comunicación.</div>
+        <!-- ACTIONS TOOLBAR -->
+        <div class="actions-toolbar no-print">
+            <div class="actions-toolbar-group">
+                <div>
+                    <h5 class="text-dark font-weight-bold mb-0" style="font-size: 1.05rem;">
+                        <i class="fa-solid fa-server mr-2 text-primary"></i> Terminales Biométricas en Red
+                    </h5>
+                    <div class="text-muted small">Gestión de dispositivos ZKTeco, conectividad IP y protocolos de comunicación.</div>
+                </div>
             </div>
-            <div class="d-flex align-items-center flex-wrap" style="gap: 5px;">
+            <div class="actions-toolbar-group">
                 <!-- Botón Principal: Sync Rápido Hoy -->
-                <button type="button" class="btn btn-success btn-sm" onclick="syncAllDevices('today', this)">
-                    <i class="fa-solid fa-bolt mr-1"></i> Sincronizar Hoy (Rápido)
+                <button type="button" class="btn btn-primary btn-sm" onclick="syncAllDevices('today', this)">
+                    <i class="fa-solid fa-bolt mr-1"></i> Sincronizar Hoy
                 </button>
 
                 <!-- Menú Desplegable de Opciones Avanzadas -->
@@ -45,13 +47,13 @@
                     </button>
                     <div class="dropdown-menu dropdown-menu-right shadow border-0">
                         <a class="dropdown-item py-2" href="javascript:void(0)" onclick="syncAllDevices('full', this)">
-                            <i class="fa-solid fa-database mr-2 text-primary"></i> Sincronización Histórica Completa
+                            <i class="fa-solid fa-database mr-2 text-primary"></i> Sincronización Histórica
                         </a>
                         <?php if (($currentUser['rol'] ?? '') === 'ADMIN'): ?>
                             <div class="dropdown-divider"></div>
-                            <h6 class="dropdown-header text-danger font-weight-bold"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Mantenimiento de Hardware</h6>
+                            <h6 class="dropdown-header text-danger font-weight-bold"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Mantenimiento</h6>
                             <a class="dropdown-item py-2 text-danger" href="javascript:void(0)" onclick="openClearMemoryModal()">
-                                <i class="fa-solid fa-broom mr-2"></i> Respaldar y Liberar Memoria del Reloj
+                                <i class="fa-solid fa-broom mr-2"></i> Liberar Memoria del Reloj
                             </a>
                         <?php endif; ?>
                     </div>
@@ -65,7 +67,7 @@
 
         <?php if (isset($_SESSION['flash_sync_output'])): ?>
             <div class="alert alert-<?= $_SESSION['flash_sync_status'] === 'success' ? 'success' : 'warning' ?> alert-dismissible fade show mb-3" role="alert">
-                <h5 class="font-weight-bold mb-2"><i class="icon fas fa-info-circle mr-1"></i> Resultado del Ciclo de Sincronización:</h5>
+                <h5 class="font-weight-bold mb-2"><i class="icon fas fa-info-circle mr-1"></i> Resultado de Sincronización:</h5>
                 <pre class="mb-0 bg-dark text-white p-2 rounded small" style="max-height: 160px; overflow-y: auto; font-family: monospace;"><?= htmlspecialchars($_SESSION['flash_sync_output']) ?></pre>
                 <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
@@ -95,15 +97,15 @@
                         <div class="card-body py-3 d-flex flex-column justify-content-between">
                             <ul class="list-group list-group-flush mb-3 small">
                                 <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-0 border-0 border-bottom">
-                                    <span class="text-secondary"><i class="fa-solid fa-network-wired mr-2 text-primary"></i> Dirección IP / Puerto:</span>
+                                    <span class="text-secondary"><i class="fa-solid fa-network-wired mr-2 text-primary"></i> Dirección IP y Puerto:</span>
                                     <span class="font-weight-bold font-monospace text-dark"><?= htmlspecialchars($d['ip']) ?>:<?= $d['puerto'] ?></span>
                                 </li>
                                 <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-0 border-0 border-bottom">
-                                    <span class="text-secondary"><i class="fa-solid fa-shield-halved mr-2 text-secondary"></i> Protocolo / Clave:</span>
+                                    <span class="text-secondary"><i class="fa-solid fa-shield-halved mr-2 text-secondary"></i> Protocolo y Clave:</span>
                                     <span><span class="badge-pill-custom badge-pill-neutral"><?= $d['protocolo'] ?></span> (Clave: <?= $d['clave_comunicacion'] ?>)</span>
                                 </li>
                                 <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-0 border-0 border-bottom">
-                                    <span class="text-secondary"><i class="fa-solid fa-location-dot text-danger mr-2"></i> Ubicación / Sede:</span>
+                                    <span class="text-secondary"><i class="fa-solid fa-location-dot text-danger mr-2"></i> Ubicación:</span>
                                     <span class="text-dark font-weight-bold"><?= htmlspecialchars($d['ubicacion'] ?? 'Sede Principal') ?></span>
                                 </li>
                                 <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-0 border-0">
@@ -142,7 +144,7 @@
                                         <?php if (($currentUser['rol'] ?? '') === 'ADMIN'): ?>
                                             <div class="dropdown-divider"></div>
                                             <a class="dropdown-item small text-danger" href="javascript:void(0)" onclick="confirmClearDeviceMemory(<?= $d['id'] ?>, '<?= htmlspecialchars($d['nombre']) ?>')">
-                                                <i class="fa-solid fa-broom mr-2"></i> Liberar Memoria del Reloj
+                                                <i class="fa-solid fa-broom mr-2"></i> Liberar Memoria
                                             </a>
                                         <?php endif; ?>
                                     </div>
@@ -158,7 +160,7 @@
         <div class="card mt-3">
             <div class="card-header d-flex align-items-center justify-content-between">
                 <h3 class="card-title font-weight-bold">
-                    <i class="fa-solid fa-clock-rotate-left mr-2 text-primary"></i> Historial de Sincronización y Auditoría
+                    <i class="fa-solid fa-clock-rotate-left mr-2 text-primary"></i> Historial de Sincronización
                 </h3>
                 <span class="badge-pill-custom badge-pill-neutral">Auditoría en tiempo real</span>
             </div>
@@ -166,23 +168,23 @@
                 <table class="table table-hover datatable text-nowrap table-sm">
                     <thead>
                         <tr>
-                            <th>Fecha y Hora</th>
+                            <th class="text-center">Fecha y Hora</th>
                             <th>Dispositivo</th>
-                            <th>Evento</th>
+                            <th class="text-center">Evento</th>
                             <th class="text-center">Descargados</th>
                             <th class="text-center">Insertados</th>
                             <th class="text-center">Duplicados</th>
                             <th class="text-center">Estado</th>
                             <th class="text-center">Duración</th>
-                            <th>Mensaje / Salida</th>
+                            <th>Detalle y Mensaje</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($logs as $l): ?>
                             <tr>
-                                <td class="text-secondary font-monospace small"><?= $l['fecha_hora'] ?></td>
+                                <td class="text-center text-secondary font-monospace small"><?= $l['fecha_hora'] ?></td>
                                 <td class="font-weight-bold text-dark"><?= htmlspecialchars($l['dispositivo_nombre'] ?? 'Global') ?></td>
-                                <td>
+                                <td class="text-center">
                                     <?php
                                         $eventoLabel = match($l['tipo_evento']) {
                                             'SYNC_AUTO' => 'Sincronización Automática',
@@ -222,7 +224,7 @@
     </div>
 </section>
 
-<!-- MODAL CREAR / EDITAR DISPOSITIVO -->
+<!-- MODAL CREAR Y EDITAR DISPOSITIVO -->
 <div class="modal fade" id="modalDispositivo" tabindex="-1">
     <div class="modal-dialog">
         <form method="POST" action="?route=dispositivos&action=guardar" class="modal-content">
@@ -273,13 +275,13 @@
                 </div>
 
                 <div class="form-group">
-                    <label class="small font-weight-bold text-secondary">Ubicación / Sede</label>
+                    <label class="small font-weight-bold text-secondary">Ubicación o Sede</label>
                     <input type="text" name="ubicacion" id="dev_ubicacion" class="form-control form-control-sm" placeholder="Ej: Puerta Principal, Almacén...">
                 </div>
 
                 <div class="form-group">
                     <label class="small font-weight-bold text-secondary">Modelo</label>
-                    <input type="text" name="modelo" id="dev_modelo" class="form-control form-control-sm" placeholder="Ej: ZKTeco MB20 / K40 / SilkBio">
+                    <input type="text" name="modelo" id="dev_modelo" class="form-control form-control-sm" placeholder="Ej: ZKTeco MB20, K40 o SilkBio">
                 </div>
 
                 <div class="form-group custom-control custom-checkbox">

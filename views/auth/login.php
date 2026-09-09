@@ -19,43 +19,70 @@
     <style>
         body {
             font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-            background: #0f172a !important;
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%) !important;
+            background-color: #090e1a !important;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.18) 0px, transparent 55%),
+                radial-gradient(at 100% 100%, rgba(30, 64, 175, 0.22) 0px, transparent 55%),
+                radial-gradient(at 50% 50%, rgba(15, 23, 42, 0.9) 0px, #090e1a 100%) !important;
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
+            letter-spacing: -0.01em;
         }
         .login-box {
             width: 440px;
+            max-width: 95%;
+            margin: 1.5rem auto;
         }
         .card-login-custom {
-            border-radius: 14px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
             background: #ffffff;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.08);
             overflow: hidden;
+            transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .form-control {
-            border-radius: 6px;
+            border-radius: 8px;
             font-size: 0.9rem;
-            padding: 0.6rem 0.75rem;
-            border-color: #cbd5e1;
+            padding: 0.65rem 0.85rem;
+            border: 1px solid #cbd5e1;
+            color: #0f172a;
+            transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .form-control:focus {
             border-color: #2563eb;
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+        }
+        .input-group-text {
+            border-radius: 0 8px 8px 0 !important;
+            border-color: #cbd5e1;
+            transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .form-group:focus-within .input-group-text {
+            border-color: #2563eb;
+            color: #2563eb !important;
         }
         .btn-primary {
-            background-color: #1e40af;
-            border-color: #1e40af;
-            border-radius: 6px;
-            font-weight: 600;
-            letter-spacing: 0.3px;
-        }
-        .btn-primary:hover {
             background-color: #1d4ed8;
             border-color: #1d4ed8;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.92rem;
+            letter-spacing: 0.2px;
+            padding: 0.65rem 1rem;
+            box-shadow: 0 2px 4px rgba(29, 78, 216, 0.25);
+            transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .btn-primary:hover {
+            background-color: #1e40af;
+            border-color: #1e40af;
+            box-shadow: 0 4px 12px rgba(29, 78, 216, 0.35);
+            transform: translateY(-1px);
+        }
+        .btn-primary:active {
+            transform: scale(0.99);
         }
         @media (max-width: 576px) {
             .login-box {
