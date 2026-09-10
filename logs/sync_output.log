@@ -1,0 +1,10 @@
+2026-09-07 10:14:09,137 [INFO] [SyncEngine] Iniciando ciclo de sincronización para 1 dispositivo(s)...
+2026-09-07 10:14:09,138 [INFO] [SyncEngine] ==> Iniciando sincronización (INCREMENTAL) con biométrico #1 [Reloj Principal - Entrada] en 192.168.1.201:4370 (TCP)
+2026-09-07 10:14:09,188 [INFO] [ZKService] Conexión exitosa con dispositivo 192.168.1.201:4370
+2026-09-07 10:14:09,204 [INFO] [ZKService] Hora del reloj 192.168.1.201 sincronizada a: 2026-09-07 10:14:09.188843
+2026-09-07 10:14:09,976 [INFO] [SyncEngine] Sincronizados/actualizados 75 empleados desde el biométrico.
+2026-09-07 10:15:05,306 [INFO] [ZKService] Se descargaron 66215 registros brutos de 192.168.1.201
+2026-09-07 10:15:05,594 [WARNING] [SyncEngine] Aviso al guardar eventos de auditoría: (1146, "Table 'control_personal.eventos_asistencia' doesn't exist")
+2026-09-07 10:15:05,599 [INFO] [SyncEngine] Sincronización (INCREMENTAL): 66215 en reloj, 24 evaluados, 0 nuevos insertados, 24 ya existentes.
+2026-09-07 10:15:05,635 [INFO] [ZKService] Desconectado de 192.168.1.201:4370
+2026-09-07 10:15:05,644 [INFO] [SyncEngine] Ciclo de sincronización finalizado exitosamente.

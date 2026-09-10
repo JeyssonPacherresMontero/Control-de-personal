@@ -14,11 +14,10 @@ class DashboardController {
         // El rol del dashboard es estrictamente el rol asignado al usuario en su sesión
         $activeRoleView = $currentUser['rol'] ?? 'RRHH';
 
-        // Solo procesar si aún no existen registros calculados para hoy
+        // Disparar cálculo en segundo plano si aún no existe registro de asistencia para hoy
         $asistenciaExiste = Database::queryOne("SELECT id FROM asistencia_diaria WHERE fecha = ? LIMIT 1", [$today]);
         if (!$asistenciaExiste) {
-            $calculator = new AttendanceCalculator(ATTENDANCE_DEBOUNCE_MINUTES);
-            $calculator->processDate($today);
+            $this->triggerAsyncCalculation($today);
         }
 
         // 1. Estadísticas Generales de Hoy
@@ -175,10 +174,10 @@ class DashboardController {
             ? round((($syncStats['exitos'] ?? 0) / $syncStats['total_syncs']) * 100, 1) 
             : 100;
 
-        // Total marcaciones hoy
+        // Total marcaciones hoy (Optimizado con índice B-Tree)
         $totalMarcacionesHoy = (int)(Database::queryOne("
-            SELECT COUNT(*) as c FROM marcaciones WHERE DATE(fecha_hora) = ?
-        ", [$today])['c'] ?? 0);
+            SELECT COUNT(*) as c FROM marcaciones WHERE fecha_hora >= ? AND fecha_hora <= ?
+        ", [$today . ' 00:00:00', $today . ' 23:59:59'])['c'] ?? 0);
 
         // 7. Últimas 10 marcaciones en vivo
         $ultimasMarcaciones = Database::query("
@@ -202,5 +201,30 @@ class DashboardController {
         $totalUsuarios = (int)(Database::queryOne("SELECT COUNT(*) as c FROM usuarios_sistema WHERE activo = 1")['c'] ?? 0);
 
         require_once APP_ROOT . '/views/dashboard/index.php';
+    }
+
+    private function triggerAsyncCalculation(string $date): void {
+        // Lock a nivel de MySQL: evita que 2 requests simultáneos disparen el cálculo
+        $lockName = 'attendance_calc_' . $date;
+        $gotLock = Database::queryOne("SELECT GET_LOCK(?, 0) as ok", [$lockName]);
+
+        if (($gotLock['ok'] ?? 0) != 1) {
+            return; // otro proceso ya lo está calculando, no hacer nada
+        }
+
+        try {
+            // Lanzar el cálculo en background vía CLI en vez de bloquear el request
+            $phpBin = PHP_BINARY;
+            $script = APP_ROOT . '/app/Console/process_attendance.php';
+            $cmd = "\"$phpBin\" \"$script\" \"$date\"";
+
+            if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+                pclose(popen("start /B \"\" $cmd", "r"));
+            } else {
+                exec("$cmd > /dev/null 2>&1 &");
+            }
+        } finally {
+            Database::execute("SELECT RELEASE_LOCK(?)", [$lockName]);
+        }
     }
 }

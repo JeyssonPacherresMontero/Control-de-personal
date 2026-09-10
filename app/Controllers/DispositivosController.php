@@ -2,6 +2,7 @@
 namespace App\Controllers;
 
 use App\Database;
+use App\Services\PythonRunner;
 
 class DispositivosController {
     public function index(): void {
@@ -23,6 +24,8 @@ class DispositivosController {
 
     public function guardar(): void {
         AuthController::checkAuth();
+        AuthController::requireRole('ADMIN', 'dispositivos');
+        \App\Security\Csrf::validate();
 
         $id = (int)($_POST['id'] ?? 0);
         $nombre = trim($_POST['nombre'] ?? '');
@@ -34,38 +37,41 @@ class DispositivosController {
         $modelo = trim($_POST['modelo'] ?? '');
         $activo = isset($_POST['activo']) ? 1 : 0;
 
+        if (empty($nombre) || empty($ip)) {
+            header('Location: ?route=dispositivos&msg=campos_requeridos');
+            exit;
+        }
+
+        $params = [
+            ':nom'   => $nombre,
+            ':ip'    => $ip,
+            ':port'  => $puerto,
+            ':proto' => $protocolo,
+            ':clave' => $clave,
+            ':ubi'   => $ubicacion,
+            ':mod'   => $modelo,
+            ':act'   => $activo
+        ];
+
         if ($id > 0) {
-            Database::execute("
+            $params[':id'] = $id;
+            $result = Database::executeSafe("
                 UPDATE dispositivos 
                 SET nombre = :nom, ip = :ip, puerto = :port, protocolo = :proto, 
                     clave_comunicacion = :clave, ubicacion = :ubi, modelo = :mod, activo = :act
                 WHERE id = :id
-            ", [
-                ':nom'   => $nombre,
-                ':ip'    => $ip,
-                ':port'  => $puerto,
-                ':proto' => $protocolo,
-                ':clave' => $clave,
-                ':ubi'   => $ubicacion,
-                ':mod'   => $modelo,
-                ':act'   => $activo,
-                ':id'    => $id
-            ]);
+            ", $params);
         } else {
-            Database::execute("
+            $result = Database::executeSafe("
                 INSERT INTO dispositivos 
                 (nombre, ip, puerto, protocolo, clave_comunicacion, ubicacion, modelo, activo)
                 VALUES (:nom, :ip, :port, :proto, :clave, :ubi, :mod, :act)
-            ", [
-                ':nom'   => $nombre,
-                ':ip'    => $ip,
-                ':port'  => $puerto,
-                ':proto' => $protocolo,
-                ':clave' => $clave,
-                ':ubi'   => $ubicacion,
-                ':mod'   => $modelo,
-                ':act'   => $activo
-            ]);
+            ", $params);
+        }
+
+        if (!$result['success']) {
+            header('Location: ?route=dispositivos&msg=' . ($result['error'] === 'duplicado' ? 'duplicado' : 'error_interno'));
+            exit;
         }
 
         header('Location: ?route=dispositivos&msg=guardado');
@@ -73,80 +79,51 @@ class DispositivosController {
     }
 
     public function eliminar(): void {
-        AuthController::checkAuth();
+        AuthController::requireRole('ADMIN', 'dispositivos');
+        \App\Security\Csrf::validate();
 
         $id = (int)($_POST['id'] ?? 0);
         if ($id > 0) {
-            Database::execute("DELETE FROM dispositivos WHERE id = ?", [$id]);
+            // Soft delete: nunca borres físicamente un dispositivo con historial de marcaciones
+            Database::execute("UPDATE dispositivos SET activo = 0 WHERE id = ?", [$id]);
         }
-        header('Location: ?route=dispositivos&msg=eliminado');
+        header('Location: ?route=dispositivos&msg=desactivado');
         exit;
     }
 
     /**
-     * Construye un array de entorno limpio eliminando PYTHONHOME/PYTHONPATH
-     * que ZKBioTime inyecta globalmente y que corrompen cualquier Python distinto.
+     * Sincronización de marcaciones desde terminales biométricos.
+     * Exige método POST y validación de token CSRF.
      */
-    private function buildCleanPythonEnv(): array {
-        $env = [];
-        
-        // Variables esenciales de Windows
-        $systemRoot = getenv('SystemRoot') ?: (getenv('windir') ?: 'C:\\Windows');
-        $env['SystemRoot'] = $systemRoot;
-        $env['windir'] = $systemRoot;
-        $env['COMSPEC'] = getenv('COMSPEC') ?: 'C:\\Windows\\system32\\cmd.exe';
-        $env['PATHEXT'] = getenv('PATHEXT') ?: '.COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC';
-
-        // Copiar todas las variables de entorno actuales
-        foreach ($_SERVER as $k => $v) {
-            if (is_string($v) && !str_starts_with($k, 'HTTP_')) {
-                $env[$k] = $v;
-            }
-        }
-        // Merge con getenv() para cubrir variables que $_SERVER no tenga
-        foreach (getenv() as $k => $v) {
-            if (!isset($env[$k]) && is_string($v)) {
-                $env[$k] = $v;
-            }
-        }
-        
-        // Eliminar las variables tóxicas de ZKBioTime
-        unset($env['PYTHONHOME'], $env['PYTHONPATH']);
-        
-        // Limpiar PATH: remover entradas de ZKBioTime y asegurar rutas del sistema
-        $pathKey = isset($env['Path']) ? 'Path' : (isset($env['PATH']) ? 'PATH' : 'Path');
-        $rawPath = $env[$pathKey] ?? getenv('Path') ?: getenv('PATH') ?: '';
-        
-        $paths = explode(';', $rawPath);
-        $cleanPaths = array_filter($paths, function($p) {
-            return trim($p) !== '' && stripos($p, 'ZKBioTime') === false;
-        });
-
-        // Asegurar que System32 esté en el PATH para sockets y red
-        $sys32 = $systemRoot . '\\system32';
-        if (!in_array($sys32, $cleanPaths, true) && !in_array(strtolower($sys32), array_map('strtolower', $cleanPaths), true)) {
-            array_unshift($cleanPaths, $sys32);
-        }
-
-        $env[$pathKey] = implode(';', $cleanPaths);
-        $env['Path'] = $env[$pathKey];
-        $env['PATH'] = $env[$pathKey];
-        
-        // Forzar UTF-8 para evitar errores de codificación en Windows
-        $env['PYTHONIOENCODING'] = 'utf-8';
-        $env['PYTHONUTF8'] = '1';
-        
-        return $env;
-    }
-
     public function sincronizar(): void {
         AuthController::checkAuth();
+        AuthController::requireRole(['ADMIN', 'RRHH'], 'dashboard');
 
-        $id = (int)($_GET['id'] ?? 0);
-        $mode = $_GET['mode'] ?? 'today'; // 'today' (ultra rápido) o 'full' (histórico)
+        $isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') 
+                  || isset($_GET['ajax']) 
+                  || isset($_POST['ajax'])
+                  || (isset($_SERVER['HTTP_ACCEPT']) && str_contains($_SERVER['HTTP_ACCEPT'], 'application/json'));
+
+        // Validar CSRF
+        \App\Security\Csrf::validate();
+
+        $id = (int)($_POST['id'] ?? ($_GET['id'] ?? 0));
+        $mode = $_POST['mode'] ?? ($_GET['mode'] ?? 'incremental'); // 'incremental', 'today' o 'full'
         $pythonScript = APP_ROOT . '/sync/sync_zkteco.py';
         $pythonBin = defined('PYTHON_BIN') ? PYTHON_BIN : 'python';
-        
+
+        // Validación temprana: verificar script
+        if (!file_exists($pythonScript)) {
+            if ($isAjax) {
+                header('Content-Type: application/json; charset=utf-8');
+                http_response_code(500);
+                echo json_encode(['success' => false, 'error' => 'Script de sincronización no encontrado.'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            header('Location: ?route=dispositivos&msg=error_interno');
+            exit;
+        }
+
         $lockFile = APP_ROOT . '/storage/sync.lock';
         $logFile = APP_ROOT . '/storage/logs/sync_current.log';
         $storageDir = APP_ROOT . '/storage/logs';
@@ -155,14 +132,13 @@ class DispositivosController {
             @mkdir($storageDir, 0777, true);
         }
 
-        // Obtener el ID del último log existente en BD antes de iniciar
         $lastLogId = (int)(Database::queryOne("SELECT MAX(id) as max_id FROM log_sincronizacion")['max_id'] ?? 0);
 
-        // Si ya hay una sincronización activa hace menos de 90 segundos
+        // Lock atómico real
         $isAlreadyRunning = false;
         if (file_exists($lockFile)) {
             $lockContent = @file_get_contents($lockFile);
-            $lockData = json_decode($lockContent, true);
+            $lockData = json_decode((string)$lockContent, true);
             $lockTime = (int)($lockData['timestamp'] ?? filemtime($lockFile));
             if (time() - $lockTime < 90) {
                 $isAlreadyRunning = true;
@@ -172,48 +148,65 @@ class DispositivosController {
         }
 
         if (!$isAlreadyRunning) {
-            @file_put_contents($lockFile, json_encode([
-                'device_id' => $id,
-                'mode' => $mode,
-                'started_at' => date('Y-m-d H:i:s'),
-                'start_log_id' => $lastLogId,
-                'timestamp' => time()
-            ]));
-
-            $modeText = ($mode === 'today') ? 'SOLO HOY (RÁPIDO)' : 'HISTÓRICO COMPLETO';
-            @file_put_contents($logFile, "=== Iniciando sincronización [$modeText - " . date('Y-m-d H:i:s') . "] ===\n");
-
-            // Comando en segundo plano en Windows
-            $cmd = "\"$pythonBin\" -E \"$pythonScript\"";
-            if ($mode === 'today') {
-                $cmd .= " --today-only";
-            }
-            if ($id > 0) {
-                $cmd .= " --device $id";
-            }
-
-            // Iniciar proceso desacoplado en background sin bloquear PHP
-            if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-                $bgCmd = "cmd /c start /B \"\" " . $cmd . " >> \"" . $logFile . "\" 2>&1";
-                pclose(popen($bgCmd, "r"));
+            $fp = @fopen($lockFile, 'x');
+            if ($fp === false) {
+                $isAlreadyRunning = true;
             } else {
-                exec($cmd . " >> \"" . $logFile . "\" 2>&1 &");
+                fwrite($fp, json_encode([
+                    'device_id' => $id,
+                    'mode' => $mode,
+                    'started_at' => date('Y-m-d H:i:s'),
+                    'start_log_id' => $lastLogId,
+                    'timestamp' => time()
+                ]));
+                fclose($fp);
+
+                $modeText = ($mode === 'today') ? 'SOLO HOY (RÁPIDO)' : (($mode === 'full') ? 'HISTÓRICO COMPLETO' : 'INCREMENTAL (PENDIENTES)');
+                @file_put_contents($logFile, "=== Iniciando sincronización [$modeText - " . date('Y-m-d H:i:s') . "] ===\n");
+
+                $cmd = "\"$pythonBin\" -E \"$pythonScript\"";
+                if ($mode === 'today') {
+                    $cmd .= " --today-only";
+                }
+                if ($id > 0) {
+                    $cmd .= " --device $id";
+                }
+
+                // Usar entorno limpio con PythonRunner
+                $env = PythonRunner::buildCleanEnv();
+
+                if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+                    $bgCmd = "cmd /c start /B \"\" $cmd >> \"$logFile\" 2>&1";
+                    $descriptors = [0 => ['pipe','r'], 1 => ['pipe','w'], 2 => ['pipe','w']];
+                    $proc = @proc_open($bgCmd, $descriptors, $pipes, APP_ROOT, $env);
+                    if (is_resource($proc)) {
+                        fclose($pipes[0]); fclose($pipes[1]); fclose($pipes[2]);
+                        proc_close($proc);
+                    }
+                } else {
+                    $proc = @proc_open($cmd . " >> \"$logFile\" 2>&1 &", 
+                        [0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']], $pipes, APP_ROOT, $env);
+                    if (is_resource($proc)) {
+                        fclose($pipes[0]); fclose($pipes[1]); fclose($pipes[2]);
+                        proc_close($proc);
+                    }
+                }
             }
         }
 
-        $isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') 
-                  || isset($_GET['ajax']) 
-                  || (isset($_SERVER['HTTP_ACCEPT']) && str_contains($_SERVER['HTTP_ACCEPT'], 'application/json'));
-
         if ($isAjax) {
-            header('Content-Type: application/json');
+            header('Content-Type: application/json; charset=utf-8');
+            $msg = $isAlreadyRunning ? 'Ya hay una sincronización en curso. Monitoreando...' : 
+                   (($mode === 'today') ? 'Sincronización rápida (Solo Hoy) iniciada.' : 
+                   (($mode === 'full') ? 'Sincronización histórica completa iniciada.' : 'Sincronización inteligente (marcaciones pendientes) iniciada.'));
+
             echo json_encode([
                 'success' => true,
                 'status' => 'started',
                 'mode' => $mode,
                 'already_running' => $isAlreadyRunning,
-                'message' => $isAlreadyRunning ? 'Ya hay una sincronización en curso. Monitoreando...' : ($mode === 'today' ? 'Sincronización rápida (Solo Hoy) iniciada.' : 'Sincronización histórica iniciada.')
-            ]);
+                'message' => $msg
+            ], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
             exit;
         }
 
@@ -221,71 +214,10 @@ class DispositivosController {
         exit;
     }
 
-    public function limpiarMemoria(): void {
-        AuthController::checkAuth();
-        $user = AuthController::user();
-
-        // Solo administradores pueden purgar memoria del reloj
-        if (($user['rol'] ?? '') !== 'ADMIN') {
-            header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'output' => 'Acceso denegado: Solo administradores pueden liberar memoria.']);
-            exit;
-        }
-
-        $id = (int)($_POST['id'] ?? 0);
-        if ($id <= 0) {
-            header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'output' => 'ID de dispositivo no válido.']);
-            exit;
-        }
-
-        $device = Database::queryOne("SELECT * FROM dispositivos WHERE id = ?", [$id]);
-        if (!$device) {
-            header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'output' => 'Dispositivo no encontrado.']);
-            exit;
-        }
-
-        $pythonScript = APP_ROOT . '/sync/sync_zkteco.py';
-        $pythonBin = defined('PYTHON_BIN') ? PYTHON_BIN : 'python';
-
-        $cmd = "\"$pythonBin\" -E \"$pythonScript\" --device $id --clear";
-        $env = $this->buildCleanPythonEnv();
-        $descriptors = [
-            0 => ['pipe', 'r'],
-            1 => ['pipe', 'w'],
-            2 => ['pipe', 'w']
-        ];
-        $process = proc_open($cmd, $descriptors, $pipes, APP_ROOT, $env);
-        
-        $outputText = '';
-        if (is_resource($process)) {
-            fclose($pipes[0]);
-            $stdout = stream_get_contents($pipes[1]);
-            $stderr = stream_get_contents($pipes[2]);
-            fclose($pipes[1]);
-            fclose($pipes[2]);
-            proc_close($process);
-            $outputText = trim($stdout . "\n" . $stderr);
-        }
-
-        if (function_exists('mb_convert_encoding')) {
-            $outputText = mb_convert_encoding($outputText, 'UTF-8', 'UTF-8, ISO-8859-1, Windows-1252');
-        }
-
-        $success = str_contains($outputText, 'EXITO') || str_contains($outputText, 'limpiada');
-
-        header('Content-Type: application/json; charset=utf-8');
-        echo json_encode([
-            'success' => $success,
-            'output' => $outputText ?: 'Operación completada en el dispositivo.'
-        ], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
-        exit;
-    }
-
     public function syncStatus(): void {
         AuthController::checkAuth();
-        header('Content-Type: application/json');
+        session_write_close(); // Liberar bloqueo de sesión para permitir navegación concurrente fluida
+        header('Content-Type: application/json; charset=utf-8');
 
         $lockFile = APP_ROOT . '/storage/sync.lock';
         $logFile = APP_ROOT . '/storage/logs/sync_current.log';
@@ -309,14 +241,6 @@ class DispositivosController {
             }
         }
 
-        // Obtener el último log registrado en la base de datos
-        $ultimoLog = Database::queryOne("
-            SELECT l.*, d.nombre as dispositivo_nombre 
-            FROM log_sincronizacion l
-            LEFT JOIN dispositivos d ON l.id_dispositivo = d.id
-            ORDER BY l.id DESC LIMIT 1
-        ");
-
         // Leer tail del log de archivo
         $logTail = '';
         $logFinished = false;
@@ -333,8 +257,14 @@ class DispositivosController {
             }
         }
 
-        // Si ya se insertó un nuevo registro en log_sincronizacion posterior al inicio de esta sincronización,
-        // o si el log en disco ya finalizó, la sincronización YA TERMINÓ.
+        // Obtener el último log registrado en la base de datos
+        $ultimoLog = Database::queryOne("
+            SELECT l.*, d.nombre as dispositivo_nombre 
+            FROM log_sincronizacion l
+            LEFT JOIN dispositivos d ON l.id_dispositivo = d.id
+            ORDER BY l.id DESC LIMIT 1
+        ");
+
         if ($isRunning) {
             $currentMaxLogId = (int)($ultimoLog['id'] ?? 0);
             if ($startLogId > 0 && $currentMaxLogId > $startLogId) {
@@ -346,6 +276,7 @@ class DispositivosController {
             }
         }
 
+        $logTail = PythonRunner::cleanEncoding($logTail);
         $dispositivos = Database::query("SELECT id, nombre, ip, puerto, estado_conexion, ultimo_sync, ultimo_error FROM dispositivos ORDER BY id ASC");
 
         echo json_encode([
@@ -355,57 +286,32 @@ class DispositivosController {
             'log_tail' => $logTail,
             'dispositivos' => $dispositivos,
             'ultimo_log' => $ultimoLog
-        ]);
+        ], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
         exit;
     }
 
     public function testConexion(): void {
         AuthController::checkAuth();
-        @set_time_limit(30);
+        AuthController::requireRole(['ADMIN', 'RRHH']);
+        @set_time_limit(35);
 
-        $id = (int)($_GET['id'] ?? 0);
+        $id = (int)($_GET['id'] ?? ($_POST['id'] ?? 0));
         $device = Database::queryOne("SELECT * FROM dispositivos WHERE id = ?", [$id]);
 
         if (!$device) {
-            header('Content-Type: application/json');
+            header('Content-Type: application/json; charset=utf-8');
             echo json_encode(['success' => false, 'output' => 'Dispositivo no encontrado en la base de datos.']);
             exit;
         }
 
         $pythonScript = APP_ROOT . '/sync/test_device.py';
-        $pythonBin = defined('PYTHON_BIN') ? PYTHON_BIN : 'python';
-        $ip = escapeshellarg($device['ip']);
+        $ip = $device['ip'];
         $port = (int)($device['puerto'] ?? 4370);
         $comkey = (int)($device['clave_comunicacion'] ?? 0);
         $udp = ($device['protocolo'] === 'UDP') ? '1' : '0';
 
-        $cmd = "\"$pythonBin\" -E \"$pythonScript\" $ip $port $comkey $udp";
-        
-        // Ejecutar con entorno limpio (sin PYTHONHOME de ZKBioTime)
-        $env = $this->buildCleanPythonEnv();
-        $descriptors = [
-            0 => ['pipe', 'r'],
-            1 => ['pipe', 'w'],
-            2 => ['pipe', 'w']
-        ];
-        $process = proc_open($cmd, $descriptors, $pipes, APP_ROOT, $env);
-        
-        $outputText = '';
-        $returnCode = 1;
-        if (is_resource($process)) {
-            fclose($pipes[0]);
-            $stdout = stream_get_contents($pipes[1]);
-            $stderr = stream_get_contents($pipes[2]);
-            fclose($pipes[1]);
-            fclose($pipes[2]);
-            $returnCode = proc_close($process);
-            $outputText = trim($stdout . "\n" . $stderr);
-        }
-        
-        // Garantizar codificación UTF-8 válida para json_encode
-        if (function_exists('mb_convert_encoding')) {
-            $outputText = mb_convert_encoding($outputText, 'UTF-8', 'UTF-8, ISO-8859-1, Windows-1252');
-        }
+        $res = PythonRunner::run($pythonScript, [$ip, $port, $comkey, $udp], 25);
+        $outputText = $res['output'];
 
         $isOnline = str_contains($outputText, 'CONEXIÓN EXITOSA') || 
                      str_contains($outputText, 'EXITOSA') || 
@@ -440,6 +346,211 @@ class DispositivosController {
             'ultimo_sync' => $updatedDevice['ultimo_sync'] ? substr($updatedDevice['ultimo_sync'], 0, 16) : 'Nunca',
             'ultimo_error' => $updatedDevice['ultimo_error'] ?? null
         ], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+        exit;
+    }
+
+    /**
+     * AJAX: Registra o actualiza un usuario directamente en el reloj biométrico ZKTeco
+     */
+    public function enviarUsuarioReloj(): void {
+        AuthController::checkAuth();
+        AuthController::requireRole(['ADMIN', 'RRHH']);
+        \App\Csrf::validateRequest();
+
+        $deviceId = (int)($_POST['device_id'] ?? 1);
+        $userId = trim($_POST['user_id'] ?? '');
+        $name = trim($_POST['name'] ?? '');
+        $privilege = (int)($_POST['privilege'] ?? 0);
+        $password = trim($_POST['password'] ?? '');
+
+        if (empty($userId) || empty($name)) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'error' => 'Se requiere el código/ID de reloj y el nombre del usuario.']);
+            exit;
+        }
+
+        $pythonScript = APP_ROOT . '/sync/biometric_admin.py';
+        $args = ['set-user', '--device', $deviceId, '--user-id', $userId, '--name', $name, '--privilege', $privilege];
+        if (!empty($password)) {
+            $args[] = '--password';
+            $args[] = $password;
+        }
+
+        $res = PythonRunner::run($pythonScript, $args, 30);
+        $output = $res['output'];
+
+        $jsonStart = strpos($output, '{');
+        if ($jsonStart !== false) {
+            $jsonStr = substr($output, $jsonStart);
+            $parsed = json_decode($jsonStr, true);
+            if (is_array($parsed)) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode($parsed, JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+        }
+
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => $res['success'], 'message' => $output ?: 'Comando enviado al biométrico.'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    /**
+     * AJAX: Activa el modo de captura/enrolamiento de huella dactilar en el reloj biométrico
+     */
+    public function enrolarHuella(): void {
+        AuthController::checkAuth();
+        AuthController::requireRole(['ADMIN', 'RRHH']);
+        \App\Csrf::validateRequest();
+
+        $deviceId = (int)($_POST['device_id'] ?? 1);
+        $userId = trim($_POST['user_id'] ?? '');
+        $tempId = (int)($_POST['temp_id'] ?? 0); // 0 = Dedo principal
+
+        if (empty($userId)) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'error' => 'Se requiere el ID de usuario en el reloj.']);
+            exit;
+        }
+
+        $pythonScript = APP_ROOT . '/sync/biometric_admin.py';
+        $args = ['enroll', '--device', $deviceId, '--user-id', $userId, '--temp-id', $tempId];
+
+        $res = PythonRunner::run($pythonScript, $args, 35);
+        $output = $res['output'];
+
+        $jsonStart = strpos($output, '{');
+        if ($jsonStart !== false) {
+            $jsonStr = substr($output, $jsonStart);
+            $parsed = json_decode($jsonStr, true);
+            if (is_array($parsed)) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode($parsed, JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+        }
+
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => $res['success'], 'message' => $output ?: 'Modo de captura activado en reloj.'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    /**
+     * AJAX: Descarga las huellas/rostros del reloj y las guarda en la tabla plantillas_biometricas
+     */
+    public function sincronizarBiometria(): void {
+        AuthController::checkAuth();
+        AuthController::requireRole(['ADMIN', 'RRHH']);
+        \App\Csrf::validateRequest();
+
+        $deviceId = (int)($_POST['device_id'] ?? 1);
+        $userId = trim($_POST['user_id'] ?? '');
+
+        $pythonScript = APP_ROOT . '/sync/biometric_admin.py';
+        $args = ['download-templates', '--device', $deviceId];
+        if (!empty($userId)) {
+            $args[] = '--user-id';
+            $args[] = $userId;
+        } else {
+            $args[] = '--user-id';
+            $args[] = '';
+        }
+
+        $res = PythonRunner::run($pythonScript, $args, 45);
+        $output = $res['output'];
+
+        $jsonStart = strpos($output, '{');
+        if ($jsonStart !== false) {
+            $jsonStr = substr($output, $jsonStart);
+            $parsed = json_decode($jsonStr, true);
+            if (is_array($parsed)) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode($parsed, JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+        }
+
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => $res['success'], 'message' => $output ?: 'Plantillas biométricas respaldadas en base de datos.'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    /**
+     * AJAX: Consulta el estado biométrico del usuario en MySQL
+     */
+    public function obtenerBiometriaUsuario(): void {
+        AuthController::checkAuth();
+        session_write_close(); // Liberar bloqueo de sesión para lecturas concurrentes
+
+        $userId = trim($_GET['user_id'] ?? '');
+        if (empty($userId)) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'error' => 'Código de reloj no proporcionado.']);
+            exit;
+        }
+
+        $plantillas = Database::query("
+            SELECT pb.id, pb.codigo_reloj, pb.tipo, pb.dedo_indice, pb.tamano, pb.actualizado_en, d.nombre as dispositivo_nombre
+            FROM plantillas_biometricas pb
+            LEFT JOIN dispositivos d ON pb.id_dispositivo_origen = d.id
+            WHERE pb.codigo_reloj = ?
+        ", [$userId]);
+
+        $fingerCount = 0;
+        $faceCount = 0;
+        foreach ($plantillas as $p) {
+            if ($p['tipo'] === 'HUELLA') $fingerCount++;
+            if ($p['tipo'] === 'FACIAL') $faceCount++;
+        }
+
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'success' => true,
+            'user_id' => $userId,
+            'huellas_count' => $fingerCount,
+            'facial_count' => $faceCount,
+            'plantillas' => $plantillas
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    /**
+     * AJAX/POST: Respalda y libera el búfer de marcaciones de la memoria del reloj ZKTeco
+     */
+    public function limpiarMemoria(): void {
+        AuthController::checkAuth();
+        AuthController::requireRole('ADMIN');
+        \App\Csrf::validateRequest();
+
+        $id = (int)($_POST['id'] ?? ($_GET['id'] ?? 0));
+        $device = Database::queryOne("SELECT * FROM dispositivos WHERE id = ?", [$id]);
+
+        if (!$device) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'output' => 'Dispositivo biométrico no encontrado.']);
+            exit;
+        }
+
+        $pythonScript = APP_ROOT . '/sync/sync_zkteco.py';
+        $res = PythonRunner::run($pythonScript, ['--device', $id, '--clear'], 45);
+        $output = $res['output'];
+
+        $isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') 
+                  || isset($_GET['ajax']) 
+                  || (isset($_SERVER['HTTP_ACCEPT']) && str_contains($_SERVER['HTTP_ACCEPT'], 'application/json'));
+
+        $success = !str_contains(strtolower($output), 'error crítico') && !str_contains(strtolower($output), 'traceback') && $res['success'];
+
+        if ($isAjax) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'success' => $success,
+                'output' => $output ?: ($success ? 'Memoria del reloj biométrico respaldada y liberada con éxito.' : 'No se pudo comunicar con el dispositivo.')
+            ], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+            exit;
+        }
+
+        header('Location: ?route=dispositivos&msg=' . ($success ? 'memoria_liberada' : 'error_limpiar'));
         exit;
     }
 }

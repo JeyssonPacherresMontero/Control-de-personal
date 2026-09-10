@@ -25,3 +25,5 @@ ZK_CONFIG = {
     'clear_after_sync': os.getenv('ZK_CLEAR_ATTENDANCE_AFTER_SYNC', 'false').lower() in ('true', '1', 'yes'),
     'sync_users': os.getenv('ZK_SYNC_USERS', 'true').lower() in ('true', '1', 'yes'),
 }
+
+APP_TIMEZONE = os.getenv('APP_TIMEZONE', 'America/Lima')

@@ -1,0 +1,11 @@
+.env
+.env.local
+.env.*.local
+/storage/logs/*.log
+/storage/*.lock
+/logs/*.log
+/sync/__pycache__/
+*.pyc
+/vendor/
+.vscode/
+.idea/

@@ -119,7 +119,7 @@ CREATE TABLE IF NOT EXISTS `marcaciones` (
     `procesado` TINYINT(1) DEFAULT 0 COMMENT '0: Pendiente de cálculo, 1: Procesado en asistencia_diaria',
     `creado_en` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT `fk_marcaciones_empleado` FOREIGN KEY (`id_empleado`) REFERENCES `empleados` (`id`) ON DELETE CASCADE,
-    CONSTRAINT `fk_marcaciones_dispositivo` FOREIGN KEY (`id_dispositivo`) REFERENCES `dispositivos` (`id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_marcaciones_dispositivo` FOREIGN KEY (`id_dispositivo`) REFERENCES `dispositivos` (`id`) ON DELETE RESTRICT,
     -- Clave Única para evitar duplicados en re-intentos de sincronización
     UNIQUE KEY `uniq_marcacion` (`codigo_reloj`, `fecha_hora`, `id_dispositivo`),
     INDEX `idx_marcaciones_fecha_hora` (`fecha_hora`),
@@ -208,9 +208,55 @@ CREATE TABLE IF NOT EXISTS `usuarios_sistema` (
     `nombre_completo` VARCHAR(120) NOT NULL,
     `email` VARCHAR(100) NULL,
     `rol` ENUM('ADMIN', 'RRHH', 'SUPERVISOR', 'CONSULTA') DEFAULT 'RRHH',
+    `permisos` TEXT NULL COMMENT 'JSON array de módulos permitidos en el menú',
     `activo` TINYINT(1) DEFAULT 1,
     `ultimo_login` DATETIME NULL,
     `creado_en` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 13. TABLA: EVENT STORE (EVENT SOURCING PARA MARCACIONES Y ASISTENCIA)
+-- Registro inmutable y de solo anexado (Append-Only) para trazabilidad total
+CREATE TABLE IF NOT EXISTS `eventos_asistencia` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `aggregate_type` ENUM('MARCACION', 'ASISTENCIA_DIARIA') NOT NULL COMMENT 'Tipo de agregado al que pertenece el evento',
+    `aggregate_id` VARCHAR(64) NOT NULL COMMENT 'Identificador único del stream (ej: emp_5_2026-09-02 o punch_104)',
+    `event_type` VARCHAR(80) NOT NULL COMMENT 'Tipo de evento: MARCACION_CAPTURADA_DISPOSITIVO, ASISTENCIA_CALCULADA, ASISTENCIA_MODIFICADA_MANUAL, etc.',
+    `event_data` JSON NOT NULL COMMENT 'Carga útil (Payload estructurado con snapshot, diffs y metadatos)',
+    `version` INT NOT NULL DEFAULT 1 COMMENT 'Versión secuencial del stream para concurrencia optimista',
+    `created_by` VARCHAR(100) NOT NULL DEFAULT 'SYSTEM' COMMENT 'Usuario que originó el evento o subsistema',
+    `ip_address` VARCHAR(45) NULL COMMENT 'IP de origen del cliente o dispositivo biométrico',
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX `idx_events_aggregate` (`aggregate_type`, `aggregate_id`),
+    INDEX `idx_events_type` (`event_type`),
+    INDEX `idx_events_created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 14. TABLA: PLANTILLAS BIOMÉTRICAS (HUELLA DACTILAR Y RECONOCIMIENTO FACIAL)
+CREATE TABLE IF NOT EXISTS `plantillas_biometricas` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `codigo_reloj` VARCHAR(32) NOT NULL,
+    `tipo` ENUM('HUELLA', 'FACIAL', 'TARJETA', 'PASSWORD') NOT NULL DEFAULT 'HUELLA',
+    `dedo_indice` INT DEFAULT 0 COMMENT '0 a 9 para huellas, 0 para facial',
+    `tamano` INT DEFAULT 0,
+    `template_data` LONGTEXT NOT NULL COMMENT 'Base64 o payload de plantilla',
+    `id_dispositivo_origen` INT NULL,
+    `actualizado_en` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT `fk_plantillas_dispositivo` FOREIGN KEY (`id_dispositivo_origen`) REFERENCES `dispositivos` (`id`) ON DELETE SET NULL,
+    UNIQUE KEY `uniq_biometria_usuario` (`codigo_reloj`, `tipo`, `dedo_indice`),
+    INDEX `idx_biometria_codigo` (`codigo_reloj`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 15. TABLA: CONTROL DE RATE LIMITING Y BLOQUEO DE LOGIN (SEGURIDAD OWASP)
+CREATE TABLE IF NOT EXISTS `login_intentos` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `ip` VARCHAR(45) NOT NULL,
+    `usuario` VARCHAR(100) NULL,
+    `intentos` INT DEFAULT 1,
+    `ultimo_intento` DATETIME NOT NULL,
+    `bloqueado_hasta` DATETIME NULL,
+    UNIQUE KEY `uniq_login_ip` (`ip`),
+    INDEX `idx_login_usuario` (`usuario`),
+    INDEX `idx_login_bloqueo` (`bloqueado_hasta`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 SET FOREIGN_KEY_CHECKS = 1;

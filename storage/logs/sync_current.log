@@ -1,16 +1,18 @@
-2026-08-31 13:09:21,635 [INFO] [SyncEngine] Iniciando ciclo de sincronización para 1 dispositivo(s)...
-2026-08-31 13:09:21,635 [INFO] [SyncEngine] ==> Iniciando sincronización (SOLO HOY) con biométrico #1 [Reloj Principal - Entrada] en 192.168.1.201:4370 (TCP)
-2026-08-31 13:09:21,694 [INFO] [ZKService] Conexión exitosa con dispositivo 192.168.1.201:4370
-2026-08-31 13:09:21,706 [INFO] [ZKService] Hora del reloj 192.168.1.201 sincronizada a: 2026-08-31 13:09:21.695001
-2026-08-31 13:10:17,234 [INFO] [ZKService] Se descargaron 66078 registros brutos de 192.168.1.201
-2026-08-31 13:10:17,354 [INFO] [SyncEngine] Sincronización (SOLO HOY): 66078 en reloj, 26 evaluados, 4 nuevos insertados, 22 ya existentes.
-2026-08-31 13:10:17,416 [INFO] [ZKService] Desconectado de 192.168.1.201:4370
-2026-08-31 13:10:17,429 [INFO] [SyncEngine] Ejecutando motor de cálculo de asistencia diaria...
-2026-08-31 13:10:18,361 [INFO] [SyncEngine] Cálculo completado: Procesando asistencia para la fecha: 2026-08-31...
+=== Iniciando sincronizaciÃ³n [INCREMENTAL (PENDIENTES) - 2026-09-09 09:28:35] ===
+2026-09-09 09:28:36,638 [INFO] [SyncEngine] Iniciando ciclo de sincronización para 1 dispositivo(s)...
+2026-09-09 09:28:36,638 [INFO] [SyncEngine] ==> Iniciando sincronización (INCREMENTAL) con biométrico #1 [Reloj Principal - Entrada] en 192.168.1.201:4370 (TCP)
+2026-09-09 09:28:36,772 [INFO] [ZKService] Conexión exitosa con dispositivo 192.168.1.201:4370
+2026-09-09 09:28:36,805 [INFO] [ZKService] Hora del reloj 192.168.1.201 sincronizada a: 2026-09-09 09:28:36.773014
+2026-09-09 09:28:37,528 [INFO] [SyncEngine] Sincronizados/actualizados 75 empleados desde el biométrico.
+2026-09-09 09:29:55,061 [INFO] [ZKService] Se descargaron 66309 registros brutos de 192.168.1.201
+2026-09-09 09:30:03,393 [INFO] [SyncEngine] Sincronización (INCREMENTAL): 66309 en reloj, 118 evaluados, 94 nuevos insertados, 24 ya existentes.
+2026-09-09 09:30:16,758 [WARNING] [ZKService] Error al desconectar de 192.168.1.201: [WinError 10054] Se ha forzado la interrupción de una conexión existente por el host remoto
+2026-09-09 09:30:16,767 [INFO] [SyncEngine] Ejecutando motor de cálculo de asistencia diaria...
+2026-09-09 09:30:18,623 [INFO] [SyncEngine] Cálculo completado: Procesando asistencia para la fecha: 2026-09-09...
 Completado: 75 empleados evaluados.
-  - Presentes:   11
-  - Tardanzas:   10
-  - Faltas:      54
+  - Presentes:   13
+  - Tardanzas:   9
+  - Faltas:      53
   - Justificados: 0
   - Sin salida:  0
-2026-08-31 13:10:18,361 [INFO] [SyncEngine] Ciclo de sincronización finalizado exitosamente.
+2026-09-09 09:30:18,623 [INFO] [SyncEngine] Ciclo de sincronización finalizado exitosamente.

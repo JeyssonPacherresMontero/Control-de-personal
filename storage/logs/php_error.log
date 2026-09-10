@@ -1,0 +1,61 @@
+[09-Sep-2026 10:42:37 America/Lima] [2026-09-09 10:42:37] Uncaught Exception: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'control_personal.login_intentos' doesn't exist in C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php:42
+Stack trace:
+#0 C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php(42): PDO->prepare('SELECT * FROM l...')
+#1 C:\Users\JEYSSON\Downloads\Control de personal\app\Controllers\AuthController.php(254): App\Database::queryOne('SELECT * FROM l...', Array)
+#2 C:\Users\JEYSSON\Downloads\Control de personal\public\index.php(47): App\Controllers\AuthController->login()
+#3 {main}
+
+
+[09-Sep-2026 10:43:08 America/Lima] [2026-09-09 10:43:08] Uncaught Exception: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'control_personal.login_intentos' doesn't exist in C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php:42
+Stack trace:
+#0 C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php(42): PDO->prepare('SELECT * FROM l...')
+#1 C:\Users\JEYSSON\Downloads\Control de personal\app\Controllers\AuthController.php(254): App\Database::queryOne('SELECT * FROM l...', Array)
+#2 C:\Users\JEYSSON\Downloads\Control de personal\public\index.php(47): App\Controllers\AuthController->login()
+#3 {main}
+
+
+[09-Sep-2026 10:43:35 America/Lima] [2026-09-09 10:43:35] Uncaught Exception: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'control_personal.login_intentos' doesn't exist in C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php:42
+Stack trace:
+#0 C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php(42): PDO->prepare('SELECT * FROM l...')
+#1 C:\Users\JEYSSON\Downloads\Control de personal\app\Controllers\AuthController.php(254): App\Database::queryOne('SELECT * FROM l...', Array)
+#2 C:\Users\JEYSSON\Downloads\Control de personal\public\index.php(47): App\Controllers\AuthController->login()
+#3 {main}
+
+
+[09-Sep-2026 10:49:21 America/Lima] [2026-09-09 10:49:21] Uncaught Exception: Call to undefined method App\Database::queryAll() in C:\Users\JEYSSON\.gemini\antigravity\brain\e500167c-6c74-4e73-a0af-47965968a56a\scratch\test_login.php:9
+Stack trace:
+#0 {main}
+
+
+[09-Sep-2026 10:49:41 America/Lima] [2026-09-09 10:49:41] Uncaught Exception: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'control_personal.login_intentos' doesn't exist in C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php:42
+Stack trace:
+#0 C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php(42): PDO->prepare('SELECT * FROM l...')
+#1 C:\Users\JEYSSON\Downloads\Control de personal\app\Controllers\AuthController.php(254): App\Database::queryOne('SELECT * FROM l...', Array)
+#2 C:\Users\JEYSSON\Downloads\Control de personal\public\index.php(47): App\Controllers\AuthController->login()
+#3 {main}
+
+
+[09-Sep-2026 10:49:48 America/Lima] [2026-09-09 10:49:48] Uncaught Exception: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'control_personal.login_intentos' doesn't exist in C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php:42
+Stack trace:
+#0 C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php(42): PDO->prepare('SELECT * FROM l...')
+#1 C:\Users\JEYSSON\Downloads\Control de personal\app\Controllers\AuthController.php(254): App\Database::queryOne('SELECT * FROM l...', Array)
+#2 C:\Users\JEYSSON\Downloads\Control de personal\public\index.php(47): App\Controllers\AuthController->login()
+#3 {main}
+
+
+[09-Sep-2026 10:49:52 America/Lima] [2026-09-09 10:49:52] Uncaught Exception: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'control_personal.login_intentos' doesn't exist in C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php:42
+Stack trace:
+#0 C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php(42): PDO->prepare('SELECT * FROM l...')
+#1 C:\Users\JEYSSON\Downloads\Control de personal\app\Controllers\AuthController.php(254): App\Database::queryOne('SELECT * FROM l...', Array)
+#2 C:\Users\JEYSSON\Downloads\Control de personal\public\index.php(47): App\Controllers\AuthController->login()
+#3 {main}
+
+
+[09-Sep-2026 10:49:58 America/Lima] [2026-09-09 10:49:58] Uncaught Exception: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'control_personal.login_intentos' doesn't exist in C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php:42
+Stack trace:
+#0 C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php(42): PDO->prepare('SELECT * FROM l...')
+#1 C:\Users\JEYSSON\Downloads\Control de personal\app\Controllers\AuthController.php(254): App\Database::queryOne('SELECT * FROM l...', Array)
+#2 C:\Users\JEYSSON\Downloads\Control de personal\public\index.php(47): App\Controllers\AuthController->login()
+#3 {main}
+
+

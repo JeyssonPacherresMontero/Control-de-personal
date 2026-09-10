@@ -9,6 +9,7 @@ Motor de Sincronización Automática de Relojes Biométricos con MySQL
 
 import sys
 import time
+import json
 import argparse
 import datetime
 import logging
@@ -75,12 +76,17 @@ class AttendanceSynchronizer:
             return cursor.fetchall()
 
     def get_employee_mapping(self):
-        """Retorna un diccionario {codigo_reloj: id_empleado} para asociación rápida"""
+        """Retorna {codigo_reloj_normalizado: id_empleado}, tolerante a ceros a la izquierda"""
         conn = self.get_db()
         with conn.cursor() as cursor:
             cursor.execute("SELECT id, codigo_reloj FROM empleados WHERE activo = 1")
             rows = cursor.fetchall()
-            return {str(row['codigo_reloj']).strip(): row['id'] for row in rows}
+            mapping = {}
+            for row in rows:
+                raw = str(row['codigo_reloj']).strip()
+                mapping[raw] = row['id']                 # match exacto
+                mapping[raw.lstrip('0') or '0'] = row['id']  # match sin ceros a la izquierda
+            return mapping
 
     def sync_users_from_device(self, device_service, device_id):
         """Descarga usuarios del biométrico e inserta nuevos empleados si no existen"""
@@ -95,7 +101,7 @@ class AttendanceSynchronizer:
 
             with conn.cursor() as cursor:
                 for u in users:
-                    user_id_str = str(u['user_id']).strip()
+                    user_id_str = str(u['user_id']).strip().lstrip('0') or '0'
                     if not user_id_str:
                         continue
 
@@ -254,21 +260,55 @@ class AttendanceSynchronizer:
 
                 insert_query = """
                     INSERT IGNORE INTO marcaciones 
-                    (id_empleado, codigo_reloj, id_dispositivo, fecha_hora, tipo, uid_dispositivo, procesado)
-                    VALUES (%s, %s, %s, %s, %s, %s, 0)
+                    (id_empleado, codigo_reloj, id_dispositivo, fecha_hora, tipo, tipo_verificacion, uid_dispositivo, procesado)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, 0)
                 """
                 
                 batch_data = []
+                event_batch_data = []
+                disp_name = device.get('nombre', 'Reloj ZKTeco')
+                
                 for rec in candidate_records:
-                    user_id_str = rec['user_id']
-                    emp_id = emp_map.get(user_id_str, None)
+                    user_id_str = str(rec['user_id']).strip()
+                    emp_id = emp_map.get(user_id_str) or emp_map.get(user_id_str.lstrip('0') or '0')
+                    dt_str = rec['timestamp'].strftime('%Y-%m-%d %H:%M:%S')
+                    tipo_verif = rec.get('tipo_verificacion', 'huella')
+                    
                     batch_data.append((
                         emp_id,
                         user_id_str,
                         device_id,
-                        rec['timestamp'].strftime('%Y-%m-%d %H:%M:%S'),
+                        dt_str,
                         rec['tipo'],
+                        tipo_verif,
                         rec['uid']
+                    ))
+
+                    # Formatear etiqueta amigable para el log inmutable
+                    verif_label = "Reconocimiento Facial" if tipo_verif == "facial" else ("Huella Dactilar" if tipo_verif == "huella" else ("Tarjeta RFID" if tipo_verif == "tarjeta" else "Contraseña / PIN"))
+
+                    # Event Sourcing: Preparar payload inmutable del evento
+                    agg_id = f"emp_{emp_id}_{dt_str.replace(' ', '_').replace(':', '-')}" if emp_id else f"zk_{user_id_str}_{dt_str.replace(' ', '_').replace(':', '-')}"
+                    event_payload = json.dumps({
+                        "id_empleado": emp_id,
+                        "codigo_reloj": user_id_str,
+                        "id_dispositivo": device_id,
+                        "dispositivo_nombre": disp_name,
+                        "dispositivo_ip": ip,
+                        "fecha_hora": dt_str,
+                        "tipo": rec['tipo'],
+                        "tipo_verificacion": verif_label,
+                        "uid_dispositivo": rec['uid']
+                    }, ensure_ascii=False)
+
+                    event_batch_data.append((
+                        'MARCACION',
+                        agg_id,
+                        'MARCACION_CAPTURADA_DISPOSITIVO',
+                        event_payload,
+                        1,
+                        f"ZKTECO_SYNC_{disp_name}",
+                        ip
                     ))
 
                 # Ejecutar con transacción única para máxima velocidad en disco
@@ -278,6 +318,21 @@ class AttendanceSynchronizer:
                     chunk = batch_data[i:i + batch_size]
                     affected = cursor.executemany(insert_query, chunk)
                     inserted_count += affected
+
+                # Registrar eventos en Event Store si hay inserciones
+                if event_batch_data:
+                    event_insert_query = """
+                        INSERT INTO eventos_asistencia 
+                        (aggregate_type, aggregate_id, event_type, event_data, version, created_by, ip_address)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    """
+                    for i in range(0, len(event_batch_data), batch_size):
+                        chunk_events = event_batch_data[i:i + batch_size]
+                        try:
+                            cursor.executemany(event_insert_query, chunk_events)
+                        except Exception as ee:
+                            logger.warning(f"Aviso al guardar eventos de auditoría: {str(ee)}")
+
                 conn.commit()
 
                 duplicates_count = len(candidate_records) - inserted_count

@@ -20,6 +20,8 @@ class TurnosController {
 
     public function guardar(): void {
         AuthController::checkAuth();
+        AuthController::requireRole(['ADMIN', 'RRHH'], 'turnos');
+        \App\Security\Csrf::validate();
 
         $id = (int)($_POST['id'] ?? 0);
         $nombre = trim($_POST['nombre'] ?? '');
@@ -34,8 +36,28 @@ class TurnosController {
         $esNocturno = isset($_POST['es_nocturno']) ? 1 : 0;
         $activo = isset($_POST['activo']) ? 1 : 0;
 
+        if (empty($nombre)) {
+            header('Location: ?route=turnos&msg=campos_requeridos');
+            exit;
+        }
+
+        $params = [
+            ':nom'      => $nombre,
+            ':ent'      => $horaEntrada,
+            ':sal'      => $horaSalida,
+            ':tol'      => $tolerancia,
+            ':tolfalta' => $toleranciaFalta,
+            ':refini'   => $horaInicioRef,
+            ':reffin'   => $horaFinRef,
+            ':refmin'   => $minutosRef,
+            ':dias'     => $diasLab,
+            ':noc'      => $esNocturno,
+            ':act'      => $activo
+        ];
+
         if ($id > 0) {
-            Database::execute("
+            $params[':id'] = $id;
+            $result = Database::executeSafe("
                 UPDATE turnos 
                 SET nombre = :nom, hora_entrada = :ent, hora_salida = :sal,
                     tolerancia_minutos = :tol, tolerancia_falta_minutos = :tolfalta,
@@ -43,39 +65,19 @@ class TurnosController {
                     minutos_refrigerio = :refmin, dias_laborables = :dias,
                     es_nocturno = :noc, activo = :act
                 WHERE id = :id
-            ", [
-                ':nom'      => $nombre,
-                ':ent'      => $horaEntrada,
-                ':sal'      => $horaSalida,
-                ':tol'      => $tolerancia,
-                ':tolfalta' => $toleranciaFalta,
-                ':refini'   => $horaInicioRef,
-                ':reffin'   => $horaFinRef,
-                ':refmin'   => $minutosRef,
-                ':dias'     => $diasLab,
-                ':noc'      => $esNocturno,
-                ':act'      => $activo,
-                ':id'       => $id
-            ]);
+            ", $params);
         } else {
-            Database::execute("
+            $result = Database::executeSafe("
                 INSERT INTO turnos 
                 (nombre, hora_entrada, hora_salida, tolerancia_minutos, tolerancia_falta_minutos,
                  hora_inicio_refrigerio, hora_fin_refrigerio, minutos_refrigerio, dias_laborables, es_nocturno, activo)
                 VALUES (:nom, :ent, :sal, :tol, :tolfalta, :refini, :reffin, :refmin, :dias, :noc, :act)
-            ", [
-                ':nom'      => $nombre,
-                ':ent'      => $horaEntrada,
-                ':sal'      => $horaSalida,
-                ':tol'      => $tolerancia,
-                ':tolfalta' => $toleranciaFalta,
-                ':refini'   => $horaInicioRef,
-                ':reffin'   => $horaFinRef,
-                ':refmin'   => $minutosRef,
-                ':dias'     => $diasLab,
-                ':noc'      => $esNocturno,
-                ':act'      => $activo
-            ]);
+            ", $params);
+        }
+
+        if (!$result['success']) {
+            header('Location: ?route=turnos&msg=' . ($result['error'] === 'duplicado' ? 'duplicado' : 'error_interno'));
+            exit;
         }
 
         header('Location: ?route=turnos&msg=guardado');
@@ -84,12 +86,30 @@ class TurnosController {
 
     public function eliminar(): void {
         AuthController::checkAuth();
+        AuthController::requireRole(['ADMIN', 'RRHH'], 'turnos');
+        \App\Csrf::validateRequest();
 
         $id = (int)($_POST['id'] ?? 0);
         if ($id > 0) {
-            Database::execute("DELETE FROM turnos WHERE id = ?", [$id]);
+            $empCount = (int)(Database::queryOne("SELECT COUNT(*) as c FROM empleados WHERE turno_id = ? AND activo = 1", [$id])['c'] ?? 0);
+            
+            if ($empCount > 0) {
+                Database::execute("UPDATE turnos SET activo = 0 WHERE id = ?", [$id]);
+                header('Location: ?route=turnos&msg=desactivado_por_empleados');
+                exit;
+            }
+
+            try {
+                Database::execute("DELETE FROM turnos WHERE id = ?", [$id]);
+                header('Location: ?route=turnos&msg=eliminado');
+                exit;
+            } catch (\PDOException $e) {
+                Database::execute("UPDATE turnos SET activo = 0 WHERE id = ?", [$id]);
+                header('Location: ?route=turnos&msg=desactivado');
+                exit;
+            }
         }
-        header('Location: ?route=turnos&msg=eliminado');
+        header('Location: ?route=turnos');
         exit;
     }
 }

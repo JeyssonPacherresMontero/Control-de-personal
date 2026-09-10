@@ -1,0 +1,36 @@
+# ==========================================================
+# SISTEMA DE CONTROL DE PERSONAL Y ASISTENCIA - ZKTECO
+# Configuración de Seguridad y Redirección Apache
+# ==========================================================
+
+# 1. Desactivar listado de directorios
+Options -Indexes
+
+# 2. Bloquear acceso a archivos y carpetas sensibles
+<FilesMatch "\.(env|sql|py|log|md|bat|vbs|sh|json|lock)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# 3. Bloquear acceso directo a directorios protegidos
+RewriteEngine On
+
+# Bloquear directorios que contienen código fuente privado, logs o sincronización
+RewriteRule ^(app|config|database|cron|logs|storage|sync|tests)/ - [F,L,NC]
+RewriteRule ^\.env.* - [F,L,NC]
+
+# 4. Forzar codificación UTF-8
+AddDefaultCharset UTF-8
+
+# 5. Cabeceras de seguridad HTTP básicas
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>

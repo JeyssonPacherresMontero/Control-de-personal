@@ -1,16 +1,19 @@
 <?php require_once APP_ROOT . '/views/layout/header.php'; ?>
 
 <!-- Content Header (Page header) -->
-<div class="content-header">
+<div class="content-header pb-2">
     <div class="container-fluid">
         <div class="row mb-2 align-items-center">
             <div class="col-sm-6">
-                <h1 class="m-0 font-weight-bold"><i class="fa-solid fa-network-wired mr-2 text-primary"></i> Relojes Biométricos ZKTeco</h1>
+                <h1 class="m-0 font-weight-bold text-dark" style="font-size: 1.45rem;">
+                    <i class="fa-solid fa-network-wired mr-2 text-primary"></i> Relojes Biométricos ZKTeco
+                </h1>
+                <div class="text-muted small mt-1">Monitoreo de red, conectividad IP, sincronización de marcaciones y auditoría.</div>
             </div>
             <div class="col-sm-6">
-                <ol class="breadcrumb float-sm-right">
+                <ol class="breadcrumb float-sm-right mb-0">
                     <li class="breadcrumb-item"><a href="?route=dashboard">Inicio</a></li>
-                    <li class="breadcrumb-item active">Dispositivos</li>
+                    <li class="breadcrumb-item active">Relojes Biométricos</li>
                 </ol>
             </div>
         </div>
@@ -21,49 +24,73 @@
 <section class="content">
     <div class="container-fluid">
 
-        <!-- ACTIONS ROW -->
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <div>
-                <h5 class="text-dark font-weight-bold mb-0">
-                    <i class="fa-solid fa-server mr-1 text-primary"></i> Biométricos Configurados en Red
-                </h5>
-                <small class="text-muted">Gestión de terminales ZKTeco, conectividad IP y protocolos</small>
+        <?php if (isset($_GET['msg'])):
+            $msgMap = [
+                'guardado' => ['success', 'Dispositivo guardado correctamente.'],
+                'desactivado' => ['info', 'Dispositivo desactivado correctamente (soft delete para preservar historial).'],
+                'desactivado_por_historial' => ['info', 'El dispositivo tiene marcaciones registradas y fue desactivado para proteger el historial.'],
+                'eliminado' => ['success', 'Dispositivo eliminado correctamente.'],
+                'sincronizando' => ['info', 'Sincronización en segundo plano iniciada.'],
+                'memoria_liberada' => ['success', 'Memoria de marcaciones del reloj respaldada y liberada con éxito.'],
+                'duplicado' => ['danger', 'Ya existe un dispositivo registrado con esa dirección IP y puerto.'],
+                'campos_requeridos' => ['warning', 'Completa todos los campos obligatorios.'],
+                'error_limpiar' => ['danger', 'No se pudo comunicar con el dispositivo para liberar su memoria.'],
+                'error_interno' => ['danger', 'Ocurrió un error al procesar el dispositivo.'],
+            ];
+            if (isset($msgMap[$_GET['msg']])):
+                [$type, $text] = $msgMap[$_GET['msg']];
+        ?>
+            <div class="alert alert-<?= $type ?> alert-dismissible fade show mb-3 shadow-sm">
+                <?= htmlspecialchars($text) ?>
+                <button type="button" class="close" data-dismiss="alert">&times;</button>
             </div>
-            <div class="d-flex align-items-center">
+        <?php endif; endif; ?>
+
+        <!-- ACTIONS TOOLBAR -->
+        <div class="actions-toolbar no-print">
+            <div class="actions-toolbar-group">
+                <div>
+                    <h5 class="text-dark font-weight-bold mb-0" style="font-size: 1.05rem;">
+                        <i class="fa-solid fa-server mr-2 text-primary"></i> Terminales Biométricas en Red
+                    </h5>
+                    <div class="text-muted small">Gestión de dispositivos ZKTeco, conectividad IP y protocolos de comunicación.</div>
+                </div>
+            </div>
+            <div class="actions-toolbar-group">
                 <!-- Botón Principal: Sync Rápido Hoy -->
-                <button type="button" class="btn btn-success btn-sm shadow-sm" onclick="syncAllDevices('today', this)">
-                    <i class="fa-solid fa-bolt mr-1"></i> Sincronizar Hoy (Rápido)
+                <button type="button" class="btn btn-primary btn-sm" onclick="syncAllDevices('today', this)">
+                    <i class="fa-solid fa-bolt mr-1"></i> Sincronizar Hoy
                 </button>
 
                 <!-- Menú Desplegable de Opciones Avanzadas -->
-                <div class="btn-group ml-1">
-                    <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle shadow-sm bg-white" data-toggle="dropdown" aria-expanded="false">
+                <div class="btn-group">
+                    <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
                         <i class="fa-solid fa-sliders mr-1"></i> Opciones
                     </button>
                     <div class="dropdown-menu dropdown-menu-right shadow border-0">
                         <a class="dropdown-item py-2" href="javascript:void(0)" onclick="syncAllDevices('full', this)">
-                            <i class="fa-solid fa-database mr-2 text-primary"></i> Sincronización Histórica Completa
+                            <i class="fa-solid fa-database mr-2 text-primary"></i> Sincronización Histórica
                         </a>
                         <?php if (($currentUser['rol'] ?? '') === 'ADMIN'): ?>
                             <div class="dropdown-divider"></div>
-                            <h6 class="dropdown-header text-danger font-weight-bold"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Mantenimiento de Hardware</h6>
+                            <h6 class="dropdown-header text-danger font-weight-bold"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Mantenimiento</h6>
                             <a class="dropdown-item py-2 text-danger" href="javascript:void(0)" onclick="openClearMemoryModal()">
-                                <i class="fa-solid fa-broom mr-2"></i> Respaldar y Liberar Memoria del Reloj
+                                <i class="fa-solid fa-broom mr-2"></i> Liberar Memoria del Reloj
                             </a>
                         <?php endif; ?>
                     </div>
                 </div>
 
-                <button class="btn btn-primary btn-sm shadow-sm ml-2" onclick="openNewDeviceModal()">
+                <button class="btn btn-primary btn-sm" onclick="openNewDeviceModal()">
                     <i class="fa-solid fa-plus mr-1"></i> Nuevo Dispositivo
                 </button>
             </div>
         </div>
 
         <?php if (isset($_SESSION['flash_sync_output'])): ?>
-            <div class="alert alert-<?= $_SESSION['flash_sync_status'] === 'success' ? 'success' : 'warning' ?> alert-dismissible fade show" role="alert">
-                <h5 class="font-weight-bold"><i class="icon fas fa-info-circle"></i> Resultado del Ciclo de Sincronización:</h5>
-                <pre class="mb-0 bg-dark text-white p-2 rounded small" style="max-height: 160px; overflow-y: auto;"><?= htmlspecialchars($_SESSION['flash_sync_output']) ?></pre>
+            <div class="alert alert-<?= $_SESSION['flash_sync_status'] === 'success' ? 'success' : 'warning' ?> alert-dismissible fade show mb-3" role="alert">
+                <h5 class="font-weight-bold mb-2"><i class="icon fas fa-info-circle mr-1"></i> Resultado de Sincronización:</h5>
+                <pre class="mb-0 bg-dark text-white p-2 rounded small" style="max-height: 160px; overflow-y: auto; font-family: monospace;"><?= htmlspecialchars($_SESSION['flash_sync_output']) ?></pre>
                 <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
@@ -74,52 +101,55 @@
         <!-- DEVICE CARDS -->
         <div class="row">
             <?php foreach ($dispositivos as $d): ?>
-                <div class="col-md-6 col-lg-4" id="card-col-<?= $d['id'] ?>">
-                    <div class="card card-outline <?= $d['estado_conexion'] === 'ONLINE' ? 'card-success' : 'card-danger' ?> shadow-sm" id="device-card-<?= $d['id'] ?>">
-                        <div class="card-header">
-                            <h3 class="card-title font-weight-bold text-dark"><?= htmlspecialchars($d['nombre']) ?></h3>
+                <div class="col-md-6 col-lg-4 mb-3" id="card-col-<?= $d['id'] ?>">
+                    <div class="card h-100" id="device-card-<?= $d['id'] ?>">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h3 class="card-title font-weight-bold text-dark">
+                                <i class="fa-solid fa-fingerprint text-primary mr-2"></i>
+                                <?= htmlspecialchars($d['nombre']) ?>
+                            </h3>
                             <div class="card-tools" id="device-badge-<?= $d['id'] ?>">
                                 <?php if ($d['estado_conexion'] === 'ONLINE'): ?>
-                                    <span class="badge badge-success px-2 py-1"><i class="fa-solid fa-signal mr-1"></i> EN LÍNEA</span>
+                                    <span class="badge-pill-custom badge-pill-online"><i class="fa-solid fa-circle" style="font-size: 6px;"></i> En Línea</span>
                                 <?php else: ?>
-                                    <span class="badge badge-danger px-2 py-1"><i class="fa-solid fa-circle-xmark mr-1"></i> DESCONECTADO</span>
+                                    <span class="badge-pill-custom badge-pill-offline"><i class="fa-solid fa-circle" style="font-size: 6px;"></i> Desconectado</span>
                                 <?php endif; ?>
                             </div>
                         </div>
-                        <div class="card-body py-2">
-                            <ul class="list-group list-group-unbordered mb-3 small">
-                                <li class="list-group-item d-flex justify-content-between py-1">
-                                    <b class="text-secondary">Dirección IP:</b>
-                                    <span class="font-weight-bold font-monospace"><?= htmlspecialchars($d['ip']) ?>:<?= $d['puerto'] ?></span>
+                        <div class="card-body py-3 d-flex flex-column justify-content-between">
+                            <ul class="list-group list-group-flush mb-3 small">
+                                <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-0 border-0 border-bottom">
+                                    <span class="text-secondary"><i class="fa-solid fa-network-wired mr-2 text-primary"></i> Dirección IP y Puerto:</span>
+                                    <span class="font-weight-bold font-monospace text-dark"><?= htmlspecialchars($d['ip']) ?>:<?= $d['puerto'] ?></span>
                                 </li>
-                                <li class="list-group-item d-flex justify-content-between py-1">
-                                    <b class="text-secondary">Protocolo / Clave:</b>
-                                    <span>Protocolo <?= $d['protocolo'] ?> (Clave: <?= $d['clave_comunicacion'] ?>)</span>
+                                <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-0 border-0 border-bottom">
+                                    <span class="text-secondary"><i class="fa-solid fa-shield-halved mr-2 text-secondary"></i> Protocolo y Clave:</span>
+                                    <span><span class="badge-pill-custom badge-pill-neutral"><?= $d['protocolo'] ?></span> (Clave: <?= $d['clave_comunicacion'] ?>)</span>
                                 </li>
-                                <li class="list-group-item d-flex justify-content-between py-1">
-                                    <b class="text-secondary">Ubicación / Sede:</b>
-                                    <span><i class="fa-solid fa-location-dot text-danger mr-1"></i><?= htmlspecialchars($d['ubicacion'] ?? 'General') ?></span>
+                                <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-0 border-0 border-bottom">
+                                    <span class="text-secondary"><i class="fa-solid fa-location-dot text-danger mr-2"></i> Ubicación:</span>
+                                    <span class="text-dark font-weight-bold"><?= htmlspecialchars($d['ubicacion'] ?? 'Sede Principal') ?></span>
                                 </li>
-                                <li class="list-group-item d-flex justify-content-between py-1">
-                                    <b class="text-secondary">Última Sincronización:</b>
-                                    <span class="text-muted" id="device-sync-<?= $d['id'] ?>"><?= $d['ultimo_sync'] ? substr($d['ultimo_sync'], 0, 16) : 'Nunca' ?></span>
+                                <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-0 border-0">
+                                    <span class="text-secondary"><i class="fa-solid fa-clock mr-2 text-secondary"></i> Último Sync:</span>
+                                    <span class="text-muted font-monospace small" id="device-sync-<?= $d['id'] ?>"><?= $d['ultimo_sync'] ? substr($d['ultimo_sync'], 0, 16) : 'Nunca' ?></span>
                                 </li>
                             </ul>
 
                             <div id="device-error-<?= $d['id'] ?>">
                                 <?php if (!empty($d['ultimo_error'])): ?>
-                                    <div class="alert alert-danger p-2 small mb-2">
+                                    <div class="alert alert-danger p-2 small mb-3">
                                         <i class="fa-solid fa-triangle-exclamation mr-1"></i> <?= htmlspecialchars(mb_strimwidth($d['ultimo_error'], 0, 90, '...')) ?>
                                     </div>
                                 <?php endif; ?>
                             </div>
 
-                            <div class="d-flex justify-content-between align-items-center">
-                                <button type="button" class="btn btn-outline-primary btn-sm flex-grow-1 mr-1" onclick="testConnection(<?= $d['id'] ?>, this)">
+                            <div class="d-flex justify-content-between align-items-center pt-2 border-top" style="gap: 5px;">
+                                <button type="button" class="btn btn-outline-primary btn-sm flex-grow-1" onclick="testConnection(<?= $d['id'] ?>, this)">
                                     <i class="fa-solid fa-plug mr-1"></i> Probar Conexión
                                 </button>
-                                <button type="button" class="btn btn-success btn-sm mr-1" onclick="syncDevice(<?= $d['id'] ?>, this, 'today')" title="Sincronizar hoy (rápido)">
-                                    <i class="fa-solid fa-bolt"></i>
+                                <button type="button" class="btn btn-success btn-sm" onclick="syncDevice(<?= $d['id'] ?>, this, 'incremental')" title="Sincronizar marcaciones pendientes">
+                                    <i class="fa-solid fa-arrows-rotate"></i>
                                 </button>
                                 
                                 <div class="btn-group">
@@ -136,7 +166,7 @@
                                         <?php if (($currentUser['rol'] ?? '') === 'ADMIN'): ?>
                                             <div class="dropdown-divider"></div>
                                             <a class="dropdown-item small text-danger" href="javascript:void(0)" onclick="confirmClearDeviceMemory(<?= $d['id'] ?>, '<?= htmlspecialchars($d['nombre']) ?>')">
-                                                <i class="fa-solid fa-broom mr-2"></i> Liberar Memoria del Reloj
+                                                <i class="fa-solid fa-broom mr-2"></i> Liberar Memoria
                                             </a>
                                         <?php endif; ?>
                                     </div>
@@ -149,34 +179,34 @@
         </div>
 
         <!-- LOGS TABLE CARD -->
-        <div class="card card-primary card-outline shadow-sm mt-3">
-            <div class="card-header">
+        <div class="card mt-3">
+            <div class="card-header d-flex align-items-center justify-content-between">
                 <h3 class="card-title font-weight-bold">
-                    <i class="fa-solid fa-list-check mr-1 text-primary"></i>
-                    Historial de Sincronización y Auditoría
+                    <i class="fa-solid fa-clock-rotate-left mr-2 text-primary"></i> Historial de Sincronización
                 </h3>
+                <span class="badge-pill-custom badge-pill-neutral">Auditoría en tiempo real</span>
             </div>
-            <div class="card-body">
-                <table class="table table-bordered table-hover datatable text-nowrap table-sm">
-                    <thead class="thead-light">
+            <div class="card-body p-0 table-responsive">
+                <table class="table table-hover datatable text-nowrap table-sm">
+                    <thead>
                         <tr>
-                            <th>Fecha y Hora</th>
+                            <th class="text-center">Fecha y Hora</th>
                             <th>Dispositivo</th>
-                            <th>Evento</th>
-                            <th>Descargados</th>
-                            <th>Insertados</th>
-                            <th>Duplicados</th>
-                            <th>Estado</th>
-                            <th>Duración</th>
-                            <th>Mensaje</th>
+                            <th class="text-center">Evento</th>
+                            <th class="text-center">Descargados</th>
+                            <th class="text-center">Insertados</th>
+                            <th class="text-center">Duplicados</th>
+                            <th class="text-center">Estado</th>
+                            <th class="text-center">Duración</th>
+                            <th>Detalle y Mensaje</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($logs as $l): ?>
                             <tr>
-                                <td class="text-secondary"><?= $l['fecha_hora'] ?></td>
+                                <td class="text-center text-secondary font-monospace small"><?= $l['fecha_hora'] ?></td>
                                 <td class="font-weight-bold text-dark"><?= htmlspecialchars($l['dispositivo_nombre'] ?? 'Global') ?></td>
-                                <td>
+                                <td class="text-center">
                                     <?php
                                         $eventoLabel = match($l['tipo_evento']) {
                                             'SYNC_AUTO' => 'Sincronización Automática',
@@ -184,25 +214,25 @@
                                             'TEST_CONEXION' => 'Prueba de Conexión',
                                             'CLEAR_ATTENDANCE' => 'Limpieza de Memoria',
                                             'SYNC_USERS' => 'Sincronización de Usuarios',
-                                            'ERROR' => 'Error',
+                                            'ERROR' => 'Error de Conexión',
                                             default => htmlspecialchars($l['tipo_evento'])
                                         };
                                     ?>
-                                    <span class="badge badge-light border"><?= $eventoLabel ?></span>
+                                    <span class="badge-pill-custom badge-pill-neutral"><?= $eventoLabel ?></span>
                                 </td>
                                 <td class="text-center font-weight-bold"><?= $l['total_descargados'] ?></td>
                                 <td class="text-center text-success font-weight-bold">+<?= $l['total_insertados'] ?></td>
-                                <td class="text-center text-muted"><?= $l['total_duplicados'] ?></td>
-                                <td>
+                                <td class="text-center text-muted font-monospace small"><?= $l['total_duplicados'] ?></td>
+                                <td class="text-center">
                                     <?php if ($l['estado'] === 'EXITO'): ?>
-                                        <span class="badge badge-success px-2 py-1">Éxito</span>
+                                        <span class="badge-pill-custom badge-pill-presente"><i class="fa-solid fa-check mr-1"></i> Éxito</span>
                                     <?php elseif ($l['estado'] === 'ERROR'): ?>
-                                        <span class="badge badge-danger px-2 py-1">Error</span>
+                                        <span class="badge-pill-custom badge-pill-falta"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Error</span>
                                     <?php else: ?>
-                                        <span class="badge badge-warning text-white px-2 py-1">Alerta</span>
+                                        <span class="badge-pill-custom badge-pill-tardanza">Alerta</span>
                                     <?php endif; ?>
                                 </td>
-                                <td><?= $l['duracion_segundos'] ?>s</td>
+                                <td class="text-center font-monospace small"><?= $l['duracion_segundos'] ?>s</td>
                                 <td class="small text-muted" title="<?= htmlspecialchars($l['mensaje'] ?? '') ?>">
                                     <?= htmlspecialchars(mb_strimwidth($l['mensaje'] ?? '', 0, 50, '...')) ?>
                                 </td>
@@ -216,10 +246,11 @@
     </div>
 </section>
 
-<!-- MODAL CREAR / EDITAR DISPOSITIVO -->
+<!-- MODAL CREAR Y EDITAR DISPOSITIVO -->
 <div class="modal fade" id="modalDispositivo" tabindex="-1">
     <div class="modal-dialog">
         <form method="POST" action="?route=dispositivos&action=guardar" class="modal-content">
+            <?= csrf_field() ?>
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title font-weight-bold" id="deviceModalTitle">Configurar Reloj Biométrico</h5>
                 <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
@@ -266,13 +297,13 @@
                 </div>
 
                 <div class="form-group">
-                    <label class="small font-weight-bold text-secondary">Ubicación / Sede</label>
+                    <label class="small font-weight-bold text-secondary">Ubicación o Sede</label>
                     <input type="text" name="ubicacion" id="dev_ubicacion" class="form-control form-control-sm" placeholder="Ej: Puerta Principal, Almacén...">
                 </div>
 
                 <div class="form-group">
                     <label class="small font-weight-bold text-secondary">Modelo</label>
-                    <input type="text" name="modelo" id="dev_modelo" class="form-control form-control-sm" placeholder="Ej: ZKTeco MB20 / K40 / SilkBio">
+                    <input type="text" name="modelo" id="dev_modelo" class="form-control form-control-sm" placeholder="Ej: ZKTeco MB20, K40 o SilkBio">
                 </div>
 
                 <div class="form-group custom-control custom-checkbox">
@@ -420,6 +451,7 @@ function testConnection(deviceId, btn) {
 
 function monitorSyncProgress(btn, originalHtml, customTitle) {
     let secondsElapsed = 0;
+    let consecutiveErrors = 0;
     
     Swal.fire({
         title: customTitle || 'Sincronizando Relojes Biométricos...',
@@ -445,14 +477,36 @@ function monitorSyncProgress(btn, originalHtml, customTitle) {
         if (timerEl) {
             timerEl.innerText = `Tiempo transcurrido: ${secondsElapsed}s`;
         }
+        
+        // Timeout de seguridad en cliente tras 120 segundos
+        if (secondsElapsed > 120) {
+            clearInterval(timerInterval);
+            clearInterval(pollInterval);
+            if (btn) {
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+            }
+            Swal.fire({
+                icon: 'info',
+                title: 'Sincronización en curso',
+                text: 'El proceso continúa ejecutándose en el servidor. La pantalla se actualizará automáticamente.',
+                confirmButtonText: 'Aceptar'
+            }).then(() => {
+                location.href = '?route=dispositivos';
+            });
+        }
     }, 1000);
 
     const pollInterval = setInterval(() => {
         fetch('?route=dispositivos&action=sync_status', {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         })
-        .then(res => res.json())
+        .then(res => {
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return res.json();
+        })
         .then(data => {
+            consecutiveErrors = 0;
             const logEl = document.getElementById('swal-sync-log');
             if (logEl && data.log_tail) {
                 logEl.style.display = 'block';
@@ -475,11 +529,12 @@ function monitorSyncProgress(btn, originalHtml, customTitle) {
                     });
                 }
 
+                const outMsg = data.output || (data.success ? 'Sincronización completada exitosamente.' : 'Sincronización finalizada.');
                 if (data.success) {
                     Swal.fire({
                         icon: 'success',
                         title: '¡Sincronización Completada!',
-                        html: `<pre class="text-left bg-dark text-white p-3 rounded small" style="max-height: 250px; overflow-y: auto;">${escapeHtml(data.output)}</pre>`,
+                        html: `<pre class="text-left bg-dark text-white p-3 rounded small" style="max-height: 250px; overflow-y: auto;">${escapeHtml(outMsg)}</pre>`,
                         confirmButtonText: 'Aceptar',
                         confirmButtonColor: '#28a745'
                     }).then(() => {
@@ -489,7 +544,7 @@ function monitorSyncProgress(btn, originalHtml, customTitle) {
                     Swal.fire({
                         icon: 'warning',
                         title: 'Resultado de Sincronización',
-                        html: `<pre class="text-left bg-dark text-white p-3 rounded small" style="max-height: 250px; overflow-y: auto;">${escapeHtml(data.output)}</pre>`,
+                        html: `<pre class="text-left bg-dark text-white p-3 rounded small" style="max-height: 250px; overflow-y: auto;">${escapeHtml(outMsg)}</pre>`,
                         confirmButtonText: 'Entendido'
                     }).then(() => {
                         location.href = '?route=dispositivos';
@@ -499,21 +554,48 @@ function monitorSyncProgress(btn, originalHtml, customTitle) {
         })
         .catch(err => {
             console.error("Polling error:", err);
+            consecutiveErrors++;
+            if (consecutiveErrors >= 5) {
+                clearInterval(pollInterval);
+                clearInterval(timerInterval);
+                if (btn) {
+                    btn.innerHTML = originalHtml;
+                    btn.disabled = false;
+                }
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Verificando estado...',
+                    text: 'El proceso se inició en segundo plano. Recargando para verificar los nuevos registros.',
+                    confirmButtonText: 'Recargar'
+                }).then(() => {
+                    location.href = '?route=dispositivos';
+                });
+            }
         });
     }, 2500);
 }
 
-function syncDevice(deviceId, btn, mode = 'today') {
+function syncDevice(deviceId, btn, mode = 'incremental') {
     const originalHtml = btn ? btn.innerHTML : '';
     if (btn) {
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
         btn.disabled = true;
     }
 
-    const title = (mode === 'today') ? 'Sincronización Rápida de Hoy...' : 'Sincronización Histórica Completa...';
+    const title = (mode === 'today') ? 'Sincronización Rápida de Hoy...' : ((mode === 'full') ? 'Sincronización Histórica Completa...' : 'Sincronización Inteligente de Marcaciones...');
 
-    fetch(`?route=dispositivos&action=sincronizar&id=${deviceId}&mode=${mode}&ajax=1`, {
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    const formData = new FormData();
+    formData.append('id', deviceId);
+    formData.append('mode', mode);
+    formData.append('_csrf_token', window._csrfToken || '');
+
+    fetch(`?route=dispositivos&action=sincronizar&ajax=1`, {
+        method: 'POST',
+        headers: { 
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': window._csrfToken || ''
+        },
+        body: formData
     })
     .then(res => res.json())
     .then(data => {
@@ -528,17 +610,26 @@ function syncDevice(deviceId, btn, mode = 'today') {
     });
 }
 
-function syncAllDevices(mode = 'today', btn = null) {
+function syncAllDevices(mode = 'incremental', btn = null) {
     const originalHtml = btn ? btn.innerHTML : '';
     if (btn) {
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Sincronizando...';
         btn.disabled = true;
     }
 
-    const title = (mode === 'today') ? 'Sincronizando Todos los Relojes (Solo Hoy)...' : 'Sincronizando Todo el Histórico...';
+    const title = (mode === 'today') ? 'Sincronizando Relojes (Solo Hoy)...' : ((mode === 'full') ? 'Sincronizando Todo el Histórico...' : 'Sincronizando Marcaciones Pendientes...');
 
-    fetch(`?route=dispositivos&action=sincronizar&mode=${mode}&ajax=1`, {
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    const formData = new FormData();
+    formData.append('mode', mode);
+    formData.append('_csrf_token', window._csrfToken || '');
+
+    fetch(`?route=dispositivos&action=sincronizar&ajax=1`, {
+        method: 'POST',
+        headers: { 
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': window._csrfToken || ''
+        },
+        body: formData
     })
     .then(res => res.json())
     .then(data => {
