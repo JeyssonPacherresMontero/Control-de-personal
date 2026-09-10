@@ -42,7 +42,69 @@ class AuthController {
             header('Location: ?route=login&msg=sesion_expirada');
             exit;
         }
+
+        // Validación en tiempo real de estado activo e invalidación de permisos
+        try {
+            $userRow = Database::queryOne(
+                "SELECT id, permisos, rol, activo, COALESCE(permisos_version, 1) as permisos_version 
+                 FROM usuarios_sistema WHERE id = ?", 
+                [$_SESSION['user_id']]
+            );
+
+            if (!$userRow || !(int)$userRow['activo']) {
+                $_SESSION = [];
+                if (ini_get("session.use_cookies")) {
+                    $params = session_get_cookie_params();
+                    setcookie(session_name(), '', time() - 42000,
+                        $params["path"], $params["domain"], $params["secure"], $params["httponly"]);
+                }
+                session_destroy();
+
+                if ($isAjax) {
+                    http_response_code(401);
+                    header('Content-Type: application/json; charset=utf-8');
+                    echo json_encode(['success' => false, 'error' => 'account_deactivated', 'message' => 'Tu cuenta ha sido desactivada o eliminada.'], JSON_UNESCAPED_UNICODE);
+                    exit;
+                }
+
+                header('Location: ?route=login&msg=cuenta_desactivada');
+                exit;
+            }
+
+            // Si los permisos o rol fueron actualizados por el Administrador, sincronizar en caliente
+            $currentSessionVersion = (int)($_SESSION['user_permisos_version'] ?? 1);
+            $dbVersion = (int)$userRow['permisos_version'];
+            if ($dbVersion !== $currentSessionVersion || !isset($_SESSION['user_permissions'])) {
+                $_SESSION['user_permisos_version'] = $dbVersion;
+                $_SESSION['user_role'] = $userRow['rol'];
+                $perms = !empty($userRow['permisos']) ? json_decode($userRow['permisos'], true) : null;
+                if (!is_array($perms)) {
+                    $perms = self::getDefaultPermissionsForRole($userRow['rol']);
+                }
+                $_SESSION['user_permissions'] = $perms;
+            }
+        } catch (\Exception $e) {
+            // Silencioso ante fallos temporales de conexión para no interrumpir
+        }
+
         $_SESSION['last_activity'] = time();
+    }
+
+    /**
+     * Valida la complejidad y robustez de contraseñas
+     * Regla: Mínimo 8 caracteres, al menos 1 letra mayúscula y al menos 1 número.
+     */
+    public static function validatePasswordStrength(string $password): ?string {
+        if (strlen($password) < 8) {
+            return 'La contraseña debe tener al menos 8 caracteres.';
+        }
+        if (!preg_match('/[A-Z]/', $password)) {
+            return 'La contraseña debe contener al menos una letra mayúscula.';
+        }
+        if (!preg_match('/[0-9]/', $password)) {
+            return 'La contraseña debe contener al menos un número.';
+        }
+        return null;
     }
 
     public static function user(): ?array {
@@ -327,6 +389,7 @@ class AuthController {
                     $_SESSION['user_role'] = $user['rol'];
                     $_SESSION['user_email'] = $user['email'] ?? '';
                     $_SESSION['user_ultimo_login'] = $user['ultimo_login'] ?? '';
+                    $_SESSION['user_permisos_version'] = (int)($user['permisos_version'] ?? 1);
                     $_SESSION['last_activity'] = time();
 
                     $perms = !empty($user['permisos']) ? json_decode($user['permisos'], true) : null;
@@ -405,14 +468,14 @@ class AuthController {
             exit;
         }
 
-        if (strlen($newPassword) < 5) {
-            $msg = 'La nueva contraseña debe contener al menos 5 caracteres.';
+        $passError = self::validatePasswordStrength($newPassword);
+        if ($passError !== null) {
             if ($isAjax) {
                 header('Content-Type: application/json');
-                echo json_encode(['success' => false, 'error' => $msg]);
+                echo json_encode(['success' => false, 'error' => $passError]);
                 exit;
             }
-            header('Location: ?route=' . self::getFirstAccessibleRoute() . '&msg_perfil_error=' . urlencode($msg));
+            header('Location: ?route=' . self::getFirstAccessibleRoute() . '&msg_perfil_error=' . urlencode($passError));
             exit;
         }
 

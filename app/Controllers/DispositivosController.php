@@ -360,7 +360,7 @@ class DispositivosController {
         $deviceId = (int)($_POST['device_id'] ?? 1);
         $userId = trim($_POST['user_id'] ?? '');
         $name = trim($_POST['name'] ?? '');
-        $privilege = (int)($_POST['privilege'] ?? 0);
+        $privilege = max(0, min(2, (int)($_POST['privilege'] ?? 0)));
         $password = trim($_POST['password'] ?? '');
 
         if (empty($userId) || empty($name)) {
@@ -480,6 +480,7 @@ class DispositivosController {
      */
     public function obtenerBiometriaUsuario(): void {
         AuthController::checkAuth();
+        AuthController::requireRole(['ADMIN', 'RRHH']);
         session_write_close(); // Liberar bloqueo de sesión para lecturas concurrentes
 
         $userId = trim($_GET['user_id'] ?? '');

@@ -53,6 +53,12 @@ class JustificacionesController {
             exit;
         }
 
+        // Validación lógica de rango de fechas
+        if (strtotime($fechaInicio) > strtotime($fechaFin)) {
+            header('Location: ?route=justificaciones&error=rango_invalido');
+            exit;
+        }
+
         try {
             Database::execute("
                 INSERT INTO justificaciones 

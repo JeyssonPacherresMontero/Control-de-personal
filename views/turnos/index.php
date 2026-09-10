@@ -30,6 +30,7 @@
                 'eliminado' => ['success', 'Turno eliminado correctamente.'],
                 'duplicado' => ['danger', 'Ya existe un turno con ese nombre.'],
                 'campos_requeridos' => ['warning', 'Completa todos los campos obligatorios.'],
+                'horario_invalido' => ['warning', 'La hora de entrada debe ser menor a la hora de salida para turnos regulares (no nocturnos).'],
                 'error_interno' => ['danger', 'Ocurrió un error al procesar el turno. Intenta nuevamente.'],
             ];
             if (isset($msgMap[$_GET['msg']])):

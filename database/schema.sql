@@ -210,6 +210,7 @@ CREATE TABLE IF NOT EXISTS `usuarios_sistema` (
     `rol` ENUM('ADMIN', 'RRHH', 'SUPERVISOR', 'CONSULTA') DEFAULT 'RRHH',
     `permisos` TEXT NULL COMMENT 'JSON array de módulos permitidos en el menú',
     `activo` TINYINT(1) DEFAULT 1,
+    `permisos_version` INT DEFAULT 1,
     `ultimo_login` DATETIME NULL,
     `creado_en` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -226,6 +227,7 @@ CREATE TABLE IF NOT EXISTS `eventos_asistencia` (
     `created_by` VARCHAR(100) NOT NULL DEFAULT 'SYSTEM' COMMENT 'Usuario que originó el evento o subsistema',
     `ip_address` VARCHAR(45) NULL COMMENT 'IP de origen del cliente o dispositivo biométrico',
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY `uniq_stream_version` (`aggregate_type`, `aggregate_id`, `version`),
     INDEX `idx_events_aggregate` (`aggregate_type`, `aggregate_id`),
     INDEX `idx_events_type` (`event_type`),
     INDEX `idx_events_created_at` (`created_at`)

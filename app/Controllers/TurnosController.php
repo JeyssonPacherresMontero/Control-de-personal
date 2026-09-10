@@ -41,6 +41,12 @@ class TurnosController {
             exit;
         }
 
+        // Validación de lógica de horario laboral
+        if (!$esNocturno && strtotime($horaEntrada) >= strtotime($horaSalida)) {
+            header('Location: ?route=turnos&msg=horario_invalido');
+            exit;
+        }
+
         $params = [
             ':nom'      => $nombre,
             ':ent'      => $horaEntrada,

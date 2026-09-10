@@ -27,31 +27,46 @@ class EventStore {
             $ipAddress = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
         }
 
-        // Obtener la última versión del stream para versionado secuencial
-        $lastEvent = Database::queryOne(
-            "SELECT version FROM eventos_asistencia 
-             WHERE aggregate_type = ? AND aggregate_id = ? 
-             ORDER BY version DESC LIMIT 1",
-            [$aggregateType, $aggregateId]
-        );
-        $nextVersion = $lastEvent ? ((int)$lastEvent['version'] + 1) : 1;
-
         $jsonPayload = json_encode($eventData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
-        return Database::execute(
-            "INSERT INTO eventos_asistencia 
-             (aggregate_type, aggregate_id, event_type, event_data, version, created_by, ip_address) 
-             VALUES (?, ?, ?, ?, ?, ?, ?)",
-            [
-                $aggregateType,
-                $aggregateId,
-                $eventType,
-                $jsonPayload,
-                $nextVersion,
-                $createdBy,
-                $ipAddress
-            ]
-        );
+        $maxRetries = 3;
+        for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+            try {
+                // Obtener la última versión del stream para versionado secuencial
+                $lastEvent = Database::queryOne(
+                    "SELECT version FROM eventos_asistencia 
+                     WHERE aggregate_type = ? AND aggregate_id = ? 
+                     ORDER BY version DESC LIMIT 1",
+                    [$aggregateType, $aggregateId]
+                );
+                $nextVersion = $lastEvent ? ((int)$lastEvent['version'] + 1) : 1;
+
+                return Database::execute(
+                    "INSERT INTO eventos_asistencia 
+                     (aggregate_type, aggregate_id, event_type, event_data, version, created_by, ip_address) 
+                     VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    [
+                        $aggregateType,
+                        $aggregateId,
+                        $eventType,
+                        $jsonPayload,
+                        $nextVersion,
+                        $createdBy,
+                        $ipAddress
+                    ]
+                );
+            } catch (\PDOException $e) {
+                $errorCode = (string)$e->getCode();
+                $errorInfo = $e->errorInfo[1] ?? 0;
+                // Código SQLSTATE 23000 o MySQL error 1062 es violación de clave única
+                if (($errorCode === '23000' || $errorInfo === 1062) && $attempt < $maxRetries) {
+                    usleep(random_int(10000, 50000)); // 10ms - 50ms backoff
+                    continue;
+                }
+                throw $e;
+            }
+        }
+        return 0;
     }
 
     /**

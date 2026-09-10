@@ -24,6 +24,24 @@
 <section class="content">
     <div class="container-fluid">
 
+        <?php if (isset($_GET['msg']) || isset($_GET['error'])):
+            $msgMap = [
+                'guardado' => ['success', 'Justificación registrada y asistencia recalculada exitosamente.'],
+                'resuelto' => ['success', 'Estado de justificación actualizado correctamente.'],
+                'campos_requeridos' => ['warning', 'Completa todos los campos obligatorios.'],
+                'rango_invalido' => ['danger', 'La fecha de inicio no puede ser posterior a la fecha de fin.'],
+                'db_error' => ['danger', 'Ocurrió un error al procesar la justificación en la base de datos.'],
+            ];
+            $key = $_GET['msg'] ?? $_GET['error'];
+            if (isset($msgMap[$key])):
+                [$type, $text] = $msgMap[$key];
+        ?>
+            <div class="alert alert-<?= $type ?> alert-dismissible fade show mb-3 shadow-sm">
+                <?= htmlspecialchars($text) ?>
+                <button type="button" class="close" data-dismiss="alert">&times;</button>
+            </div>
+        <?php endif; endif; ?>
+
         <!-- ACTIONS TOOLBAR -->
         <div class="actions-toolbar no-print">
             <div class="actions-toolbar-group">

@@ -9,7 +9,8 @@ class UsuariosController {
         AuthController::requireRole('ADMIN', 'dashboard');
 
         $usuarios = Database::query("
-            SELECT u.*,
+            SELECT u.id, u.usuario, u.nombre_completo, u.email, u.rol, u.permisos, u.activo, 
+                   COALESCE(u.permisos_version, 1) as permisos_version, u.ultimo_login, u.creado_en,
                    (SELECT COUNT(*) FROM plantillas_biometricas pb WHERE pb.codigo_reloj = u.usuario AND pb.tipo = 'HUELLA') as huellas_count,
                    (SELECT COUNT(*) FROM plantillas_biometricas pb WHERE pb.codigo_reloj = u.usuario AND pb.tipo = 'FACIAL') as facial_count
             FROM usuarios_sistema u 
@@ -98,7 +99,8 @@ class UsuariosController {
             if ($id > 0) {
                 // Actualizar usuario existente
                 if (!empty($password)) {
-                    if (strlen($password) < 5) {
+                    $passError = AuthController::validatePasswordStrength($password);
+                    if ($passError !== null) {
                         header('Location: ?route=usuarios&msg=error_pass_corta');
                         exit;
                     }
@@ -106,7 +108,8 @@ class UsuariosController {
                     Database::execute("
                         UPDATE usuarios_sistema 
                         SET usuario = :usr, nombre_completo = :nom, email = :email, 
-                            password = :pass, rol = :rol, permisos = :perms, activo = :act
+                            password = :pass, rol = :rol, permisos = :perms, activo = :act,
+                            permisos_version = COALESCE(permisos_version, 1) + 1
                         WHERE id = :id
                     ", [
                         ':usr'   => $usuario,
@@ -122,7 +125,8 @@ class UsuariosController {
                     Database::execute("
                         UPDATE usuarios_sistema 
                         SET usuario = :usr, nombre_completo = :nom, email = :email, 
-                            rol = :rol, permisos = :perms, activo = :act
+                            rol = :rol, permisos = :perms, activo = :act,
+                            permisos_version = COALESCE(permisos_version, 1) + 1
                         WHERE id = :id
                     ", [
                         ':usr'   => $usuario,
@@ -140,7 +144,8 @@ class UsuariosController {
                     header('Location: ?route=usuarios&msg=error_password_requerida');
                     exit;
                 }
-                if (strlen($password) < 5) {
+                $passError = AuthController::validatePasswordStrength($password);
+                if ($passError !== null) {
                     header('Location: ?route=usuarios&msg=error_pass_corta');
                     exit;
                 }
@@ -149,8 +154,8 @@ class UsuariosController {
 
                 Database::execute("
                     INSERT INTO usuarios_sistema 
-                    (usuario, password, nombre_completo, email, rol, permisos, activo)
-                    VALUES (:usr, :pass, :nom, :email, :rol, :perms, :act)
+                    (usuario, password, nombre_completo, email, rol, permisos, activo, permisos_version)
+                    VALUES (:usr, :pass, :nom, :email, :rol, :perms, :act, 1)
                 ", [
                     ':usr'   => $usuario,
                     ':pass'  => $passHash,
@@ -202,11 +207,11 @@ class UsuariosController {
             exit;
         }
 
-        if (strlen($newPassword) < 5) {
-            $msg = 'La nueva contraseña debe tener al menos 5 caracteres.';
+        $passError = AuthController::validatePasswordStrength($newPassword);
+        if ($passError !== null) {
             if ($isAjax) {
                 header('Content-Type: application/json; charset=utf-8');
-                echo json_encode(['success' => false, 'error' => $msg]);
+                echo json_encode(['success' => false, 'error' => $passError]);
                 exit;
             }
             header('Location: ?route=usuarios&msg=error_pass_corta');
@@ -226,7 +231,10 @@ class UsuariosController {
         }
 
         $newHash = password_hash($newPassword, PASSWORD_BCRYPT);
-        Database::execute("UPDATE usuarios_sistema SET password = ? WHERE id = ?", [$newHash, $userId]);
+        Database::execute(
+            "UPDATE usuarios_sistema SET password = ?, permisos_version = COALESCE(permisos_version, 1) + 1 WHERE id = ?", 
+            [$newHash, $userId]
+        );
 
         if ($isAjax) {
             header('Content-Type: application/json; charset=utf-8');
@@ -276,7 +284,10 @@ class UsuariosController {
         }
 
         $nuevoEstado = $targetUser['activo'] ? 0 : 1;
-        Database::execute("UPDATE usuarios_sistema SET activo = ? WHERE id = ?", [$nuevoEstado, $id]);
+        Database::execute(
+            "UPDATE usuarios_sistema SET activo = ?, permisos_version = COALESCE(permisos_version, 1) + 1 WHERE id = ?", 
+            [$nuevoEstado, $id]
+        );
 
         if ($isAjax) {
             header('Content-Type: application/json; charset=utf-8');
@@ -312,7 +323,11 @@ class UsuariosController {
             exit;
         }
 
-        Database::execute("DELETE FROM usuarios_sistema WHERE id = ?", [$id]);
+        // Soft-delete para mantener integridad histórica y revocar acceso
+        Database::execute(
+            "UPDATE usuarios_sistema SET activo = 0, permisos_version = COALESCE(permisos_version, 1) + 1 WHERE id = ?", 
+            [$id]
+        );
 
         header('Location: ?route=usuarios&msg=eliminado');
         exit;
