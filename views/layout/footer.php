@@ -224,6 +224,20 @@
         }
     });
 
+    $(document).ajaxError(function(event, jqXHR) {
+        if (jqXHR.status === 401) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Sesión expirada',
+                text: 'Tu sesión ha caducado por inactividad o seguridad. Por favor, vuelve a iniciar sesión.',
+                confirmButtonText: 'Iniciar Sesión',
+                confirmButtonColor: '#2563eb'
+            }).then(() => {
+                window.location.href = '?route=login&msg=sesion_expirada';
+            });
+        }
+    });
+
     const originalFetch = window.fetch;
     window.fetch = function(url, options = {}) {
         options.headers = options.headers || {};
@@ -236,7 +250,20 @@
                 options.headers['X-CSRF-TOKEN'] = csrfToken;
             }
         }
-        return originalFetch(url, options);
+        return originalFetch(url, options).then(response => {
+            if (response.status === 401) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Sesión expirada',
+                    text: 'Tu sesión ha caducado. Vuelve a iniciar sesión.',
+                    confirmButtonText: 'Iniciar Sesión',
+                    confirmButtonColor: '#2563eb'
+                }).then(() => {
+                    window.location.href = '?route=login&msg=sesion_expirada';
+                });
+            }
+            return response;
+        });
     };
 
     $(document).ready(function () {

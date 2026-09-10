@@ -24,6 +24,24 @@
 <section class="content">
     <div class="container-fluid">
 
+        <?php if (isset($_GET['msg'])):
+            $msgMap = [
+                'guardado' => ['success', 'Empleado guardado correctamente.'],
+                'eliminado' => ['success', 'Empleado eliminado correctamente.'],
+                'duplicado' => ['danger', 'Ya existe un empleado con ese DNI o código de reloj.'],
+                'dni_invalido' => ['warning', 'El DNI debe tener 8 dígitos numéricos.'],
+                'campos_requeridos' => ['warning', 'Completa todos los campos obligatorios.'],
+                'error_interno' => ['danger', 'Ocurrió un error al guardar. Intenta nuevamente.'],
+            ];
+            if (isset($msgMap[$_GET['msg']])):
+                [$type, $text] = $msgMap[$_GET['msg']];
+        ?>
+            <div class="alert alert-<?= $type ?> alert-dismissible fade show mb-3 shadow-sm">
+                <?= htmlspecialchars($text) ?>
+                <button type="button" class="close" data-dismiss="alert">&times;</button>
+            </div>
+        <?php endif; endif; ?>
+
         <!-- FILTER AND ACTIONS CARD -->
         <div class="card mb-3 no-print">
             <div class="card-header d-flex align-items-center justify-content-between flex-wrap py-2 px-3">

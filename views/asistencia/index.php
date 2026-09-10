@@ -54,6 +54,24 @@ if (!empty($deptoId)) {
 <section class="content">
     <div class="container-fluid">
 
+        <?php if (isset($_GET['msg'])):
+            $msgMap = [
+                'recalculado' => ['success', 'Asistencia recalculada exitosamente para el período seleccionado.'],
+                'guardado' => ['success', 'Registro de asistencia actualizado correctamente.'],
+                'justificado' => ['success', 'Justificación administrativa aplicada correctamente.'],
+                'rango_muy_amplio' => ['warning', 'El rango de fechas no puede superar los 62 días (~2 meses) para recálculo web. Use la consola CLI para rangos masivos.'],
+                'rango_invalido' => ['danger', 'Rango de fechas inválido. La fecha inicial debe ser anterior o igual a la final.'],
+                'acceso_denegado' => ['danger', 'No tienes permisos para realizar esta acción.'],
+            ];
+            if (isset($msgMap[$_GET['msg']])):
+                [$type, $text] = $msgMap[$_GET['msg']];
+        ?>
+            <div class="alert alert-<?= $type ?> alert-dismissible fade show mb-3 shadow-sm no-print">
+                <?= htmlspecialchars($text) ?>
+                <button type="button" class="close" data-dismiss="alert">&times;</button>
+            </div>
+        <?php endif; endif; ?>
+
         <!-- MEMBRETE OFICIAL DE IMPRESIÓN / PDF (Solo visible al imprimir o guardar como PDF) -->
         <div class="print-only mb-3">
             <table style="width: 100%; border-collapse: collapse; border-bottom: 2px solid #1e3a8a; padding-bottom: 8px;">
@@ -260,7 +278,7 @@ if (!empty($deptoId)) {
         <!-- MAIN TABLE CARD -->
         <div class="card">
             <div class="card-body p-0 table-responsive">
-                <table class="table table-hover datatable text-nowrap table-sm">
+                <table class="table table-hover text-nowrap table-sm">
                     <thead>
                         <tr>
                             <th class="text-center">Fecha</th>

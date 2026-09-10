@@ -142,10 +142,30 @@ class AsistenciaController {
     public function recalcular(): void {
         AuthController::checkAuth();
         AuthController::requireRole(['ADMIN', 'RRHH'], 'asistencia');
-        \App\Csrf::validateRequest();
+        \App\Security\Csrf::validate();
 
         $fechaInicio = $_POST['fecha_inicio'] ?? date('Y-m-d');
         $fechaFin = $_POST['fecha_fin'] ?? $fechaInicio;
+
+        try {
+            $inicio = new \DateTime($fechaInicio);
+            $fin = new \DateTime($fechaFin);
+        } catch (\Exception $e) {
+            header("Location: ?route=asistencia&msg=rango_invalido");
+            exit;
+        }
+
+        if ($inicio > $fin) {
+            header("Location: ?route=asistencia&msg=rango_invalido");
+            exit;
+        }
+
+        $diffDias = $inicio->diff($fin)->days;
+        $maxDiasPermitidos = 62; // ~2 meses por solicitud manual desde la UI
+        if ($diffDias > $maxDiasPermitidos) {
+            header("Location: ?route=asistencia&msg=rango_muy_amplio");
+            exit;
+        }
 
         $calculator = new AttendanceCalculator(ATTENDANCE_DEBOUNCE_MINUTES);
         $results = $calculator->processDateRange($fechaInicio, $fechaFin);

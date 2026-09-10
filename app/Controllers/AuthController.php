@@ -5,10 +5,44 @@ use App\Database;
 
 class AuthController {
     public static function checkAuth(): void {
+        $isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')
+                  || isset($_GET['ajax'])
+                  || (isset($_SERVER['HTTP_ACCEPT']) && str_contains($_SERVER['HTTP_ACCEPT'], 'application/json'));
+
         if (!isset($_SESSION['user_id'])) {
+            if ($isAjax) {
+                http_response_code(401);
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'error' => 'session_expired', 'message' => 'Tu sesión ha expirado.'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
             header('Location: ?route=login');
             exit;
         }
+
+        // Timeout de inactividad (4 horas por defecto)
+        $maxInactivity = (int)($_ENV['SESSION_IDLE_TIMEOUT'] ?? (4 * 3600));
+        if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity']) > $maxInactivity) {
+            $_SESSION = [];
+            if (ini_get("session.use_cookies")) {
+                $params = session_get_cookie_params();
+                setcookie(session_name(), '', time() - 42000,
+                    $params["path"], $params["domain"], $params["secure"], $params["httponly"]);
+            }
+            session_destroy();
+
+            if ($isAjax) {
+                http_response_code(401);
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'error' => 'session_expired', 'message' => 'Tu sesión ha expirado por inactividad.'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
+            header('Location: ?route=login&msg=sesion_expirada');
+            exit;
+        }
+        $_SESSION['last_activity'] = time();
     }
 
     public static function user(): ?array {

@@ -233,7 +233,7 @@ if (!empty($dispositivoId)) {
         <!-- MAIN TABLE CARD -->
         <div class="card">
             <div class="card-body p-0 table-responsive">
-                <table class="table table-hover datatable text-nowrap table-sm">
+                <table class="table table-hover text-nowrap table-sm">
                     <thead>
                         <tr>
                             <th class="text-center" style="width: 80px;">N° Registro</th>

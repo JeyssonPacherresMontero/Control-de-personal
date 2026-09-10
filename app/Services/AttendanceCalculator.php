@@ -388,17 +388,17 @@ class AttendanceCalculator {
                     :estado, :obs, 0
                 )
                 ON DUPLICATE KEY UPDATE
-                    id_turno = VALUES(id_turno),
-                    hora_entrada_programada = VALUES(hora_entrada_programada),
-                    hora_salida_programada = VALUES(hora_salida_programada),
-                    hora_entrada_real = VALUES(hora_entrada_real),
-                    hora_salida_real = VALUES(hora_salida_real),
-                    hora_inicio_refrigerio_real = VALUES(hora_inicio_refrigerio_real),
-                    hora_fin_refrigerio_real = VALUES(hora_fin_refrigerio_real),
-                    minutos_tardanza = VALUES(minutos_tardanza),
-                    minutos_trabajados = VALUES(minutos_trabajados),
-                    minutos_extra = VALUES(minutos_extra),
-                    minutos_salida_temprana = VALUES(minutos_salida_temprana),
+                    id_turno = IF(manual = 1, id_turno, VALUES(id_turno)),
+                    hora_entrada_programada = IF(manual = 1, hora_entrada_programada, VALUES(hora_entrada_programada)),
+                    hora_salida_programada  = IF(manual = 1, hora_salida_programada, VALUES(hora_salida_programada)),
+                    hora_entrada_real = IF(manual = 1, hora_entrada_real, VALUES(hora_entrada_real)),
+                    hora_salida_real  = IF(manual = 1, hora_salida_real, VALUES(hora_salida_real)),
+                    hora_inicio_refrigerio_real = IF(manual = 1, hora_inicio_refrigerio_real, VALUES(hora_inicio_refrigerio_real)),
+                    hora_fin_refrigerio_real    = IF(manual = 1, hora_fin_refrigerio_real, VALUES(hora_fin_refrigerio_real)),
+                    minutos_tardanza  = IF(manual = 1, minutos_tardanza, VALUES(minutos_tardanza)),
+                    minutos_trabajados = IF(manual = 1, minutos_trabajados, VALUES(minutos_trabajados)),
+                    minutos_extra = IF(manual = 1, minutos_extra, VALUES(minutos_extra)),
+                    minutos_salida_temprana = IF(manual = 1, minutos_salida_temprana, VALUES(minutos_salida_temprana)),
                     estado = IF(manual = 1, estado, VALUES(estado)),
                     observaciones = IF(manual = 1, observaciones, VALUES(observaciones)),
                     procesado_en = NOW()

@@ -51,6 +51,19 @@ class Database {
         return $stmt->rowCount();
     }
 
+    public static function executeSafe(string $sql, array $params = []): array {
+        try {
+            $rows = self::execute($sql, $params);
+            return ['success' => true, 'rows' => $rows];
+        } catch (PDOException $e) {
+            if ((int)$e->getCode() === 23000 || str_contains($e->getMessage(), 'Duplicate entry')) {
+                return ['success' => false, 'error' => 'duplicado'];
+            }
+            error_log('[DB ERROR] ' . $e->getMessage() . ' | SQL: ' . $sql);
+            return ['success' => false, 'error' => 'error_interno'];
+        }
+    }
+
     public static function lastInsertId(): string {
         return self::getConnection()->lastInsertId();
     }

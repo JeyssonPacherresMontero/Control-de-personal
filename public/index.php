@@ -8,15 +8,19 @@
 
 // Encabezados de Seguridad HTTP (Ciberseguridad OWASP)
 if (!headers_sent()) {
-    header('X-Frame-Options: SAMEORIGIN');
     header('X-Content-Type-Options: nosniff');
-    header('X-XSS-Protection: 1; mode=block');
+    header('X-Frame-Options: SAMEORIGIN');
     header('Referrer-Policy: strict-origin-when-cross-origin');
+    header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://code.jquery.com https://cdn.datatables.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com https://cdnjs.cloudflare.com https://cdn.datatables.net; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com data:; img-src 'self' data: https:;");
 }
 
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../app/Database.php';
+require_once __DIR__ . '/../app/Security/Csrf.php';
 require_once __DIR__ . '/../app/Services/AttendanceCalculator.php';
+
+// Validar CSRF en toda petición POST, antes de llegar a cualquier controlador
+\App\Security\Csrf::validate();
 
 // Cargar Controladores
 require_once __DIR__ . '/../app/Controllers/AuthController.php';
@@ -38,6 +42,7 @@ use App\Controllers\EmpleadosController;
 use App\Controllers\TurnosController;
 use App\Controllers\JustificacionesController;
 use App\Controllers\UsuariosController;
+use App\Security\Csrf;
 
 $route = $_GET['route'] ?? AuthController::getFirstAccessibleRoute();
 $action = $_GET['action'] ?? 'index';

@@ -24,6 +24,23 @@
 <section class="content">
     <div class="container-fluid">
 
+        <?php if (isset($_GET['msg'])):
+            $msgMap = [
+                'guardado' => ['success', 'Turno guardado correctamente.'],
+                'eliminado' => ['success', 'Turno eliminado correctamente.'],
+                'duplicado' => ['danger', 'Ya existe un turno con ese nombre.'],
+                'campos_requeridos' => ['warning', 'Completa todos los campos obligatorios.'],
+                'error_interno' => ['danger', 'Ocurrió un error al procesar el turno. Intenta nuevamente.'],
+            ];
+            if (isset($msgMap[$_GET['msg']])):
+                [$type, $text] = $msgMap[$_GET['msg']];
+        ?>
+            <div class="alert alert-<?= $type ?> alert-dismissible fade show mb-3 shadow-sm">
+                <?= htmlspecialchars($text) ?>
+                <button type="button" class="close" data-dismiss="alert">&times;</button>
+            </div>
+        <?php endif; endif; ?>
+
         <!-- ACTIONS TOOLBAR -->
         <div class="actions-toolbar no-print">
             <div class="actions-toolbar-group">

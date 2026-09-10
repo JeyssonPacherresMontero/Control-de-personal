@@ -7,9 +7,14 @@
 Options -Indexes
 
 # 2. Bloquear acceso a archivos y carpetas sensibles
-<FilesMatch "^\.env|\.git|\.sql|\.log|\.bat|\.vbs|\.sh|\.py$|composer\.(json|lock)|package\.json">
-    Order allow,deny
-    Deny from all
+<FilesMatch "\.(env|sql|py|log|md|bat|vbs|sh|json|lock)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
 </FilesMatch>
 
 # 3. Bloquear acceso directo a directorios protegidos

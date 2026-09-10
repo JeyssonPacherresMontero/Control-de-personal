@@ -76,19 +76,16 @@ class AttendanceSynchronizer:
             return cursor.fetchall()
 
     def get_employee_mapping(self):
-        """Retorna un diccionario {codigo_reloj: id_empleado} para asociación rápida"""
+        """Retorna {codigo_reloj_normalizado: id_empleado}, tolerante a ceros a la izquierda"""
         conn = self.get_db()
         with conn.cursor() as cursor:
             cursor.execute("SELECT id, codigo_reloj FROM empleados WHERE activo = 1")
             rows = cursor.fetchall()
             mapping = {}
             for row in rows:
-                code_raw = str(row['codigo_reloj']).strip()
-                emp_id = row['id']
-                mapping[code_raw] = emp_id
-                code_lstrip = code_raw.lstrip('0')
-                if code_lstrip and code_lstrip not in mapping:
-                    mapping[code_lstrip] = emp_id
+                raw = str(row['codigo_reloj']).strip()
+                mapping[raw] = row['id']                 # match exacto
+                mapping[raw.lstrip('0') or '0'] = row['id']  # match sin ceros a la izquierda
             return mapping
 
     def sync_users_from_device(self, device_service, device_id):
@@ -104,7 +101,7 @@ class AttendanceSynchronizer:
 
             with conn.cursor() as cursor:
                 for u in users:
-                    user_id_str = str(u['user_id']).strip()
+                    user_id_str = str(u['user_id']).strip().lstrip('0') or '0'
                     if not user_id_str:
                         continue
 
@@ -273,7 +270,7 @@ class AttendanceSynchronizer:
                 
                 for rec in candidate_records:
                     user_id_str = str(rec['user_id']).strip()
-                    emp_id = emp_map.get(user_id_str) or emp_map.get(user_id_str.lstrip('0'))
+                    emp_id = emp_map.get(user_id_str) or emp_map.get(user_id_str.lstrip('0') or '0')
                     dt_str = rec['timestamp'].strftime('%Y-%m-%d %H:%M:%S')
                     tipo_verif = rec.get('tipo_verificacion', 'huella')
                     

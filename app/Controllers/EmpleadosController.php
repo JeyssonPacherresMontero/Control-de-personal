@@ -63,13 +63,24 @@ class EmpleadosController {
     public function guardar(): void {
         AuthController::checkAuth();
         AuthController::requireRole(['ADMIN', 'RRHH'], 'empleados');
-        \App\Csrf::validateRequest();
+        \App\Security\Csrf::validate();
 
         $id = (int)($_POST['id'] ?? 0);
         $codigoReloj = trim($_POST['codigo_reloj'] ?? '');
         $dni = trim($_POST['dni'] ?? '');
         $nombres = trim($_POST['nombres'] ?? '');
         $apellidos = trim($_POST['apellidos'] ?? '');
+
+        // Validación básica de negocio antes de tocar la BD
+        if (empty($codigoReloj) || empty($dni) || empty($nombres) || empty($apellidos)) {
+            header('Location: ?route=empleados&msg=campos_requeridos');
+            exit;
+        }
+        if (!preg_match('/^\d{8}$/', $dni)) {
+            header('Location: ?route=empleados&msg=dni_invalido');
+            exit;
+        }
+
         $email = trim($_POST['email'] ?? '');
         $telefono = trim($_POST['telefono'] ?? '');
         $deptoId = !empty($_POST['departamento_id']) ? (int)$_POST['departamento_id'] : null;
@@ -78,73 +89,44 @@ class EmpleadosController {
         $fechaIngreso = !empty($_POST['fecha_ingreso']) ? $_POST['fecha_ingreso'] : null;
         $activo = isset($_POST['activo']) ? 1 : 0;
 
-        if (empty($dni) || empty($nombres) || empty($apellidos) || empty($codigoReloj)) {
-            header('Location: ?route=empleados&error=campos_requeridos');
+        $params = [
+            ':cod'   => $codigoReloj,
+            ':dni'   => $dni,
+            ':nom'   => $nombres,
+            ':ape'   => $apellidos,
+            ':email' => $email ?: null,
+            ':tel'   => $telefono ?: null,
+            ':depto' => $deptoId,
+            ':cargo' => $cargoId,
+            ':turno' => $turnoId,
+            ':fecha' => $fechaIngreso,
+            ':act'   => $activo
+        ];
+
+        if ($id > 0) {
+            $params[':id'] = $id;
+            $result = Database::executeSafe("
+                UPDATE empleados 
+                SET codigo_reloj = :cod, dni = :dni, nombres = :nom, apellidos = :ape,
+                    email = :email, telefono = :tel, departamento_id = :depto, cargo_id = :cargo,
+                    turno_id = :turno, fecha_ingreso = :fecha, activo = :act
+                WHERE id = :id
+            ", $params);
+        } else {
+            $result = Database::executeSafe("
+                INSERT INTO empleados 
+                (codigo_reloj, dni, nombres, apellidos, email, telefono, departamento_id, cargo_id, turno_id, fecha_ingreso, activo)
+                VALUES (:cod, :dni, :nom, :ape, :email, :tel, :depto, :cargo, :turno, :fecha, :act)
+            ", $params);
+        }
+
+        if (!$result['success']) {
+            header('Location: ?route=empleados&msg=' . $result['error']);
             exit;
         }
 
-        try {
-            if ($id > 0) {
-                Database::execute("
-                    UPDATE empleados 
-                    SET codigo_reloj = :cod, dni = :dni, nombres = :nom, apellidos = :ape,
-                        email = :email, telefono = :tel, departamento_id = :depto, cargo_id = :cargo,
-                        turno_id = :turno, fecha_ingreso = :fecha, activo = :act
-                    WHERE id = :id
-                ", [
-                    ':cod'   => $codigoReloj,
-                    ':dni'   => $dni,
-                    ':nom'   => $nombres,
-                    ':ape'   => $apellidos,
-                    ':email' => $email ?: null,
-                    ':tel'   => $telefono ?: null,
-                    ':depto' => $deptoId,
-                    ':cargo' => $cargoId,
-                    ':turno' => $turnoId,
-                    ':fecha' => $fechaIngreso,
-                    ':act'   => $activo,
-                    ':id'    => $id
-                ]);
-            } else {
-                Database::execute("
-                    INSERT INTO empleados 
-                    (codigo_reloj, dni, nombres, apellidos, email, telefono, departamento_id, cargo_id, turno_id, fecha_ingreso, activo)
-                    VALUES (:cod, :dni, :nom, :ape, :email, :tel, :depto, :cargo, :turno, :fecha, :act)
-                ", [
-                    ':cod'   => $codigoReloj,
-                    ':dni'   => $dni,
-                    ':nom'   => $nombres,
-                    ':ape'   => $apellidos,
-                    ':email' => $email ?: null,
-                    ':tel'   => $telefono ?: null,
-                    ':depto' => $deptoId,
-                    ':cargo' => $cargoId,
-                    ':turno' => $turnoId,
-                    ':fecha' => $fechaIngreso,
-                    ':act'   => $activo
-                ]);
-            }
-
-            header('Location: ?route=empleados&msg=guardado');
-            exit;
-        } catch (\PDOException $e) {
-            $errorCode = (string)$e->getCode();
-            $errorInfo = $e->errorInfo[1] ?? 0;
-            $msg = $e->getMessage();
-
-            if ($errorCode === '23000' || $errorInfo === 1062) {
-                if (stripos($msg, 'dni') !== false) {
-                    header('Location: ?route=empleados&error=dni_duplicado');
-                } elseif (stripos($msg, 'codigo_reloj') !== false) {
-                    header('Location: ?route=empleados&error=codigo_duplicado');
-                } else {
-                    header('Location: ?route=empleados&error=duplicado');
-                }
-            } else {
-                header('Location: ?route=empleados&error=db_error');
-            }
-            exit;
-        }
+        header('Location: ?route=empleados&msg=guardado');
+        exit;
     }
 
     public function eliminar(): void {

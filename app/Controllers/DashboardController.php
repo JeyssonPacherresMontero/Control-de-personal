@@ -14,6 +14,12 @@ class DashboardController {
         // El rol del dashboard es estrictamente el rol asignado al usuario en su sesión
         $activeRoleView = $currentUser['rol'] ?? 'RRHH';
 
+        // Disparar cálculo en segundo plano si aún no existe registro de asistencia para hoy
+        $asistenciaExiste = Database::queryOne("SELECT id FROM asistencia_diaria WHERE fecha = ? LIMIT 1", [$today]);
+        if (!$asistenciaExiste) {
+            $this->triggerAsyncCalculation($today);
+        }
+
         // 1. Estadísticas Generales de Hoy
         $totalEmpleados = (int)(Database::queryOne("SELECT COUNT(*) as c FROM empleados WHERE activo = 1")['c'] ?? 0);
         
@@ -195,5 +201,30 @@ class DashboardController {
         $totalUsuarios = (int)(Database::queryOne("SELECT COUNT(*) as c FROM usuarios_sistema WHERE activo = 1")['c'] ?? 0);
 
         require_once APP_ROOT . '/views/dashboard/index.php';
+    }
+
+    private function triggerAsyncCalculation(string $date): void {
+        // Lock a nivel de MySQL: evita que 2 requests simultáneos disparen el cálculo
+        $lockName = 'attendance_calc_' . $date;
+        $gotLock = Database::queryOne("SELECT GET_LOCK(?, 0) as ok", [$lockName]);
+
+        if (($gotLock['ok'] ?? 0) != 1) {
+            return; // otro proceso ya lo está calculando, no hacer nada
+        }
+
+        try {
+            // Lanzar el cálculo en background vía CLI en vez de bloquear el request
+            $phpBin = PHP_BINARY;
+            $script = APP_ROOT . '/app/Console/process_attendance.php';
+            $cmd = "\"$phpBin\" \"$script\" \"$date\"";
+
+            if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+                pclose(popen("start /B \"\" $cmd", "r"));
+            } else {
+                exec("$cmd > /dev/null 2>&1 &");
+            }
+        } finally {
+            Database::execute("SELECT RELEASE_LOCK(?)", [$lockName]);
+        }
     }
 }

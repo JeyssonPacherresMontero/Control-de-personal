@@ -223,35 +223,32 @@ spl_autoload_register(function ($class) {
 
 // Configuración de Sesión Segura (Hardening OWASP)
 if (session_status() === PHP_SESSION_NONE) {
-    ini_set('session.cookie_httponly', '1');
-    ini_set('session.use_only_cookies', '1');
-    ini_set('session.use_trans_sid', '0');
-
     $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-               || (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443)
-               || (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
+        || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https')
+        || (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443);
 
-    if (PHP_VERSION_ID >= 70300) {
-        session_set_cookie_params([
-            'lifetime' => 0, // Cookie dura hasta cerrar el navegador
-            'path'     => '/',
-            'domain'   => '',
-            'secure'   => $isHttps,
-            'httponly' => true,
-            'samesite' => 'Lax'
-        ]);
-    } else {
-        session_set_cookie_params(0, '/; samesite=Lax', '', $isHttps, true);
-    }
-
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path'     => '/',
+        'domain'   => '',
+        'secure'   => $isHttps,   // true en producción con HTTPS real
+        'httponly' => true,
+        'samesite' => 'Lax'
+    ]);
+    session_name('ZKCTRL_SESSID'); // evita exponer que es PHP
     session_start();
 }
 
-// Control de Inactividad de Sesión (Idle Timeout: 2 Horas = 7200 segundos)
+// Control de Inactividad de Sesión (Idle Timeout: 4 Horas = 14400 segundos por defecto)
 if (isset($_SESSION['user_id'])) {
-    $maxIdleTime = (int)($_ENV['SESSION_IDLE_TIMEOUT'] ?? 7200);
+    $maxIdleTime = (int)($_ENV['SESSION_IDLE_TIMEOUT'] ?? 14400);
     if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > $maxIdleTime)) {
-        session_unset();
+        $_SESSION = [];
+        if (ini_get("session.use_cookies")) {
+            $params = session_get_cookie_params();
+            setcookie(session_name(), '', time() - 42000,
+                $params["path"], $params["domain"], $params["secure"], $params["httponly"]);
+        }
         session_destroy();
         header('Location: ?route=login&msg=sesion_expirada');
         exit;
@@ -263,11 +260,11 @@ if (isset($_SESSION['user_id'])) {
  * Helpers globales para CSRF
  */
 function csrf_token(): string {
-    return \App\Csrf::getToken();
+    return \App\Security\Csrf::token();
 }
 
 function csrf_field(): string {
-    return \App\Csrf::field();
+    return \App\Security\Csrf::field();
 }
 
 

@@ -25,7 +25,7 @@ class DispositivosController {
     public function guardar(): void {
         AuthController::checkAuth();
         AuthController::requireRole('ADMIN', 'dispositivos');
-        \App\Csrf::validateRequest();
+        \App\Security\Csrf::validate();
 
         $id = (int)($_POST['id'] ?? 0);
         $nombre = trim($_POST['nombre'] ?? '');
@@ -38,89 +38,56 @@ class DispositivosController {
         $activo = isset($_POST['activo']) ? 1 : 0;
 
         if (empty($nombre) || empty($ip)) {
-            header('Location: ?route=dispositivos&error=campos_requeridos');
+            header('Location: ?route=dispositivos&msg=campos_requeridos');
             exit;
         }
 
-        try {
-            if ($id > 0) {
-                Database::execute("
-                    UPDATE dispositivos 
-                    SET nombre = :nom, ip = :ip, puerto = :port, protocolo = :proto, 
-                        clave_comunicacion = :clave, ubicacion = :ubi, modelo = :mod, activo = :act
-                    WHERE id = :id
-                ", [
-                    ':nom'   => $nombre,
-                    ':ip'    => $ip,
-                    ':port'  => $puerto,
-                    ':proto' => $protocolo,
-                    ':clave' => $clave,
-                    ':ubi'   => $ubicacion,
-                    ':mod'   => $modelo,
-                    ':act'   => $activo,
-                    ':id'    => $id
-                ]);
-            } else {
-                Database::execute("
-                    INSERT INTO dispositivos 
-                    (nombre, ip, puerto, protocolo, clave_comunicacion, ubicacion, modelo, activo)
-                    VALUES (:nom, :ip, :port, :proto, :clave, :ubi, :mod, :act)
-                ", [
-                    ':nom'   => $nombre,
-                    ':ip'    => $ip,
-                    ':port'  => $puerto,
-                    ':proto' => $protocolo,
-                    ':clave' => $clave,
-                    ':ubi'   => $ubicacion,
-                    ':mod'   => $modelo,
-                    ':act'   => $activo
-                ]);
-            }
+        $params = [
+            ':nom'   => $nombre,
+            ':ip'    => $ip,
+            ':port'  => $puerto,
+            ':proto' => $protocolo,
+            ':clave' => $clave,
+            ':ubi'   => $ubicacion,
+            ':mod'   => $modelo,
+            ':act'   => $activo
+        ];
 
-            header('Location: ?route=dispositivos&msg=guardado');
-            exit;
-        } catch (\PDOException $e) {
-            $errorCode = (string)($e->getCode());
-            $errorInfo = $e->errorInfo[1] ?? 0;
-            if ($errorCode === '23000' || $errorInfo === 1062) {
-                header('Location: ?route=dispositivos&error=ip_puerto_duplicado');
-            } else {
-                header('Location: ?route=dispositivos&error=db_error');
-            }
+        if ($id > 0) {
+            $params[':id'] = $id;
+            $result = Database::executeSafe("
+                UPDATE dispositivos 
+                SET nombre = :nom, ip = :ip, puerto = :port, protocolo = :proto, 
+                    clave_comunicacion = :clave, ubicacion = :ubi, modelo = :mod, activo = :act
+                WHERE id = :id
+            ", $params);
+        } else {
+            $result = Database::executeSafe("
+                INSERT INTO dispositivos 
+                (nombre, ip, puerto, protocolo, clave_comunicacion, ubicacion, modelo, activo)
+                VALUES (:nom, :ip, :port, :proto, :clave, :ubi, :mod, :act)
+            ", $params);
+        }
+
+        if (!$result['success']) {
+            header('Location: ?route=dispositivos&msg=' . ($result['error'] === 'duplicado' ? 'duplicado' : 'error_interno'));
             exit;
         }
+
+        header('Location: ?route=dispositivos&msg=guardado');
+        exit;
     }
 
     public function eliminar(): void {
-        AuthController::checkAuth();
         AuthController::requireRole('ADMIN', 'dispositivos');
-        \App\Csrf::validateRequest();
+        \App\Security\Csrf::validate();
 
         $id = (int)($_POST['id'] ?? 0);
         if ($id > 0) {
-            // Protección contra pérdida de datos: comprobar si tiene marcaciones registradas
-            $marcacionesCount = (int)(Database::queryOne("SELECT COUNT(*) as c FROM marcaciones WHERE id_dispositivo = ?", [$id])['c'] ?? 0);
-            
-            if ($marcacionesCount > 0) {
-                // Desactivar en lugar de eliminar físicamente para preservar la integridad referencial
-                Database::execute("UPDATE dispositivos SET activo = 0 WHERE id = ?", [$id]);
-                header('Location: ?route=dispositivos&msg=desactivado_por_historial');
-                exit;
-            }
-
-            try {
-                Database::execute("DELETE FROM dispositivos WHERE id = ?", [$id]);
-                header('Location: ?route=dispositivos&msg=eliminado');
-                exit;
-            } catch (\PDOException $e) {
-                // Fallback por restricción FK
-                Database::execute("UPDATE dispositivos SET activo = 0 WHERE id = ?", [$id]);
-                header('Location: ?route=dispositivos&msg=desactivado_por_historial');
-                exit;
-            }
+            // Soft delete: nunca borres físicamente un dispositivo con historial de marcaciones
+            Database::execute("UPDATE dispositivos SET activo = 0 WHERE id = ?", [$id]);
         }
-
-        header('Location: ?route=dispositivos');
+        header('Location: ?route=dispositivos&msg=desactivado');
         exit;
     }
 
@@ -134,27 +101,29 @@ class DispositivosController {
 
         $isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') 
                   || isset($_GET['ajax']) 
+                  || isset($_POST['ajax'])
                   || (isset($_SERVER['HTTP_ACCEPT']) && str_contains($_SERVER['HTTP_ACCEPT'], 'application/json'));
 
-        // Exigir POST y validar CSRF
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            if ($isAjax) {
-                http_response_code(405);
-                header('Content-Type: application/json; charset=utf-8');
-                echo json_encode(['success' => false, 'error' => 'Método no permitido. Se requiere POST.']);
-                exit;
-            }
-            header('Location: ?route=dispositivos&error=metodo_no_permitido');
-            exit;
-        }
-
-        \App\Csrf::validateRequest();
+        // Validar CSRF
+        \App\Security\Csrf::validate();
 
         $id = (int)($_POST['id'] ?? ($_GET['id'] ?? 0));
         $mode = $_POST['mode'] ?? ($_GET['mode'] ?? 'incremental'); // 'incremental', 'today' o 'full'
         $pythonScript = APP_ROOT . '/sync/sync_zkteco.py';
         $pythonBin = defined('PYTHON_BIN') ? PYTHON_BIN : 'python';
-        
+
+        // Validación temprana: verificar script
+        if (!file_exists($pythonScript)) {
+            if ($isAjax) {
+                header('Content-Type: application/json; charset=utf-8');
+                http_response_code(500);
+                echo json_encode(['success' => false, 'error' => 'Script de sincronización no encontrado.'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            header('Location: ?route=dispositivos&msg=error_interno');
+            exit;
+        }
+
         $lockFile = APP_ROOT . '/storage/sync.lock';
         $logFile = APP_ROOT . '/storage/logs/sync_current.log';
         $storageDir = APP_ROOT . '/storage/logs';
@@ -163,14 +132,13 @@ class DispositivosController {
             @mkdir($storageDir, 0777, true);
         }
 
-        // Obtener el ID del último log existente en BD antes de iniciar
         $lastLogId = (int)(Database::queryOne("SELECT MAX(id) as max_id FROM log_sincronizacion")['max_id'] ?? 0);
 
-        // Si ya hay una sincronización activa hace menos de 90 segundos
+        // Lock atómico real
         $isAlreadyRunning = false;
         if (file_exists($lockFile)) {
             $lockContent = @file_get_contents($lockFile);
-            $lockData = json_decode($lockContent, true);
+            $lockData = json_decode((string)$lockContent, true);
             $lockTime = (int)($lockData['timestamp'] ?? filemtime($lockFile));
             if (time() - $lockTime < 90) {
                 $isAlreadyRunning = true;
@@ -180,32 +148,49 @@ class DispositivosController {
         }
 
         if (!$isAlreadyRunning) {
-            @file_put_contents($lockFile, json_encode([
-                'device_id' => $id,
-                'mode' => $mode,
-                'started_at' => date('Y-m-d H:i:s'),
-                'start_log_id' => $lastLogId,
-                'timestamp' => time()
-            ]));
-
-            $modeText = ($mode === 'today') ? 'SOLO HOY (RÁPIDO)' : (($mode === 'full') ? 'HISTÓRICO COMPLETO' : 'INCREMENTAL (PENDIENTES)');
-            @file_put_contents($logFile, "=== Iniciando sincronización [$modeText - " . date('Y-m-d H:i:s') . "] ===\n");
-
-            // Comando en segundo plano en Windows
-            $cmd = "\"$pythonBin\" -E \"$pythonScript\"";
-            if ($mode === 'today') {
-                $cmd .= " --today-only";
-            }
-            if ($id > 0) {
-                $cmd .= " --device $id";
-            }
-
-            // Iniciar proceso desacoplado en background sin bloquear PHP
-            if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-                $bgCmd = "cmd /c start /B \"\" " . $cmd . " >> \"" . $logFile . "\" 2>&1";
-                pclose(popen($bgCmd, "r"));
+            $fp = @fopen($lockFile, 'x');
+            if ($fp === false) {
+                $isAlreadyRunning = true;
             } else {
-                exec($cmd . " >> \"" . $logFile . "\" 2>&1 &");
+                fwrite($fp, json_encode([
+                    'device_id' => $id,
+                    'mode' => $mode,
+                    'started_at' => date('Y-m-d H:i:s'),
+                    'start_log_id' => $lastLogId,
+                    'timestamp' => time()
+                ]));
+                fclose($fp);
+
+                $modeText = ($mode === 'today') ? 'SOLO HOY (RÁPIDO)' : (($mode === 'full') ? 'HISTÓRICO COMPLETO' : 'INCREMENTAL (PENDIENTES)');
+                @file_put_contents($logFile, "=== Iniciando sincronización [$modeText - " . date('Y-m-d H:i:s') . "] ===\n");
+
+                $cmd = "\"$pythonBin\" -E \"$pythonScript\"";
+                if ($mode === 'today') {
+                    $cmd .= " --today-only";
+                }
+                if ($id > 0) {
+                    $cmd .= " --device $id";
+                }
+
+                // Usar entorno limpio con PythonRunner
+                $env = PythonRunner::buildCleanEnv();
+
+                if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+                    $bgCmd = "cmd /c start /B \"\" $cmd >> \"$logFile\" 2>&1";
+                    $descriptors = [0 => ['pipe','r'], 1 => ['pipe','w'], 2 => ['pipe','w']];
+                    $proc = @proc_open($bgCmd, $descriptors, $pipes, APP_ROOT, $env);
+                    if (is_resource($proc)) {
+                        fclose($pipes[0]); fclose($pipes[1]); fclose($pipes[2]);
+                        proc_close($proc);
+                    }
+                } else {
+                    $proc = @proc_open($cmd . " >> \"$logFile\" 2>&1 &", 
+                        [0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']], $pipes, APP_ROOT, $env);
+                    if (is_resource($proc)) {
+                        fclose($pipes[0]); fclose($pipes[1]); fclose($pipes[2]);
+                        proc_close($proc);
+                    }
+                }
             }
         }
 

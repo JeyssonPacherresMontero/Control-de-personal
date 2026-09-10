@@ -1,5 +1,10 @@
+import os
 import logging
 import datetime
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    ZoneInfo = None
 from zk import ZK, const
 
 logging.basicConfig(
@@ -347,9 +352,16 @@ class ZKDeviceService:
         if not self.conn:
             self.connect()
         try:
-            now = datetime.datetime.now()
-            self.conn.set_time(now)
-            logger.info(f"Hora del reloj {self.ip} sincronizada a: {now}")
+            tz_name = os.getenv('APP_TIMEZONE', 'America/Lima')
+            if ZoneInfo:
+                now = datetime.datetime.now(ZoneInfo(tz_name))
+                # pyzk espera un datetime naive en hora local del dispositivo
+                naive_now = now.replace(tzinfo=None)
+            else:
+                naive_now = datetime.datetime.now()
+            
+            self.conn.set_time(naive_now)
+            logger.info(f"Hora del reloj {self.ip} sincronizada a: {naive_now} ({tz_name})")
             return True
         except Exception as e:
             logger.error(f"Error al sincronizar hora en {self.ip}: {str(e)}")

@@ -24,6 +24,28 @@
 <section class="content">
     <div class="container-fluid">
 
+        <?php if (isset($_GET['msg'])):
+            $msgMap = [
+                'guardado' => ['success', 'Dispositivo guardado correctamente.'],
+                'desactivado' => ['info', 'Dispositivo desactivado correctamente (soft delete para preservar historial).'],
+                'desactivado_por_historial' => ['info', 'El dispositivo tiene marcaciones registradas y fue desactivado para proteger el historial.'],
+                'eliminado' => ['success', 'Dispositivo eliminado correctamente.'],
+                'sincronizando' => ['info', 'Sincronización en segundo plano iniciada.'],
+                'memoria_liberada' => ['success', 'Memoria de marcaciones del reloj respaldada y liberada con éxito.'],
+                'duplicado' => ['danger', 'Ya existe un dispositivo registrado con esa dirección IP y puerto.'],
+                'campos_requeridos' => ['warning', 'Completa todos los campos obligatorios.'],
+                'error_limpiar' => ['danger', 'No se pudo comunicar con el dispositivo para liberar su memoria.'],
+                'error_interno' => ['danger', 'Ocurrió un error al procesar el dispositivo.'],
+            ];
+            if (isset($msgMap[$_GET['msg']])):
+                [$type, $text] = $msgMap[$_GET['msg']];
+        ?>
+            <div class="alert alert-<?= $type ?> alert-dismissible fade show mb-3 shadow-sm">
+                <?= htmlspecialchars($text) ?>
+                <button type="button" class="close" data-dismiss="alert">&times;</button>
+            </div>
+        <?php endif; endif; ?>
+
         <!-- ACTIONS TOOLBAR -->
         <div class="actions-toolbar no-print">
             <div class="actions-toolbar-group">
