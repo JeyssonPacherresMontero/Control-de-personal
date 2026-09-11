@@ -74,6 +74,10 @@ CREATE TABLE IF NOT EXISTS `empleados` (
     `turno_id` INT NULL,
     `fecha_ingreso` DATE NULL,
     `foto` VARCHAR(255) NULL,
+    `dedo_reloj` INT DEFAULT 2 COMMENT 'Dedo principal (1 a 10)',
+    `dedo_nombre` VARCHAR(60) DEFAULT 'Índice Mano Derecha' COMMENT 'Nombre legible del dedo principal',
+    `dedos_reloj` VARCHAR(255) DEFAULT '2' COMMENT 'Lista de IDs de dedos seleccionados (1 a 10) separados por comas',
+    `dedos_nombre` TEXT NULL COMMENT 'Nombres de los dedos seleccionados separados por comas',
     `activo` TINYINT(1) DEFAULT 1,
     `creado_en` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `actualizado_en` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -122,6 +126,7 @@ CREATE TABLE IF NOT EXISTS `marcaciones` (
     CONSTRAINT `fk_marcaciones_dispositivo` FOREIGN KEY (`id_dispositivo`) REFERENCES `dispositivos` (`id`) ON DELETE RESTRICT,
     -- Clave Única para evitar duplicados en re-intentos de sincronización
     UNIQUE KEY `uniq_marcacion` (`codigo_reloj`, `fecha_hora`, `id_dispositivo`),
+    INDEX `idx_marcaciones_emp_fecha` (`id_empleado`, `fecha_hora`),
     INDEX `idx_marcaciones_fecha_hora` (`fecha_hora`),
     INDEX `idx_marcaciones_procesado` (`procesado`),
     INDEX `idx_marcaciones_codigo_reloj` (`codigo_reloj`)
@@ -170,6 +175,7 @@ CREATE TABLE IF NOT EXISTS `justificaciones` (
     `fecha_resolucion` DATETIME NULL,
     `creado_en` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT `fk_justificaciones_empleado` FOREIGN KEY (`id_empleado`) REFERENCES `empleados` (`id`) ON DELETE CASCADE,
+    INDEX `idx_justificaciones_emp_rango` (`id_empleado`, `fecha_inicio`, `fecha_fin`, `estado`),
     INDEX `idx_justificaciones_fechas` (`fecha_inicio`, `fecha_fin`),
     INDEX `idx_justificaciones_estado` (`estado`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -256,7 +262,8 @@ CREATE TABLE IF NOT EXISTS `login_intentos` (
     `intentos` INT DEFAULT 1,
     `ultimo_intento` DATETIME NOT NULL,
     `bloqueado_hasta` DATETIME NULL,
-    UNIQUE KEY `uniq_login_ip` (`ip`),
+    INDEX `idx_login_ip_usuario` (`ip`, `usuario`),
+    INDEX `idx_login_ip` (`ip`),
     INDEX `idx_login_usuario` (`usuario`),
     INDEX `idx_login_bloqueo` (`bloqueado_hasta`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

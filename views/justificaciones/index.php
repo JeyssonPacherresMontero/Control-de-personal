@@ -26,10 +26,13 @@
 
         <?php if (isset($_GET['msg']) || isset($_GET['error'])):
             $msgMap = [
-                'guardado' => ['success', 'Justificación registrada y asistencia recalculada exitosamente.'],
+                'guardado' => ['success', 'Justificación registrada y aprobada exitosamente.'],
+                'solicitud_enviada' => ['info', 'Solicitud de justificación registrada exitosamente. Queda en estado PENDIENTE para revisión y aprobación por RRHH / Administración.'],
                 'resuelto' => ['success', 'Estado de justificación actualizado correctamente.'],
                 'campos_requeridos' => ['warning', 'Completa todos los campos obligatorios.'],
                 'rango_invalido' => ['danger', 'La fecha de inicio no puede ser posterior a la fecha de fin.'],
+                'archivo_grande' => ['danger', 'El archivo adjunto supera el tamaño máximo permitido de 5 MB.'],
+                'formato_invalido' => ['danger', 'El formato del archivo adjunto no es válido (solo PDF, JPG, PNG, WEBP).'],
                 'db_error' => ['danger', 'Ocurrió un error al procesar la justificación en la base de datos.'],
             ];
             $key = $_GET['msg'] ?? $_GET['error'];
@@ -37,6 +40,7 @@
                 [$type, $text] = $msgMap[$key];
         ?>
             <div class="alert alert-<?= $type ?> alert-dismissible fade show mb-3 shadow-sm">
+                <i class="fa-solid <?= $type === 'success' ? 'fa-circle-check' : ($type === 'info' ? 'fa-circle-info' : 'fa-triangle-exclamation') ?> mr-2"></i>
                 <?= htmlspecialchars($text) ?>
                 <button type="button" class="close" data-dismiss="alert">&times;</button>
             </div>
@@ -69,6 +73,7 @@
                             <th class="text-center">Tipo de Permiso</th>
                             <th class="text-center">Rango de Fechas</th>
                             <th>Motivo y Sustento</th>
+                            <th class="text-center">Adjunto</th>
                             <th class="text-center">Estado</th>
                             <th class="text-center">Aprobado Por</th>
                             <?php if (in_array($userRole, ['ADMIN', 'RRHH'], true)): ?>
@@ -109,6 +114,15 @@
                                     <small class="text-muted font-monospace">Reg: <?= substr($j['creado_en'], 0, 16) ?></small>
                                 </td>
                                 <td class="text-center">
+                                    <?php if (!empty($j['archivo_adjunto'])): ?>
+                                        <a href="?route=justificaciones&action=ver_adjunto&id=<?= $j['id'] ?>" target="_blank" class="btn btn-outline-info btn-xs px-2" title="Ver Documento Adjunto">
+                                            <i class="fa-solid fa-paperclip mr-1"></i> Ver Doc
+                                        </a>
+                                    <?php else: ?>
+                                        <span class="text-muted small">-</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="text-center">
                                     <?php if ($j['estado'] === 'APROBADO'): ?>
                                         <span class="badge-pill-custom badge-pill-presente"><i class="fa-solid fa-check mr-1"></i> Aprobado</span>
                                     <?php elseif ($j['estado'] === 'RECHAZADO'): ?>
@@ -118,7 +132,7 @@
                                     <?php endif; ?>
                                 </td>
                                 <td class="text-center">
-                                    <small class="text-muted font-weight-bold"><?= htmlspecialchars($j['aprobado_por'] ?? 'Sistema') ?></small>
+                                    <small class="text-muted font-weight-bold"><?= htmlspecialchars($j['aprobado_por'] ?? 'Sin aprobar') ?></small>
                                 </td>
                                 <?php if (in_array($userRole, ['ADMIN', 'RRHH'], true)): ?>
                                     <td class="text-center">
@@ -156,16 +170,16 @@
 <!-- MODAL REGISTRAR JUSTIFICACIÓN -->
 <div class="modal fade" id="modalJustificacion" tabindex="-1">
     <div class="modal-dialog">
-        <form method="POST" action="?route=justificaciones&action=guardar" class="modal-content">
+        <form method="POST" action="?route=justificaciones&action=guardar" enctype="multipart/form-data" class="modal-content">
             <?= csrf_field() ?>
             <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title font-weight-bold"><i class="fa-solid fa-file-signature mr-2"></i> Nueva Justificación</h5>
+                <h5 class="modal-title font-weight-bold"><i class="fa-solid fa-file-signature mr-2"></i> Nueva Justificación / Permiso</h5>
                 <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="form-group">
                     <label class="small font-weight-bold text-secondary">Empleado</label>
-                    <select name="id_empleado" class="form-control form-control-sm" required>
+                    <select name="id_empleado" class="form-control form-control-sm select2-worker" style="width: 100%;" required>
                         <option value="">-- Seleccionar Empleado --</option>
                         <?php foreach ($empleados as $e): ?>
                             <option value="<?= $e['id'] ?>"><?= htmlspecialchars($e['apellidos'] . ' ' . $e['nombres']) ?> (DNI: <?= htmlspecialchars($e['dni']) ?>)</option>
@@ -201,18 +215,45 @@
                     </div>
                 </div>
 
-                <div class="form-group mb-0">
+                <div class="form-group mb-2">
                     <label class="small font-weight-bold text-secondary">Motivo Detallado</label>
                     <textarea name="motivo" class="form-control form-control-sm" rows="3" placeholder="Ingresa el motivo o justificación..." required></textarea>
+                </div>
+
+                <div class="form-group mb-0">
+                    <label class="small font-weight-bold text-secondary">Comprobante / Documento de Sustento (Opcional)</label>
+                    <div class="custom-file">
+                        <input type="file" name="archivo_adjunto" class="custom-file-input" id="customFileJustif" accept=".pdf,.jpg,.jpeg,.png,.webp" onchange="document.getElementById('customFileLabel').innerText = this.files[0]?.name || 'Seleccionar archivo (PDF, JPG, PNG)...'">
+                        <label class="custom-file-label text-truncate small" id="customFileLabel" for="customFileJustif">Seleccionar archivo (PDF, JPG, PNG)...</label>
+                    </div>
+                    <small class="form-text text-muted" style="font-size: 80%;">Máximo 5 MB. Formatos permitidos: PDF, JPG, PNG, WEBP.</small>
                 </div>
             </div>
             <div class="modal-footer justify-content-between">
                 <button type="button" class="btn btn-default btn-sm" data-dismiss="modal">Cancelar</button>
-                <button type="submit" class="btn btn-primary btn-sm"><i class="fa-solid fa-floppy-disk mr-1"></i> Guardar y Aplicar</button>
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <?php if ($userRole === 'SUPERVISOR'): ?>
+                        <i class="fa-solid fa-paper-plane mr-1"></i> Enviar Solicitud a RRHH
+                    <?php else: ?>
+                        <i class="fa-solid fa-floppy-disk mr-1"></i> Guardar y Aplicar
+                    <?php endif; ?>
+                </button>
             </div>
         </form>
     </div>
 </div>
+<script>
+$(document).ready(function() {
+    if ($.fn.select2) {
+        $('#modalJustificacion select[name="id_empleado"]').select2({
+            theme: 'bootstrap4',
+            dropdownParent: $('#modalJustificacion'),
+            placeholder: '-- Seleccionar Empleado --',
+            width: '100%'
+        });
+    }
+});
+</script>
 <?php endif; ?>
 
 <?php require_once APP_ROOT . '/views/layout/footer.php'; ?>

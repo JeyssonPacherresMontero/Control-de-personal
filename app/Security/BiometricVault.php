@@ -7,16 +7,20 @@ namespace App\Security;
  */
 class BiometricVault {
     private static function getKey(): string {
-        $keyHex = $_ENV['BIOMETRIC_ENCRYPTION_KEY'] ?? '';
-        if (empty($keyHex)) {
-            // Derivar clave estática desde APP_KEY si existe
-            $appKey = $_ENV['APP_KEY'] ?? 'zkteco-control-personal-default-key-32b';
+        $keyHex = trim($_ENV['BIOMETRIC_ENCRYPTION_KEY'] ?? '');
+        if (!empty($keyHex)) {
+            if (ctype_xdigit($keyHex) && strlen($keyHex) === 64) {
+                return hex2bin($keyHex);
+            }
+            return hash('sha256', $keyHex, true);
+        }
+
+        $appKey = trim($_ENV['APP_KEY'] ?? '');
+        if (!empty($appKey)) {
             return hash('sha256', $appKey, true);
         }
-        if (ctype_xdigit($keyHex) && strlen($keyHex) === 64) {
-            return hex2bin($keyHex);
-        }
-        return hash('sha256', $keyHex, true);
+
+        throw new \RuntimeException('Error de Seguridad Crítico: No se ha configurado la clave de cifrado criptográfico (BIOMETRIC_ENCRYPTION_KEY o APP_KEY) en el entorno de producción (.env).');
     }
 
     /**

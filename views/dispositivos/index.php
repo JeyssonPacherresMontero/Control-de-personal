@@ -407,7 +407,15 @@ function testConnection(deviceId, btn) {
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Probando...';
     btn.disabled = true;
 
-    fetch(`?route=dispositivos&action=test&id=${deviceId}`, {
+    const fd = new FormData();
+    fd.append('id', deviceId);
+    if (window._csrfToken) {
+        fd.append('_csrf', window._csrfToken);
+    }
+
+    fetch('?route=dispositivos&action=test', {
+        method: 'POST',
+        body: fd,
         headers: { 'X-Requested-With': 'XMLHttpRequest' }
     })
     .then(async res => {

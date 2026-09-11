@@ -156,28 +156,28 @@ if (!empty($dispositivoId)) {
 
         <!-- FILTER AND ACTIONS CARD -->
         <div class="card mb-3 no-print">
-            <div class="card-header d-flex align-items-center justify-content-between flex-wrap py-2 px-3">
-                <h3 class="card-title font-weight-bold text-dark mb-0 d-flex align-items-center" style="font-size: 0.92rem;">
-                    <i class="fa-solid fa-filter mr-2 text-primary"></i> Filtros de Auditoría
-                </h3>
-                <div class="card-tools d-flex align-items-center flex-wrap my-1" style="gap: 6px;">
+            <div class="card-header d-flex align-items-center justify-content-between flex-wrap" style="padding: 0.75rem 1.25rem;">
+                <div class="d-flex align-items-center">
+                    <h3 class="card-title font-weight-bold text-dark mb-0 d-flex align-items-center" style="font-size: 0.92rem;">
+                        <i class="fa-solid fa-filter mr-2 text-primary"></i> Filtros de Auditoría
+                    </h3>
+                </div>
+                <div class="d-flex align-items-center flex-wrap" style="gap: 8px; margin-left: auto;">
                     <?php if (in_array($userRole, ['ADMIN', 'RRHH'], true)): ?>
                         <button class="btn btn-primary btn-sm" data-toggle="modal" data-target="#modalNuevaMarcacion">
                             <i class="fa-solid fa-plus mr-1"></i> Registrar Marcación
                         </button>
                     <?php endif; ?>
 
-                    <div class="btn-group btn-group-sm ml-md-1">
-                        <a href="?route=marcaciones&fecha_inicio=<?= $fechaInicio ?>&fecha_fin=<?= $fechaFin ?>&dispositivo_id=<?= $dispositivoId ?>&tipo=<?= $tipo ?? '' ?>&search=<?= urlencode($search ?? '') ?>&export=excel" class="btn btn-success btn-sm" title="Descargar reporte en Excel">
-                            <i class="fa-solid fa-file-excel mr-1"></i> Excel
-                        </a>
-                        <a href="?route=marcaciones&fecha_inicio=<?= $fechaInicio ?>&fecha_fin=<?= $fechaFin ?>&dispositivo_id=<?= $dispositivoId ?>&tipo=<?= $tipo ?? '' ?>&search=<?= urlencode($search ?? '') ?>&export=csv" class="btn btn-outline-secondary btn-sm" title="Exportar archivo CSV">
-                            <i class="fa-solid fa-file-csv mr-1"></i> CSV
-                        </a>
-                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print()" title="Imprimir reporte oficial o Guardar como PDF">
-                            <i class="fa-solid fa-print mr-1"></i> PDF
-                        </button>
-                    </div>
+                    <a href="?route=marcaciones&fecha_inicio=<?= $fechaInicio ?>&fecha_fin=<?= $fechaFin ?>&dispositivo_id=<?= $dispositivoId ?>&tipo=<?= $tipo ?? '' ?>&search=<?= urlencode($search ?? '') ?>&export=excel" class="btn btn-success btn-sm" title="Descargar reporte en Excel">
+                        <i class="fa-solid fa-file-excel mr-1"></i> Excel
+                    </a>
+                    <a href="?route=marcaciones&fecha_inicio=<?= $fechaInicio ?>&fecha_fin=<?= $fechaFin ?>&dispositivo_id=<?= $dispositivoId ?>&tipo=<?= $tipo ?? '' ?>&search=<?= urlencode($search ?? '') ?>&export=csv" class="btn btn-outline-secondary btn-sm" title="Exportar archivo CSV">
+                        <i class="fa-solid fa-file-csv mr-1"></i> CSV
+                    </a>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print()" title="Imprimir reporte oficial o Guardar como PDF">
+                        <i class="fa-solid fa-print mr-1"></i> PDF
+                    </button>
                 </div>
             </div>
             <div class="card-body py-3 px-3">
@@ -402,7 +402,7 @@ if (!empty($dispositivoId)) {
             <div class="modal-body">
                 <div class="form-group">
                     <label class="small font-weight-bold text-secondary">Empleado</label>
-                    <select name="id_empleado" class="form-control form-control-sm" required>
+                    <select name="id_empleado" class="form-control form-control-sm select2-worker" style="width: 100%;" required>
                         <option value="">-- Seleccionar Empleado --</option>
                         <?php foreach ($empleados as $e): ?>
                             <option value="<?= $e['id'] ?>"><?= htmlspecialchars($e['apellidos'] . ' ' . $e['nombres']) ?> (ID Reloj: <?= htmlspecialchars($e['codigo_reloj']) ?>)</option>
@@ -577,6 +577,17 @@ function openTimelineModal(empId, fecha, nombreEmp) {
             document.getElementById('timelineEmpty').style.display = 'block';
         });
 }
+
+$(document).ready(function() {
+    if ($.fn.select2) {
+        $('#modalNuevaMarcacion select[name="id_empleado"]').select2({
+            theme: 'bootstrap4',
+            dropdownParent: $('#modalNuevaMarcacion'),
+            placeholder: '-- Seleccionar Empleado --',
+            width: '100%'
+        });
+    }
+});
 </script>
 <?php endif; ?>
 

@@ -500,18 +500,18 @@
                         <div class="form-group mb-2">
                             <label class="small font-weight-bold text-secondary mb-1">Nueva Contraseña para el Usuario <span class="text-danger">*</span></label>
                             <div class="input-group input-group-sm mb-2">
-                                <input type="password" id="reset_new_pass" class="form-control font-monospace" placeholder="Mínimo 5 caracteres" required>
+                                <input type="password" id="reset_new_pass" class="form-control font-monospace" placeholder="Mínimo 8 caracteres (mayúscula y número)" minlength="8" required>
                                 <div class="input-group-append">
                                     <button class="btn btn-outline-secondary" type="button" onclick="togglePassVisibility('reset_new_pass', this)" title="Ver/Ocultar contraseña">
                                         <i class="fa-solid fa-eye"></i>
                                     </button>
                                 </div>
                             </div>
-                            <small class="text-muted d-block mb-2">Define una contraseña manual o utiliza el generador automático.</small>
+                            <small class="text-muted d-block mb-2">Debe tener al menos 8 caracteres, 1 mayúscula y 1 número. O usa el generador seguro:</small>
 
                             <!-- BOTÓN GENERAR CONTRASEÑA ALEATORIA -->
                             <button type="button" class="btn btn-outline-primary btn-xs btn-block py-1 mb-2" onclick="generateRandomPass()">
-                                <i class="fa-solid fa-wand-magic-sparkles mr-1 text-warning"></i> Generar Contraseña Aleatoria Segura
+                                <i class="fa-solid fa-wand-magic-sparkles mr-1 text-warning"></i> Generar Contraseña Aleatoria Segura (12 car.)
                             </button>
                         </div>
                     </div>
@@ -537,8 +537,8 @@ function openNewUserModal() {
     document.getElementById('usr_email').value = '';
     document.getElementById('usr_password').value = '';
     document.getElementById('usr_password').required = true;
-    document.getElementById('usr_password').placeholder = 'Contraseña requerida (min. 5 caracteres)';
-    document.getElementById('usr_pass_hint').innerText = 'Contraseña obligatoria para el nuevo usuario (No se asignará por defecto)';
+    document.getElementById('usr_password').placeholder = 'Contraseña requerida (min. 8 caracteres, mayúscula y número)';
+    document.getElementById('usr_pass_hint').innerText = 'Mínimo 8 caracteres, con al menos una mayúscula y un número.';
     document.getElementById('usr_pass_required_star').style.display = 'inline';
     
     // Configuración de Rol: Exclusivo no-admin
@@ -620,11 +620,27 @@ function openResetPasswordModal(user) {
 }
 
 function generateRandomPass() {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%&*';
-    let pass = '';
-    for (let i = 0; i < 10; i++) {
-        pass += chars.charAt(Math.floor(Math.random() * chars.length));
+    const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    const lower = 'abcdefghijkmnopqrstuvwxyz';
+    const digits = '23456789';
+    const symbols = '!@#$%&*';
+    const all = upper + lower + digits + symbols;
+
+    // Garantizar que contenga al menos mayúsculas, minúsculas, números y símbolos
+    let pass = [
+        upper.charAt(Math.floor(Math.random() * upper.length)),
+        upper.charAt(Math.floor(Math.random() * upper.length)),
+        lower.charAt(Math.floor(Math.random() * lower.length)),
+        lower.charAt(Math.floor(Math.random() * lower.length)),
+        digits.charAt(Math.floor(Math.random() * digits.length)),
+        digits.charAt(Math.floor(Math.random() * digits.length)),
+        symbols.charAt(Math.floor(Math.random() * symbols.length))
+    ];
+    for (let i = 0; i < 5; i++) {
+        pass.push(all.charAt(Math.floor(Math.random() * all.length)));
     }
+    pass = pass.sort(() => Math.random() - 0.5).join('');
+
     const input = document.getElementById('reset_new_pass');
     input.value = pass;
     input.type = 'text'; // Mostrar para que el admin la pueda leer y copiar
@@ -647,11 +663,11 @@ function submitResetPassword() {
     const userId = document.getElementById('reset_user_id').value;
     const newPass = document.getElementById('reset_new_pass').value.trim();
 
-    if (!newPass || newPass.length < 5) {
+    if (!newPass || newPass.length < 8 || !/[A-Z]/.test(newPass) || !/[0-9]/.test(newPass)) {
         Swal.fire({
             icon: 'warning',
             title: 'Contraseña no válida',
-            text: 'La nueva contraseña debe tener al menos 5 caracteres.',
+            text: 'La nueva contraseña debe tener al menos 8 caracteres, contener al menos una letra mayúscula y al menos un número.',
             confirmButtonColor: '#1d4ed8'
         });
         return;

@@ -68,19 +68,20 @@
                                 <div class="form-group mb-2">
                                     <label class="small font-weight-bold text-secondary mb-1">Nueva Contraseña</label>
                                     <div class="input-group input-group-sm">
-                                        <input type="password" name="new_password" id="pass_new" class="form-control" placeholder="Mínimo 5 caracteres" minlength="5" required>
+                                        <input type="password" name="new_password" id="pass_new" class="form-control" placeholder="Mínimo 8 caracteres (mayúscula y número)" minlength="8" required>
                                         <div class="input-group-append">
                                             <button class="btn btn-outline-secondary" type="button" onclick="togglePassVisibility('pass_new', this)">
                                                 <i class="fa-solid fa-eye"></i>
                                             </button>
                                         </div>
                                     </div>
+                                    <small class="text-muted d-block" style="font-size: 78%;">Debe incluir al menos 8 caracteres, 1 mayúscula y 1 número.</small>
                                 </div>
 
                                 <div class="form-group mb-3">
                                     <label class="small font-weight-bold text-secondary mb-1">Confirmar Nueva Contraseña</label>
                                     <div class="input-group input-group-sm">
-                                        <input type="password" name="confirm_password" id="pass_confirm" class="form-control" placeholder="Repite la nueva contraseña" minlength="5" required>
+                                        <input type="password" name="confirm_password" id="pass_confirm" class="form-control" placeholder="Repite la nueva contraseña" minlength="8" required>
                                         <div class="input-group-append">
                                             <button class="btn btn-outline-secondary" type="button" onclick="togglePassVisibility('pass_confirm', this)">
                                                 <i class="fa-solid fa-eye"></i>
@@ -120,22 +121,25 @@
 
 <!-- REQUIRED SCRIPTS -->
 <!-- jQuery -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js" crossorigin="anonymous"></script>
 <!-- Bootstrap 4 -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
 <!-- overlayScrollbars -->
-<script src="https://cdn.jsdelivr.net/npm/overlayscrollbars@2.4.4/browser/overlayscrollbars.browser.es6.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/overlayscrollbars@2.4.4/browser/overlayscrollbars.browser.es6.min.js" crossorigin="anonymous"></script>
 <!-- AdminLTE App -->
-<script src="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/js/adminlte.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/js/adminlte.min.js" crossorigin="anonymous"></script>
 <!-- DataTables & Plugins -->
-<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap4.min.js"></script>
-<script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
-<script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap4.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap4.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap4.min.js" crossorigin="anonymous"></script>
 <!-- SweetAlert2 -->
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" crossorigin="anonymous"></script>
+<!-- Select2 -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/i18n/es.js" crossorigin="anonymous"></script>
 <!-- ChartJS -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js" crossorigin="anonymous"></script>
 
 <script>
     function openMiPerfilModal() {
@@ -161,6 +165,16 @@
         e.preventDefault();
         const pNew = $('#pass_new').val();
         const pConfirm = $('#pass_confirm').val();
+
+        if (!pNew || pNew.length < 8 || !/[A-Z]/.test(pNew) || !/[0-9]/.test(pNew)) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Contraseña no cumple los requisitos',
+                text: 'La contraseña debe tener al menos 8 caracteres, contener al menos una letra mayúscula y al menos un número.',
+                confirmButtonColor: '#1d4ed8'
+            });
+            return;
+        }
 
         if (pNew !== pConfirm) {
             Swal.fire({
@@ -271,6 +285,11 @@
         localStorage.removeItem('theme_mode');
         $('body').removeClass('dark-mode');
         $('html').removeClass('dark-mode');
+
+        if ($.fn.select2) {
+            $.fn.select2.defaults.set('theme', 'bootstrap4');
+            $.fn.select2.defaults.set('language', 'es');
+        }
 
         if ($('.datatable').length) {
             $('.datatable').DataTable({

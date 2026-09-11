@@ -195,7 +195,7 @@ class DashboardController {
             FROM log_sincronizacion l
             LEFT JOIN dispositivos d ON l.id_dispositivo = d.id
             ORDER BY l.id DESC
-            LIMIT 6
+            LIMIT 5
         ");
 
         $totalUsuarios = (int)(Database::queryOne("SELECT COUNT(*) as c FROM usuarios_sistema WHERE activo = 1")['c'] ?? 0);

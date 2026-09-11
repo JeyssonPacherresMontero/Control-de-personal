@@ -59,3 +59,33 @@ Stack trace:
 #3 {main}
 
 
+[11-Sep-2026 08:51:02 America/Lima] [2026-09-11 08:51:02] Uncaught Exception: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'u.permisos_version' in 'field list' in C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php:36
+Stack trace:
+#0 C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php(36): PDO->prepare('\n            SE...')
+#1 C:\Users\JEYSSON\Downloads\Control de personal\app\Controllers\UsuariosController.php(11): App\Database::query('\n            SE...')
+#2 C:\Users\JEYSSON\Downloads\Control de personal\public\index.php(198): App\Controllers\UsuariosController->index()
+#3 {main}
+
+
+[11-Sep-2026 08:51:08 America/Lima] [2026-09-11 08:51:08] Uncaught Exception: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'u.permisos_version' in 'field list' in C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php:36
+Stack trace:
+#0 C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php(36): PDO->prepare('\n            SE...')
+#1 C:\Users\JEYSSON\Downloads\Control de personal\app\Controllers\UsuariosController.php(11): App\Database::query('\n            SE...')
+#2 C:\Users\JEYSSON\Downloads\Control de personal\public\index.php(198): App\Controllers\UsuariosController->index()
+#3 {main}
+
+
+[11-Sep-2026 08:51:12 America/Lima] [2026-09-11 08:51:12] Uncaught Exception: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'u.permisos_version' in 'field list' in C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php:36
+Stack trace:
+#0 C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php(36): PDO->prepare('\n            SE...')
+#1 C:\Users\JEYSSON\Downloads\Control de personal\app\Controllers\UsuariosController.php(11): App\Database::query('\n            SE...')
+#2 C:\Users\JEYSSON\Downloads\Control de personal\public\index.php(198): App\Controllers\UsuariosController->index()
+#3 {main}
+
+
+[11-Sep-2026 11:27:15 America/Lima] [2026-09-11 11:27:15] Uncaught Exception: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'tipo_documento' in 'field list' in C:\Users\JEYSSON\Downloads\Control de personal\test_biometria.php:82
+Stack trace:
+#0 C:\Users\JEYSSON\Downloads\Control de personal\test_biometria.php(82): PDO->prepare('INSERT INTO emp...')
+#1 {main}
+
+

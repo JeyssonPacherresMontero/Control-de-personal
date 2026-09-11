@@ -13,7 +13,7 @@ class JustificacionesController {
         $estado = $_GET['estado'] ?? 'TODOS';
 
         $sql = "
-            SELECT j.*, e.nombres, e.apellidos, e.dni, e.codigo_reloj, d.nombre as depto_nombre
+            SELECT j.*, e.nombres, e.apellidos, e.dni, e.codigo_reloj, d.nombre as departamento_nombre
             FROM justificaciones j
             JOIN empleados e ON j.id_empleado = e.id
             LEFT JOIN departamentos d ON e.departamento_id = d.id
@@ -59,18 +59,87 @@ class JustificacionesController {
             exit;
         }
 
+        // Manejo y Validación de Archivo Adjunto (Comprobante / Certificado Médico)
+        $archivoAdjunto = null;
+        if (isset($_FILES['archivo_adjunto']) && $_FILES['archivo_adjunto']['error'] === UPLOAD_ERR_OK) {
+            $file = $_FILES['archivo_adjunto'];
+            $maxBytes = 5 * 1024 * 1024; // 5 MB
+            if ($file['size'] > $maxBytes) {
+                header('Location: ?route=justificaciones&error=archivo_grande');
+                exit;
+            }
+
+            $allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png', 'webp'];
+            $originalName = $file['name'];
+            $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+
+            if (!in_array($ext, $allowedExtensions, true)) {
+                header('Location: ?route=justificaciones&error=formato_invalido');
+                exit;
+            }
+
+            // Validar MIME type real con fileinfo
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            $mimeType = finfo_file($finfo, $file['tmp_name']);
+            finfo_close($finfo);
+
+            $allowedMimes = [
+                'application/pdf',
+                'image/jpeg',
+                'image/png',
+                'image/webp'
+            ];
+
+            if (!in_array($mimeType, $allowedMimes, true)) {
+                header('Location: ?route=justificaciones&error=formato_invalido');
+                exit;
+            }
+
+            $storageDir = APP_ROOT . '/storage/justificaciones';
+            if (!file_exists($storageDir)) {
+                @mkdir($storageDir, 0755, true);
+                @file_put_contents($storageDir . '/.htaccess', "Options -Indexes\n<Files *.php>\nOrder Deny,Allow\nDeny from all\n</Files>\n");
+            }
+
+            $safeFilename = 'justif_' . date('Ymd_His') . '_' . bin2hex(random_bytes(8)) . '.' . $ext;
+            $destPath = $storageDir . '/' . $safeFilename;
+
+            if (move_uploaded_file($file['tmp_name'], $destPath)) {
+                $archivoAdjunto = $safeFilename;
+            }
+        }
+
+        // Segregación de Funciones (Separation of Duties - SoD):
+        // - Si es SUPERVISOR: el estado es 'PENDIENTE' para revisión por RRHH / Admin. No se auto-aprueba ni recalcula asistencia aún.
+        // - Si es ADMIN o RRHH: se aprueba de forma directa y se recalcula la asistencia.
+        $userRole = AuthController::role();
+        $currentUser = AuthController::user();
+
+        if ($userRole === 'SUPERVISOR') {
+            $estado = 'PENDIENTE';
+            $aprobadoPor = null;
+            $fechaResolucion = null;
+        } else {
+            $estado = 'APROBADO';
+            $aprobadoPor = $currentUser['nombre'] ?? 'Administración';
+            $fechaResolucion = date('Y-m-d H:i:s');
+        }
+
         try {
             Database::execute("
                 INSERT INTO justificaciones 
-                (id_empleado, tipo, fecha_inicio, fecha_fin, motivo, estado, creado_en)
-                VALUES (?, ?, ?, ?, ?, 'APROBADO', NOW())
-            ", [$idEmpleado, $tipo, $fechaInicio, $fechaFin, $motivo]);
+                (id_empleado, tipo, fecha_inicio, fecha_fin, motivo, archivo_adjunto, estado, aprobado_por, fecha_resolucion, creado_en)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+            ", [$idEmpleado, $tipo, $fechaInicio, $fechaFin, $motivo, $archivoAdjunto, $estado, $aprobadoPor, $fechaResolucion]);
 
-            // Recalcular asistencia para el rango afectado
-            $calculator = new AttendanceCalculator(ATTENDANCE_DEBOUNCE_MINUTES);
-            $calculator->processDateRange($fechaInicio, $fechaFin);
+            // Recalcular asistencia únicamente si fue aprobada inmediatamente por RRHH/Admin
+            if ($estado === 'APROBADO') {
+                $calculator = new AttendanceCalculator(ATTENDANCE_DEBOUNCE_MINUTES);
+                $calculator->processDateRange($fechaInicio, $fechaFin);
+            }
 
-            header('Location: ?route=justificaciones&msg=guardado');
+            $msgKey = ($estado === 'PENDIENTE') ? 'solicitud_enviada' : 'guardado';
+            header("Location: ?route=justificaciones&msg={$msgKey}");
             exit;
         } catch (\PDOException $e) {
             header('Location: ?route=justificaciones&error=db_error');
@@ -78,13 +147,21 @@ class JustificacionesController {
         }
     }
 
+    /**
+     * Resuelve (Aprueba o Rechaza) una solicitud de justificación pendiente.
+     * Exclusivo para ADMIN y RRHH.
+     */
     public function resolver(): void {
         AuthController::checkAuth();
-        AuthController::requireRole(['ADMIN', 'RRHH', 'SUPERVISOR'], 'justificaciones');
+        AuthController::requireRole(['ADMIN', 'RRHH'], 'justificaciones');
         \App\Csrf::validateRequest();
 
         $id = (int)($_POST['id'] ?? 0);
         $nuevoEstado = $_POST['estado'] ?? 'APROBADO';
+        if (!in_array($nuevoEstado, ['APROBADO', 'RECHAZADO'], true)) {
+            $nuevoEstado = 'APROBADO';
+        }
+
         $usuario = AuthController::user()['nombre'] ?? 'Administrador';
 
         if ($id > 0) {
@@ -105,7 +182,7 @@ class JustificacionesController {
                     $calculator = new AttendanceCalculator(ATTENDANCE_DEBOUNCE_MINUTES);
                     $calculator->processDateRange($just['fecha_inicio'], $just['fecha_fin']);
                 }
-                header('Location: ?route=justificaciones&msg=actualizado');
+                header('Location: ?route=justificaciones&msg=resuelto');
                 exit;
             } catch (\PDOException $e) {
                 header('Location: ?route=justificaciones&error=db_error');
@@ -114,6 +191,52 @@ class JustificacionesController {
         }
 
         header('Location: ?route=justificaciones');
+        exit;
+    }
+
+    /**
+     * Descarga / visualización segura de comprobantes adjuntos
+     */
+    public function verAdjunto(): void {
+        AuthController::checkAuth();
+
+        $id = (int)($_GET['id'] ?? 0);
+        if ($id <= 0) {
+            http_response_code(404);
+            echo "Archivo no especificado.";
+            exit;
+        }
+
+        $just = Database::queryOne("SELECT archivo_adjunto FROM justificaciones WHERE id = ?", [$id]);
+        if (!$just || empty($just['archivo_adjunto'])) {
+            http_response_code(404);
+            echo "No existe archivo adjunto para esta justificación.";
+            exit;
+        }
+
+        $filename = basename($just['archivo_adjunto']);
+        $filePath = APP_ROOT . '/storage/justificaciones/' . $filename;
+
+        if (!file_exists($filePath)) {
+            http_response_code(404);
+            echo "El archivo físico no fue encontrado en el servidor.";
+            exit;
+        }
+
+        $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+        $mime = match($ext) {
+            'pdf' => 'application/pdf',
+            'jpg', 'jpeg' => 'image/jpeg',
+            'png' => 'image/png',
+            'webp' => 'image/webp',
+            default => 'application/octet-stream'
+        };
+
+        header('Content-Type: ' . $mime);
+        header('Content-Length: ' . filesize($filePath));
+        header('Content-Disposition: inline; filename="' . $filename . '"');
+        header('Cache-Control: private, max-age=3600');
+        readfile($filePath);
         exit;
     }
 }

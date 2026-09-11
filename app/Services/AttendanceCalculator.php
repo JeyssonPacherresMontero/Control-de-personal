@@ -369,6 +369,11 @@ class AttendanceCalculator {
             elseif ($estado === 'SALIDA_SIN_MARCAR') $stats['missing_exit']++;
         }
 
+        // Ordenar registros determinísticamente por ID de empleado para prevenir deadlocks en InnoDB
+        usort($recordsToUpsert, function($a, $b) {
+            return $a[':id_emp'] <=> $b[':id_emp'];
+        });
+
         // 6. Persistencia Masiva Transaccional
         Database::transaction(function() use ($recordsToUpsert, $processedPunchIds) {
             $sql = "

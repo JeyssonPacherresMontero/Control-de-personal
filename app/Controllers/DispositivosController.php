@@ -293,9 +293,17 @@ class DispositivosController {
     public function testConexion(): void {
         AuthController::checkAuth();
         AuthController::requireRole(['ADMIN', 'RRHH']);
+        \App\Security\Csrf::validate();
         @set_time_limit(35);
 
-        $id = (int)($_GET['id'] ?? ($_POST['id'] ?? 0));
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Content-Type: application/json; charset=utf-8');
+            http_response_code(405);
+            echo json_encode(['success' => false, 'output' => 'Método HTTP no permitido. Se requiere POST con token de seguridad.']);
+            exit;
+        }
+
+        $id = (int)($_POST['id'] ?? 0);
         $device = Database::queryOne("SELECT * FROM dispositivos WHERE id = ?", [$id]);
 
         if (!$device) {
@@ -405,7 +413,9 @@ class DispositivosController {
 
         $deviceId = (int)($_POST['device_id'] ?? 1);
         $userId = trim($_POST['user_id'] ?? '');
-        $tempId = (int)($_POST['temp_id'] ?? 0); // 0 = Dedo principal
+        $rawTempId = (int)($_POST['temp_id'] ?? 2);
+        // Si viene en rango 1-10 (1=Pulgar D, 2=Índice D, ..., 10=Meñique I), mapear a 0-9 para el SDK ZKTeco
+        $tempId = ($rawTempId >= 1 && $rawTempId <= 10) ? ($rawTempId - 1) : max(0, min(9, $rawTempId));
 
         if (empty($userId)) {
             header('Content-Type: application/json; charset=utf-8');
@@ -523,7 +533,14 @@ class DispositivosController {
         AuthController::requireRole('ADMIN');
         \App\Csrf::validateRequest();
 
-        $id = (int)($_POST['id'] ?? ($_GET['id'] ?? 0));
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Content-Type: application/json; charset=utf-8');
+            http_response_code(405);
+            echo json_encode(['success' => false, 'output' => 'Método HTTP no permitido. Se requiere POST.']);
+            exit;
+        }
+
+        $id = (int)($_POST['id'] ?? 0);
         $device = Database::queryOne("SELECT * FROM dispositivos WHERE id = ?", [$id]);
 
         if (!$device) {

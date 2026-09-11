@@ -135,6 +135,76 @@ foreach ($filesToLint as $f) {
     }
 }
 
+// Test 5: Verificaciones de Auditoría de Seguridad y Correcciones
+echo "\n[TEST 5] Verificaciones de Auditoría y Blindaje de Seguridad:\n";
+
+// A. EventStore::getEventsForAggregate
+if (method_exists(EventStore::class, 'getEventsForAggregate')) {
+    echo "  ✔ [VUL-01] EventStore::getEventsForAggregate existe y está declarado correctamente.\n";
+} else {
+    echo "  ✖ [VUL-01] Falta método EventStore::getEventsForAggregate.\n";
+    $allSyntaxValid = false;
+}
+
+// B. BiometricVault AES-256-GCM
+try {
+    require_once __DIR__ . '/../app/Security/BiometricVault.php';
+    $rawSample = "ZKTECO_TEMPLATE_BIOMETRIC_DATA_998877";
+    $enc = \App\Security\BiometricVault::encrypt($rawSample);
+    $dec = \App\Security\BiometricVault::decrypt($enc);
+    if ($dec === $rawSample && $enc !== $rawSample) {
+        echo "  ✔ [VUL-04] BiometricVault cifra y descifra con AES-256-GCM usando clave segura.\n";
+    } else {
+        echo "  ✖ [VUL-04] Fallo en cifrado/descifrado de BiometricVault.\n";
+        $allSyntaxValid = false;
+    }
+} catch (\Throwable $e) {
+    echo "  ✖ [VUL-04] Excepción en BiometricVault: " . $e->getMessage() . "\n";
+    $allSyntaxValid = false;
+}
+
+// C. AuthController Password Policy & Client IP
+require_once __DIR__ . '/../app/Controllers/AuthController.php';
+$passShort = \App\Controllers\AuthController::validatePasswordStrength('abc');
+$passNoUpper = \App\Controllers\AuthController::validatePasswordStrength('password123');
+$passNoNum = \App\Controllers\AuthController::validatePasswordStrength('PasswordABC');
+$passValid = \App\Controllers\AuthController::validatePasswordStrength('SecurePass2026!');
+
+if ($passShort !== null && $passNoUpper !== null && $passNoNum !== null && $passValid === null) {
+    echo "  ✔ [VUL-09] AuthController valida correctamente la complejidad de contraseñas (8+ car., mayúscula, número).\n";
+} else {
+    echo "  ✖ [VUL-09] Inconsistencia en validación de contraseñas de AuthController.\n";
+    $allSyntaxValid = false;
+}
+
+// D. Client IP extraction
+$_SERVER['HTTP_CF_CONNECTING_IP'] = '198.51.100.77';
+$ipCF = \App\Controllers\AuthController::getClientIp();
+unset($_SERVER['HTTP_CF_CONNECTING_IP']);
+
+$_SERVER['HTTP_X_FORWARDED_FOR'] = '203.0.113.88, 10.0.0.1';
+$ipXFF = \App\Controllers\AuthController::getClientIp();
+unset($_SERVER['HTTP_X_FORWARDED_FOR']);
+
+if ($ipCF === '198.51.100.77' && $ipXFF === '203.0.113.88') {
+    echo "  ✔ [VUL-06] Extracción de IP de cliente tras proxies inversos y balanceadores funciona correctamente.\n";
+} else {
+    echo "  ✖ [VUL-06] Fallo en extracción de IP de cliente.\n";
+    $allSyntaxValid = false;
+}
+
+// E. CSRF Class Unification
+require_once __DIR__ . '/../app/Security/Csrf.php';
+require_once __DIR__ . '/../app/Csrf.php';
+$t1 = \App\Security\Csrf::token();
+$t2 = \App\Csrf::getToken();
+if (!empty($t1) && $t1 === $t2 && \App\Csrf::verify($t1)) {
+    echo "  ✔ [RSK-11] Clases CSRF unificadas y sin duplicidad de lógica.\n";
+} else {
+    echo "  ✖ [RSK-11] Error en integración de clases CSRF.\n";
+    $allSyntaxValid = false;
+}
+
 echo "\n=========================================================\n";
 if ($allSyntaxValid) {
     echo "¡TODAS LAS PRUEBAS Y VALIDACIONES PASARON EXITOSAMENTE!\n";

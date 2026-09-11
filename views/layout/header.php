@@ -37,16 +37,19 @@ $roleLabel = match($userRole) {
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
     <!-- Font Awesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous">
     <!-- overlayScrollbars -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/overlayscrollbars@2.4.4/styles/overlayscrollbars.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/overlayscrollbars@2.4.4/styles/overlayscrollbars.min.css" crossorigin="anonymous">
     <!-- DataTables Bootstrap 4 -->
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap4.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap4.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap4.min.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap4.min.css" crossorigin="anonymous">
     <!-- AdminLTE v3.2 CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css" crossorigin="anonymous">
     <!-- SweetAlert2 CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" crossorigin="anonymous">
+    <!-- Select2 CSS & Bootstrap 4 Theme -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ttskch/select2-bootstrap4-theme@1.5.2/dist/select2-bootstrap4.min.css" crossorigin="anonymous">
 
     <style>
         :root {
@@ -254,7 +257,14 @@ $roleLabel = match($userRole) {
         .card-header {
             background-color: #ffffff !important;
             border-bottom: 1px solid #f1f5f9 !important;
-            padding: 0.65rem 1rem !important;
+            padding: 0.75rem 1.25rem !important;
+        }
+        .card-header::after,
+        .card-header::before,
+        .card-header.d-flex::after,
+        .card-header.d-flex::before {
+            display: none !important;
+            content: none !important;
         }
         .card-header .card-title {
             font-size: 0.88rem !important;
@@ -263,6 +273,15 @@ $roleLabel = match($userRole) {
             margin-bottom: 0;
             display: flex;
             align-items: center;
+        }
+        .card-header .card-tools,
+        .card-tools {
+            margin-left: auto !important;
+            margin-right: 0 !important;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
         }
         .card-body {
             padding: 0.85rem 1rem !important;
@@ -442,9 +461,10 @@ $roleLabel = match($userRole) {
         .dataTables_wrapper .dataTables_length select {
             border-radius: 6px !important;
             border: 1px solid #cbd5e1 !important;
-            padding: 0.25rem 0.5rem !important;
+            padding: 0.25rem 1.65rem 0.25rem 0.65rem !important;
+            min-width: 68px !important;
             font-size: 0.85rem !important;
-            margin: 0 0.3rem !important;
+            margin: 0 0.35rem !important;
         }
 
         /* FORMULARIOS Y FILTROS */
@@ -470,6 +490,76 @@ $roleLabel = match($userRole) {
             margin-bottom: 4px;
             display: flex;
             align-items: center;
+        }
+
+        /* SELECT2 BOOTSTRAP 4 CUSTOM THEME & REFINEMENT */
+        .select2-container {
+            width: 100% !important;
+        }
+        .select2-container--bootstrap4 .select2-selection--single {
+            height: 34px !important;
+            padding: 0.35rem 0.65rem !important;
+            font-size: 0.835rem !important;
+            line-height: 1.5 !important;
+            border-radius: 6px !important;
+            border: 1px solid #cbd5e1 !important;
+            background-color: #ffffff !important;
+            font-weight: 600;
+            color: #1e293b !important;
+            display: flex !important;
+            align-items: center;
+            transition: all 0.16s ease !important;
+        }
+        .select2-container--bootstrap4.select2-container--focus .select2-selection--single,
+        .select2-container--bootstrap4.select2-container--open .select2-selection--single {
+            border-color: #3b82f6 !important;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12) !important;
+        }
+        .select2-container--bootstrap4 .select2-selection--single .select2-selection__arrow {
+            top: 50% !important;
+            transform: translateY(-50%) !important;
+            right: 8px !important;
+        }
+        .select2-container--bootstrap4 .select2-dropdown {
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 8px !important;
+            box-shadow: 0 12px 28px -4px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.08) !important;
+            font-size: 0.835rem !important;
+            z-index: 99999 !important;
+            overflow: hidden;
+            background: #ffffff !important;
+        }
+        .select2-container--bootstrap4 .select2-search--dropdown {
+            padding: 6px 8px !important;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .select2-container--bootstrap4 .select2-search--dropdown .select2-search__field {
+            border-radius: 6px !important;
+            border: 1px solid #cbd5e1 !important;
+            padding: 0.35rem 0.65rem !important;
+            font-size: 0.825rem !important;
+            width: 100% !important;
+            outline: none;
+        }
+        .select2-container--bootstrap4 .select2-search--dropdown .select2-search__field:focus {
+            border-color: #3b82f6 !important;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15) !important;
+        }
+        .select2-container--bootstrap4 .select2-results__option {
+            padding: 7px 12px !important;
+            font-size: 0.835rem !important;
+            color: #334155 !important;
+            transition: background-color 0.12s ease;
+        }
+        .select2-container--bootstrap4 .select2-results__option--highlighted[aria-selected] {
+            background-color: #1d4ed8 !important;
+            color: #ffffff !important;
+        }
+        .select2-container--bootstrap4 .select2-results__option[aria-selected=true] {
+            background-color: #eff6ff !important;
+            color: #1d4ed8 !important;
+            font-weight: 700 !important;
         }
 
         /* BREADCRUMB ELEGANTE SIN SLASH */
@@ -808,6 +898,128 @@ $roleLabel = match($userRole) {
         a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible {
             outline: 2px solid #2563eb !important;
             outline-offset: 2px !important;
+        }
+
+        /* ==========================================================
+           DATATABLES CONTROLS STYLING (GLOBAL FIX FOR ALL VIEWS)
+           ========================================================== */
+        .dataTables_wrapper .dataTables_length {
+            margin-bottom: 0.75rem;
+        }
+
+        .dataTables_wrapper .dataTables_length label {
+            display: inline-flex !important;
+            align-items: center !important;
+            font-size: 0.85rem !important;
+            color: #475569 !important;
+            font-weight: 500 !important;
+            margin-bottom: 0 !important;
+            gap: 6px;
+        }
+
+        .dataTables_wrapper .dataTables_length select,
+        .dataTables_wrapper .dataTables_length select.custom-select,
+        .dataTables_wrapper .dataTables_length select.form-control,
+        div.dataTables_wrapper div.dataTables_length select {
+            display: inline-block !important;
+            width: auto !important;
+            min-width: 66px !important;
+            height: 32px !important;
+            padding: 0.25rem 1.65rem 0.25rem 0.65rem !important;
+            margin: 0 4px !important;
+            font-size: 0.85rem !important;
+            font-weight: 600 !important;
+            line-height: 1.5 !important;
+            color: #1e293b !important;
+            vertical-align: middle !important;
+            background-color: #ffffff !important;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='4' height='5' viewBox='0 0 4 5'%3e%3cpath fill='%2364748b' d='M2 0L0 2h4zm0 5L0 3h4z'/%3e%3c/svg%3e") !important;
+            background-repeat: no-repeat !important;
+            background-position: right 0.5rem center !important;
+            background-size: 8px 10px !important;
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 6px !important;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+            cursor: pointer !important;
+            -webkit-appearance: none !important;
+            -moz-appearance: none !important;
+            appearance: none !important;
+        }
+
+        .dataTables_wrapper .dataTables_length select:focus,
+        div.dataTables_wrapper div.dataTables_length select:focus {
+            border-color: #3b82f6 !important;
+            outline: 0 !important;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18) !important;
+        }
+
+        /* DataTables Search Input */
+        .dataTables_wrapper .dataTables_filter {
+            margin-bottom: 0.75rem;
+        }
+
+        .dataTables_wrapper .dataTables_filter label {
+            display: inline-flex !important;
+            align-items: center !important;
+            font-size: 0.85rem !important;
+            color: #475569 !important;
+            font-weight: 500 !important;
+            margin-bottom: 0 !important;
+            gap: 6px;
+        }
+
+        .dataTables_wrapper .dataTables_filter input,
+        .dataTables_wrapper .dataTables_filter input.form-control,
+        div.dataTables_wrapper div.dataTables_filter input {
+            display: inline-block !important;
+            width: auto !important;
+            min-width: 180px !important;
+            height: 32px !important;
+            padding: 0.25rem 0.65rem !important;
+            margin-left: 4px !important;
+            font-size: 0.85rem !important;
+            color: #1e293b !important;
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 6px !important;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+        }
+
+        .dataTables_wrapper .dataTables_filter input:focus,
+        div.dataTables_wrapper div.dataTables_filter input:focus {
+            border-color: #3b82f6 !important;
+            outline: 0 !important;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18) !important;
+        }
+
+        /* DataTables Info & Pagination */
+        .dataTables_wrapper .dataTables_info,
+        div.dataTables_wrapper div.dataTables_info {
+            font-size: 0.83rem !important;
+            color: #64748b !important;
+            padding-top: 0.6rem !important;
+        }
+
+        .dataTables_wrapper .dataTables_paginate,
+        div.dataTables_wrapper div.dataTables_paginate {
+            padding-top: 0.4rem !important;
+        }
+
+        .dataTables_wrapper .dataTables_paginate .page-link,
+        div.dataTables_wrapper div.dataTables_paginate .page-link {
+            font-size: 0.83rem !important;
+            padding: 0.3rem 0.65rem !important;
+            border-radius: 6px !important;
+            margin: 0 2px !important;
+            color: #334155 !important;
+            border-color: #e2e8f0 !important;
+        }
+
+        .dataTables_wrapper .dataTables_paginate .page-item.active .page-link,
+        div.dataTables_wrapper div.dataTables_paginate .page-item.active .page-link {
+            background-color: #2563eb !important;
+            border-color: #2563eb !important;
+            color: #ffffff !important;
+            font-weight: 600 !important;
         }
     </style>
 </head>

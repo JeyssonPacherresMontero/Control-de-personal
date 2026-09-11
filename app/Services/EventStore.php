@@ -88,6 +88,33 @@ class EventStore {
     }
 
     /**
+     * Obtiene los eventos asociados a un ID de agregado o stream específico.
+     * Soporta identificadores compuestos de empleados (ej. emp_{id}_{fecha}) y agregados genéricos.
+     */
+    public static function getEventsForAggregate(string $aggregateId): array {
+        if (preg_match('/^emp_(\d+)_(\d{4}-\d{2}-\d{2})$/', $aggregateId, $matches)) {
+            return self::getTimelineForEmployeeDate((int)$matches[1], $matches[2]);
+        }
+
+        $rows = Database::query(
+            "SELECT * FROM eventos_asistencia 
+             WHERE aggregate_id = ? 
+             ORDER BY created_at ASC, id ASC",
+            [$aggregateId]
+        );
+
+        $events = [];
+        foreach ($rows as $row) {
+            $data = json_decode($row['event_data'], true) ?: [];
+            $row['event_data'] = $data;
+            $row['display'] = self::formatEventForDisplay($row['event_type'], $data, $row['created_by'], $row['created_at']);
+            $events[] = $row;
+        }
+
+        return $events;
+    }
+
+    /**
      * Obtiene la línea de tiempo completa de eventos para un empleado en una fecha específica.
      * Consolida eventos tanto del aggregate de asistencia como de las marcaciones ocurridas ese día.
      */

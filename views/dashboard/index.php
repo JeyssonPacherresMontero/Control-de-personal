@@ -193,14 +193,14 @@
                                 </a>
                             </div>
                         </div>
-                        <div class="card-body p-0 table-responsive" style="max-height: 200px; overflow-y: auto;">
-                            <table class="table table-hover table-sm mb-0">
+                        <div class="card-body p-0" style="max-height: 200px; overflow-y: auto; overflow-x: hidden;">
+                            <table class="table table-hover table-sm mb-0" style="width: 100%; table-layout: fixed;">
                                 <thead>
                                     <tr>
-                                        <th>Dispositivo</th>
-                                        <th>Dirección IP y Puerto</th>
-                                        <th>Ubicación</th>
-                                        <th class="text-center">Estado</th>
+                                        <th style="width: 32%;">Dispositivo</th>
+                                        <th style="width: 30%;">IP y Puerto</th>
+                                        <th style="width: 20%;">Ubicación</th>
+                                        <th class="text-center" style="width: 18%;">Estado</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -211,15 +211,15 @@
                                     <?php else: ?>
                                         <?php foreach ($dispositivos as $d): ?>
                                             <tr>
-                                                <td class="font-weight-bold text-dark py-1">
+                                                <td class="font-weight-bold text-dark py-1 text-truncate" title="<?= htmlspecialchars($d['nombre']) ?>">
                                                     <i class="fa-solid fa-fingerprint text-primary mr-1"></i>
                                                     <?= htmlspecialchars($d['nombre']) ?>
                                                 </td>
-                                                <td class="font-monospace small py-1">
+                                                <td class="font-monospace small py-1 text-truncate">
                                                     <?= htmlspecialchars($d['ip']) ?>:<?= $d['puerto'] ?>
                                                     <span class="badge-pill-custom badge-pill-neutral ml-1" style="font-size: 0.68rem;"><?= htmlspecialchars($d['protocolo']) ?></span>
                                                 </td>
-                                                <td class="small text-muted py-1">
+                                                <td class="small text-muted py-1 text-truncate" title="<?= htmlspecialchars($d['ubicacion'] ?? 'Sede Principal') ?>">
                                                     <?= htmlspecialchars($d['ubicacion'] ?? 'Sede Principal') ?>
                                                 </td>
                                                 <td class="text-center py-1">
@@ -252,14 +252,14 @@
                                 </a>
                             </div>
                         </div>
-                        <div class="card-body p-0 table-responsive" style="max-height: 220px; overflow-y: auto;">
-                            <table class="table table-hover table-sm mb-0">
+                        <div class="card-body p-0" style="max-height: 220px; overflow-y: auto; overflow-x: hidden;">
+                            <table class="table table-hover table-sm mb-0" style="width: 100%; table-layout: fixed;">
                                 <thead>
                                     <tr>
-                                        <th>Hora</th>
-                                        <th>Empleado e ID</th>
-                                        <th>Punto de Control</th>
-                                        <th>Tipo Marcación</th>
+                                        <th class="text-center" style="width: 18%;">Hora</th>
+                                        <th style="width: 38%;">Empleado e ID</th>
+                                        <th style="width: 24%;">Punto de Control</th>
+                                        <th class="text-center" style="width: 20%;">Tipo Marcación</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -273,19 +273,19 @@
                                     <?php else: ?>
                                         <?php foreach ($ultimasMarcaciones as $m): ?>
                                             <tr>
-                                                <td class="font-weight-bold font-monospace text-secondary py-1" style="font-size: 0.78rem;">
+                                                <td class="text-center font-weight-bold font-monospace text-secondary py-1" style="font-size: 0.78rem;">
                                                     <i class="far fa-clock mr-1 text-muted"></i>
                                                     <?= substr($m['fecha_hora'], 11, 8) ?>
                                                 </td>
-                                                <td class="py-1">
+                                                <td class="py-1 text-truncate">
                                                     <?php if (!empty($m['nombres'])): ?>
-                                                        <div class="font-weight-bold text-dark" style="font-size: 0.82rem;"><?= htmlspecialchars($m['apellidos'] . ' ' . $m['nombres']) ?></div>
+                                                        <div class="font-weight-bold text-dark text-truncate" style="font-size: 0.82rem;" title="<?= htmlspecialchars($m['apellidos'] . ' ' . $m['nombres']) ?>"><?= htmlspecialchars($m['apellidos'] . ' ' . $m['nombres']) ?></div>
                                                         <small class="text-muted" style="font-size: 0.72rem;">ID Reloj: <?= htmlspecialchars($m['codigo_reloj']) ?></small>
                                                     <?php else: ?>
                                                         <span class="badge-pill-custom badge-pill-neutral" style="font-size: 0.7rem;">ID Reloj: <?= htmlspecialchars($m['codigo_reloj']) ?> (Sin vincular)</span>
                                                     <?php endif; ?>
                                                 </td>
-                                                <td class="py-1">
+                                                <td class="py-1 text-truncate" title="<?= htmlspecialchars($m['dispositivo_nombre'] ?? 'Reloj') ?>">
                                                     <span class="text-muted small" style="font-size: 0.78rem;">
                                                         <?php
                                                             $v = strtolower($m['tipo_verificacion'] ?? '');
@@ -302,7 +302,7 @@
                                                         <?= htmlspecialchars($m['dispositivo_nombre'] ?? 'Reloj') ?>
                                                     </span>
                                                 </td>
-                                                <td class="py-1">
+                                                <td class="text-center py-1">
                                                     <?php
                                                         $tipo = strtolower($m['tipo'] ?? '');
                                                         if ($tipo === 'entrada') echo '<span class="badge-pill-custom badge-pill-presente" style="font-size: 0.7rem;"><i class="fa-solid fa-arrow-right-to-bracket mr-1"></i> Entrada</span>';
@@ -368,17 +368,17 @@
                             <h3 class="card-title font-weight-bold" style="font-size: 0.88rem;">
                                 <i class="fa-solid fa-clock-rotate-left mr-2 text-primary"></i> Auditoría de Sincronización
                             </h3>
-                            <span class="badge-pill-custom badge-pill-neutral" style="font-size: 0.68rem;">Últimos ciclos</span>
+                            <span class="badge-pill-custom badge-pill-neutral" style="font-size: 0.68rem;">Últimos 5 ciclos</span>
                         </div>
-                        <div class="card-body p-0 table-responsive" style="max-height: 190px; overflow-y: auto;">
-                            <table class="table table-hover table-sm mb-0">
+                        <div class="card-body p-0" style="overflow: hidden;">
+                            <table class="table table-hover table-sm mb-0" style="width: 100%; table-layout: fixed;">
                                 <thead>
                                     <tr>
-                                        <th>Hora</th>
-                                        <th>Dispositivo</th>
-                                        <th class="text-center">Nuevos</th>
-                                        <th class="text-center">Duración</th>
-                                        <th class="text-center">Estado</th>
+                                        <th class="text-center" style="width: 18%; padding: 6px 4px;">Hora</th>
+                                        <th style="width: 32%; padding: 6px 4px;">Dispositivo</th>
+                                        <th class="text-center" style="width: 16%; padding: 6px 4px;">Nuevos</th>
+                                        <th class="text-center" style="width: 16%; padding: 6px 4px;">Duración</th>
+                                        <th class="text-center" style="width: 18%; padding: 6px 4px;">Estado</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -389,23 +389,23 @@
                                     <?php else: ?>
                                         <?php foreach ($ultimosLogsSync as $log): ?>
                                             <tr>
-                                                <td class="font-monospace small text-secondary py-1" style="font-size: 0.75rem;">
+                                                <td class="text-center font-monospace small text-secondary py-1" style="font-size: 0.74rem; padding: 5px 4px;">
                                                     <?= substr($log['fecha_hora'], 11, 5) ?>
                                                 </td>
-                                                <td class="small font-weight-bold text-dark py-1">
+                                                <td class="small font-weight-bold text-dark py-1 text-truncate" style="padding: 5px 4px;" title="<?= htmlspecialchars($log['dispositivo_nombre'] ?? 'Reloj') ?>">
                                                     <?= htmlspecialchars($log['dispositivo_nombre'] ?? 'Reloj') ?>
                                                 </td>
-                                                <td class="text-center font-weight-bold text-success py-1" style="font-size: 0.78rem;">
+                                                <td class="text-center font-weight-bold text-success py-1" style="font-size: 0.76rem; padding: 5px 4px;">
                                                     +<?= (int)$log['total_insertados'] ?>
                                                 </td>
-                                                <td class="text-center font-monospace small text-muted py-1" style="font-size: 0.75rem;">
+                                                <td class="text-center font-monospace small text-muted py-1" style="font-size: 0.74rem; padding: 5px 4px;">
                                                     <?= round((float)$log['duracion_segundos'], 1) ?>s
                                                 </td>
-                                                <td class="text-center py-1">
+                                                <td class="text-center py-1" style="padding: 5px 4px;">
                                                     <?php if ($log['estado'] === 'EXITO'): ?>
-                                                        <span class="badge-pill-custom badge-pill-presente" style="font-size: 0.68rem;"><i class="fa-solid fa-check mr-1"></i> Éxito</span>
+                                                        <span class="badge-pill-custom badge-pill-presente" style="font-size: 0.67rem; padding: 2px 5px;"><i class="fa-solid fa-check mr-1"></i>Éxito</span>
                                                     <?php else: ?>
-                                                        <span class="badge-pill-custom badge-pill-falta" style="font-size: 0.68rem;" title="<?= htmlspecialchars($log['mensaje_error'] ?? '') ?>"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Error</span>
+                                                        <span class="badge-pill-custom badge-pill-falta" style="font-size: 0.67rem; padding: 2px 5px;" title="<?= htmlspecialchars($log['mensaje_error'] ?? '') ?>"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Error</span>
                                                     <?php endif; ?>
                                                 </td>
                                             </tr>
@@ -531,16 +531,16 @@
                                 <i class="fa-solid fa-building-user mr-2 text-primary"></i> Cumplimiento por Departamentos (Hoy)
                             </h3>
                         </div>
-                        <div class="card-body p-0 table-responsive" style="max-height: 200px; overflow-y: auto;">
-                            <table class="table table-hover table-sm mb-0">
+                        <div class="card-body p-0" style="max-height: 200px; overflow-y: auto; overflow-x: hidden;">
+                            <table class="table table-hover table-sm mb-0" style="width: 100%; table-layout: fixed;">
                                 <thead>
                                     <tr>
-                                        <th>Departamento o Área</th>
-                                        <th class="text-center">Personal</th>
-                                        <th class="text-center">Presentes</th>
-                                        <th class="text-center">Tardanzas</th>
-                                        <th class="text-center">Faltas</th>
-                                        <th>% Cumplimiento</th>
+                                        <th style="width: 32%;">Departamento o Área</th>
+                                        <th class="text-center" style="width: 13%;">Personal</th>
+                                        <th class="text-center" style="width: 13%;">Presentes</th>
+                                        <th class="text-center" style="width: 13%;">Tardanzas</th>
+                                        <th class="text-center" style="width: 13%;">Faltas</th>
+                                        <th class="text-center" style="width: 16%;">% Cumplimiento</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -552,12 +552,12 @@
                                             $barColor = $porc >= 90 ? 'bg-success' : ($porc >= 70 ? 'bg-warning' : 'bg-danger');
                                         ?>
                                         <tr>
-                                            <td class="font-weight-bold text-dark py-1" style="font-size: 0.82rem;"><?= htmlspecialchars($ds['depto_nombre'] ?? 'General') ?></td>
+                                            <td class="font-weight-bold text-dark py-1 text-truncate" style="font-size: 0.82rem;" title="<?= htmlspecialchars($ds['depto_nombre'] ?? 'General') ?>"><?= htmlspecialchars($ds['depto_nombre'] ?? 'General') ?></td>
                                             <td class="text-center font-weight-bold py-1"><?= $tot ?></td>
                                             <td class="text-center text-success font-weight-bold py-1"><?= $pres ?></td>
                                             <td class="text-center text-warning font-weight-bold py-1"><?= (int)$ds['tardanzas'] ?></td>
                                             <td class="text-center text-danger font-weight-bold py-1"><?= (int)$ds['faltas'] ?></td>
-                                            <td style="min-width: 120px;" class="py-1">
+                                            <td class="text-center py-1">
                                                 <div class="progress mb-1" style="height: 5px; border-radius: 9999px;">
                                                     <div class="progress-bar <?= $barColor ?>" style="width: <?= $porc ?>%; border-radius: 9999px;"></div>
                                                 </div>
@@ -750,14 +750,14 @@
                                 </a>
                             </div>
                         </div>
-                        <div class="card-body p-0 table-responsive" style="max-height: 380px; overflow-y: auto;">
-                            <table class="table table-hover table-sm mb-0">
+                        <div class="card-body p-0" style="max-height: 380px; overflow-y: auto; overflow-x: hidden;">
+                            <table class="table table-hover table-sm mb-0" style="width: 100%; table-layout: fixed;">
                                 <thead>
                                     <tr>
-                                        <th>Hora</th>
-                                        <th>Empleado</th>
-                                        <th>Punto de Control</th>
-                                        <th>Marcación</th>
+                                        <th class="text-center" style="width: 18%;">Hora</th>
+                                        <th style="width: 38%;">Empleado</th>
+                                        <th style="width: 24%;">Punto de Control</th>
+                                        <th class="text-center" style="width: 20%;">Marcación</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -770,16 +770,16 @@
                                     <?php else: ?>
                                         <?php foreach ($ultimasMarcaciones as $m): ?>
                                             <tr>
-                                                <td class="font-weight-bold font-monospace text-secondary py-1" style="font-size: 0.78rem;">
+                                                <td class="text-center font-weight-bold font-monospace text-secondary py-1" style="font-size: 0.78rem;">
                                                     <?= substr($m['fecha_hora'], 11, 8) ?>
                                                 </td>
-                                                <td class="font-weight-bold text-dark py-1" style="font-size: 0.82rem;">
+                                                <td class="font-weight-bold text-dark py-1 text-truncate" style="font-size: 0.82rem;" title="<?= htmlspecialchars($m['apellidos'] . ' ' . $m['nombres']) ?>">
                                                     <?= htmlspecialchars($m['apellidos'] . ' ' . $m['nombres']) ?>
                                                 </td>
-                                                <td class="small text-muted py-1" style="font-size: 0.78rem;">
+                                                <td class="small text-muted py-1 text-truncate" style="font-size: 0.78rem;" title="<?= htmlspecialchars($m['dispositivo_nombre'] ?? 'Reloj') ?>">
                                                     <?= htmlspecialchars($m['dispositivo_nombre'] ?? 'Reloj') ?>
                                                 </td>
-                                                <td class="py-1">
+                                                <td class="text-center py-1">
                                                     <?php
                                                         $tipo = strtolower($m['tipo'] ?? '');
                                                         if ($tipo === 'entrada') echo '<span class="badge-pill-custom badge-pill-presente" style="font-size: 0.7rem;"><i class="fa-solid fa-arrow-right-to-bracket mr-1"></i> Entrada</span>';

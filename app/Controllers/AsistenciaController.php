@@ -595,6 +595,7 @@ class AsistenciaController {
         echo json_encode([
             'success' => true,
             'stream_id' => $streamId,
+            'fecha' => $fecha,
             'asistencia' => $asistencia,
             'eventos' => $eventos,
             'marcaciones_crudas' => $marcacionesCrudas

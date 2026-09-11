@@ -6,7 +6,7 @@
 
 USE `control_personal`;
 
--- 1. Crear tabla login_intentos si no existe
+-- 1. Crear tabla login_intentos si no existe y ajustar indices para proxies
 CREATE TABLE IF NOT EXISTS `login_intentos` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `ip` VARCHAR(45) NOT NULL,
@@ -14,7 +14,8 @@ CREATE TABLE IF NOT EXISTS `login_intentos` (
     `intentos` INT DEFAULT 1,
     `ultimo_intento` DATETIME NOT NULL,
     `bloqueado_hasta` DATETIME NULL,
-    UNIQUE KEY `uniq_login_ip` (`ip`),
+    INDEX `idx_login_ip_usuario` (`ip`, `usuario`),
+    INDEX `idx_login_ip` (`ip`),
     INDEX `idx_login_usuario` (`usuario`),
     INDEX `idx_login_bloqueo` (`bloqueado_hasta`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -186,11 +186,13 @@ if (!empty($deptoId)) {
 
         <!-- FILTER AND ACTIONS CARD -->
         <div class="card mb-3 no-print">
-            <div class="card-header d-flex align-items-center justify-content-between flex-wrap py-2 px-3">
-                <h3 class="card-title font-weight-bold text-dark mb-0 d-flex align-items-center" style="font-size: 0.92rem;">
-                    <i class="fa-solid fa-filter mr-2 text-primary"></i> Filtros de Asistencia
-                </h3>
-                <div class="card-tools d-flex align-items-center flex-wrap my-1" style="gap: 6px;">
+            <div class="card-header d-flex align-items-center justify-content-between flex-wrap" style="padding: 0.75rem 1.25rem;">
+                <div class="d-flex align-items-center">
+                    <h3 class="card-title font-weight-bold text-dark mb-0 d-flex align-items-center" style="font-size: 0.92rem;">
+                        <i class="fa-solid fa-filter mr-2 text-primary"></i> Filtros de Asistencia
+                    </h3>
+                </div>
+                <div class="d-flex align-items-center flex-wrap" style="gap: 8px; margin-left: auto;">
                     <?php if ($userRole === 'ADMIN'): ?>
                         <button type="button" class="btn btn-primary btn-sm" onclick="openAsignarHorasModal()" title="Asignar u oficializar horas de entrada y salida">
                             <i class="fa-solid fa-clock-medical mr-1"></i> Asignar Horas
@@ -201,7 +203,7 @@ if (!empty($deptoId)) {
                     <?php endif; ?>
 
                     <?php if (in_array($userRole, ['ADMIN', 'RRHH'], true)): ?>
-                        <form method="POST" action="?route=asistencia&action=recalcular" class="d-inline">
+                        <form method="POST" action="?route=asistencia&action=recalcular" class="d-inline m-0">
                             <?= csrf_field() ?>
                             <input type="hidden" name="fecha_inicio" value="<?= htmlspecialchars($fechaInicio) ?>">
                             <input type="hidden" name="fecha_fin" value="<?= htmlspecialchars($fechaFin) ?>">
@@ -211,17 +213,15 @@ if (!empty($deptoId)) {
                         </form>
                     <?php endif; ?>
 
-                    <div class="btn-group btn-group-sm ml-md-1">
-                        <a href="?route=asistencia&fecha_inicio=<?= $fechaInicio ?>&fecha_fin=<?= $fechaFin ?>&departamento_id=<?= $deptoId ?>&estado=<?= $estado ?>&search=<?= urlencode($search ?? '') ?>&export=excel" class="btn btn-success btn-sm" title="Descargar reporte oficial en Excel">
-                            <i class="fa-solid fa-file-excel mr-1"></i> Excel
-                        </a>
-                        <a href="?route=asistencia&fecha_inicio=<?= $fechaInicio ?>&fecha_fin=<?= $fechaFin ?>&departamento_id=<?= $deptoId ?>&estado=<?= $estado ?>&search=<?= urlencode($search ?? '') ?>&export=csv" class="btn btn-outline-secondary btn-sm" title="Descargar archivo CSV">
-                            <i class="fa-solid fa-file-csv mr-1"></i> CSV
-                        </a>
-                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print()" title="Imprimir reporte oficial o Guardar como PDF">
-                            <i class="fa-solid fa-print mr-1"></i> PDF
-                        </button>
-                    </div>
+                    <a href="?route=asistencia&fecha_inicio=<?= $fechaInicio ?>&fecha_fin=<?= $fechaFin ?>&departamento_id=<?= $deptoId ?>&estado=<?= $estado ?>&search=<?= urlencode($search ?? '') ?>&export=excel" class="btn btn-success btn-sm" title="Descargar reporte oficial en Excel">
+                        <i class="fa-solid fa-file-excel mr-1"></i> Excel
+                    </a>
+                    <a href="?route=asistencia&fecha_inicio=<?= $fechaInicio ?>&fecha_fin=<?= $fechaFin ?>&departamento_id=<?= $deptoId ?>&estado=<?= $estado ?>&search=<?= urlencode($search ?? '') ?>&export=csv" class="btn btn-outline-secondary btn-sm" title="Descargar archivo CSV">
+                        <i class="fa-solid fa-file-csv mr-1"></i> CSV
+                    </a>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print()" title="Imprimir reporte oficial o Guardar como PDF">
+                        <i class="fa-solid fa-print mr-1"></i> PDF
+                    </button>
                 </div>
             </div>
             <div class="card-body py-3 px-3">
@@ -583,11 +583,11 @@ if (!empty($deptoId)) {
                         <span class="font-weight-bold text-dark small text-uppercase"><i class="fa-solid fa-user-plus text-primary mr-1"></i> Seleccionar Empleado y Fecha</span>
                     </div>
                     <div class="card-body p-3">
-                        <div class="row">
+                        <div class="row align-items-center">
                             <div class="col-md-8 mb-2">
-                                <label class="small font-weight-bold text-secondary mb-1">Buscar y Seleccionar Trabajador <span class="text-danger">*</span></label>
-                                <input type="text" id="edit_worker_search" class="form-control form-control-sm mb-1" placeholder="Filtrar por nombre, DNI o reloj..." oninput="filterWorkerSelect(this.value)">
-                                <select id="edit_worker_select" class="form-control form-control-sm font-weight-bold" size="3" onchange="onWorkerSelected(this)">
+                                <label class="small font-weight-bold text-secondary mb-1"><i class="fa-solid fa-user mr-1"></i> Buscar y Seleccionar Trabajador <span class="text-danger">*</span></label>
+                                <select id="edit_worker_select" class="form-control form-control-sm font-weight-bold select2-worker" style="width: 100%;" onchange="onWorkerSelected(this)">
+                                    <option value="">-- Buscar o seleccionar trabajador por Nombre o DNI --</option>
                                     <?php foreach ($empleados as $emp): ?>
                                         <option value="<?= $emp['id'] ?>" 
                                                 data-nombres="<?= htmlspecialchars($emp['nombres']) ?>"
@@ -597,15 +597,14 @@ if (!empty($deptoId)) {
                                                 data-turno="<?= htmlspecialchars($emp['turno_nombre'] ?? 'Turno General') ?>"
                                                 data-hent="<?= !empty($emp['hora_entrada']) ? substr($emp['hora_entrada'], 0, 5) : '08:00' ?>"
                                                 data-hsal="<?= !empty($emp['hora_salida']) ? substr($emp['hora_salida'], 0, 5) : '17:00' ?>"
-                                                data-tol="<?= $emp['tolerancia_minutos'] ?? 10 ?>"
-                                                data-search="<?= strtolower(htmlspecialchars($emp['apellidos'] . ' ' . $emp['nombres'] . ' ' . $emp['dni'] . ' ' . $emp['codigo_reloj'])) ?>">
+                                                data-tol="<?= $emp['tolerancia_minutos'] ?? 10 ?>">
                                             <?= htmlspecialchars($emp['apellidos'] . ' ' . $emp['nombres']) ?> &mdash; DNI: <?= htmlspecialchars($emp['dni']) ?>
                                         </option>
                                     <?php endforeach; ?>
                                 </select>
                             </div>
                             <div class="col-md-4 mb-2">
-                                <label class="small font-weight-bold text-secondary mb-1">Fecha de Asistencia <span class="text-danger">*</span></label>
+                                <label class="small font-weight-bold text-secondary mb-1"><i class="fa-regular fa-calendar mr-1"></i> Fecha de Asistencia <span class="text-danger">*</span></label>
                                 <input type="date" id="edit_fecha_picker" class="form-control form-control-sm" value="<?= date('Y-m-d') ?>" onchange="onDatePickerChanged(this.value)">
                             </div>
                         </div>
@@ -729,24 +728,15 @@ if (!empty($deptoId)) {
                 <!-- BUSCADOR INTERACTIVO DE TRABAJADOR -->
                 <div class="card border bg-white shadow-none mb-3" style="border-radius: 8px;">
                     <div class="card-header py-2 bg-white border-bottom">
-                        <span class="font-weight-bold text-dark small text-uppercase"><i class="fa-solid fa-magnifying-glass text-primary mr-1"></i> Seleccionar Trabajador</span>
+                        <span class="font-weight-bold text-dark small text-uppercase"><i class="fa-solid fa-user-shield text-primary mr-1"></i> Seleccionar Trabajador</span>
                     </div>
                     <div class="card-body p-3">
-                        <div class="form-group mb-2">
-                            <label class="small font-weight-bold text-secondary mb-1">Buscar por Nombres, Apellidos o DNI</label>
-                            <div class="input-group input-group-sm">
-                                <div class="input-group-prepend">
-                                    <span class="input-group-text bg-light text-muted"><i class="fa-solid fa-search"></i></span>
-                                </div>
-                                <input type="text" id="just_search_input" class="form-control" placeholder="Escribe para filtrar trabajadores al instante..." oninput="filterEmployeeSelect(this.value)">
-                            </div>
-                        </div>
-
                         <div class="form-group mb-0">
-                            <label class="small font-weight-bold text-secondary mb-1">Trabajador Seleccionado <span class="text-danger">*</span></label>
-                            <select name="id_empleado" id="just_empleado_select" class="form-control form-control-sm" size="5" required style="border-radius: 6px;">
+                            <label class="small font-weight-bold text-secondary mb-1">Buscar y Seleccionar Trabajador <span class="text-danger">*</span></label>
+                            <select name="id_empleado" id="just_empleado_select" class="form-control form-control-sm select2-worker" style="width: 100%;" required>
+                                <option value="">-- Buscar o seleccionar trabajador por Nombre o DNI --</option>
                                 <?php foreach ($empleados as $emp): ?>
-                                    <option value="<?= $emp['id'] ?>" data-search="<?= strtolower(htmlspecialchars($emp['apellidos'] . ' ' . $emp['nombres'] . ' ' . $emp['dni'] . ' ' . $emp['codigo_reloj'])) ?>">
+                                    <option value="<?= $emp['id'] ?>">
                                         <?= htmlspecialchars($emp['apellidos'] . ' ' . $emp['nombres']) ?> &mdash; DNI: <?= htmlspecialchars($emp['dni']) ?> (ID: <?= htmlspecialchars($emp['codigo_reloj']) ?>)
                                     </option>
                                 <?php endforeach; ?>
@@ -866,14 +856,10 @@ function openAsignarHorasModal() {
     
     document.getElementById('edit_empleado_card').style.display = 'none';
     document.getElementById('edit_empleado_selector_card').style.display = 'block';
-    
-    document.getElementById('edit_worker_search').value = '';
-    filterWorkerSelect('');
 
     const select = document.getElementById('edit_worker_select');
-    if (select.options.length > 0) {
-        select.selectedIndex = 0;
-        onWorkerSelected(select);
+    if (select.options.length > 1) {
+        $('#edit_worker_select').val(select.options[1].value).trigger('change');
     }
 
     document.getElementById('edit_hora_entrada').value = '';
@@ -887,32 +873,9 @@ function openAsignarHorasModal() {
     $('#modalEditarAsistencia').modal('show');
 }
 
-function filterWorkerSelect(term) {
-    const q = term.toLowerCase().trim();
-    const select = document.getElementById('edit_worker_select');
-    const options = select.options;
-    let firstMatch = null;
-
-    for (let i = 0; i < options.length; i++) {
-        const opt = options[i];
-        const searchData = opt.getAttribute('data-search') || opt.text.toLowerCase();
-        if (q === '' || searchData.includes(q)) {
-            opt.style.display = '';
-            if (!firstMatch) firstMatch = opt;
-        } else {
-            opt.style.display = 'none';
-        }
-    }
-
-    if (firstMatch && q !== '') {
-        select.value = firstMatch.value;
-        onWorkerSelected(select);
-    }
-}
-
 function onWorkerSelected(selectEl) {
     const opt = selectEl.options[selectEl.selectedIndex];
-    if (!opt) return;
+    if (!opt || !opt.value) return;
 
     document.getElementById('edit_id_empleado').value = opt.value;
     document.getElementById('edit_prog_entrada').value = opt.getAttribute('data-hent') || '08:00';
@@ -1069,8 +1032,7 @@ function submitAdminEditAttendance(e) {
 
 function openJustificarAdminModal() {
     $('#formJustificarAdmin')[0].reset();
-    document.getElementById('just_search_input').value = '';
-    filterEmployeeSelect('');
+    $('#just_empleado_select').val('').trigger('change');
     document.getElementById('just_fecha_inicio').value = '<?= date('Y-m-d') ?>';
     document.getElementById('just_fecha_fin').value = '<?= date('Y-m-d') ?>';
     $('#modalJustificarAdmin').modal('show');
@@ -1078,35 +1040,11 @@ function openJustificarAdminModal() {
 
 function openQuickJustifyModal(rec) {
     $('#formJustificarAdmin')[0].reset();
-    document.getElementById('just_search_input').value = '';
-    filterEmployeeSelect('');
-    document.getElementById('just_empleado_select').value = rec.id_empleado;
+    $('#just_empleado_select').val(rec.id_empleado).trigger('change');
     document.getElementById('just_fecha_inicio').value = rec.fecha;
     document.getElementById('just_fecha_fin').value = rec.fecha;
     document.getElementById('just_motivo').value = `Justificación oficial de asistencia del día ${rec.fecha}`;
     $('#modalJustificarAdmin').modal('show');
-}
-
-function filterEmployeeSelect(term) {
-    const q = term.toLowerCase().trim();
-    const select = document.getElementById('just_empleado_select');
-    const options = select.options;
-    let firstMatch = null;
-
-    for (let i = 0; i < options.length; i++) {
-        const opt = options[i];
-        const searchData = opt.getAttribute('data-search') || opt.text.toLowerCase();
-        if (q === '' || searchData.includes(q)) {
-            opt.style.display = '';
-            if (!firstMatch) firstMatch = opt;
-        } else {
-            opt.style.display = 'none';
-        }
-    }
-
-    if (firstMatch && q !== '') {
-        select.value = firstMatch.value;
-    }
 }
 
 function submitJustificarAdmin(e) {
@@ -1163,6 +1101,26 @@ function submitJustificarAdmin(e) {
         }
     });
 }
+
+$(document).ready(function() {
+    if ($.fn.select2) {
+        $('#edit_worker_select').select2({
+            theme: 'bootstrap4',
+            dropdownParent: $('#modalEditarAsistencia'),
+            placeholder: '-- Buscar o seleccionar trabajador --',
+            width: '100%'
+        }).on('change', function() {
+            onWorkerSelected(this);
+        });
+
+        $('#just_empleado_select').select2({
+            theme: 'bootstrap4',
+            dropdownParent: $('#modalJustificarAdmin'),
+            placeholder: '-- Buscar o seleccionar trabajador --',
+            width: '100%'
+        });
+    }
+});
 </script>
 <?php endif; ?>
 

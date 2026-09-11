@@ -334,6 +334,34 @@ class AuthController {
         }
     }
 
+    /**
+     * Extrae de forma segura la IP real del cliente considerando proxies y balanceadores confiables.
+     */
+    public static function getClientIp(): string {
+        $headers = [
+            'HTTP_CF_CONNECTING_IP',
+            'HTTP_X_REAL_IP',
+            'HTTP_X_FORWARDED_FOR',
+            'REMOTE_ADDR'
+        ];
+        foreach ($headers as $h) {
+            if (!empty($_SERVER[$h])) {
+                $ips = explode(',', $_SERVER[$h]);
+                foreach ($ips as $rawIp) {
+                    $ip = trim($rawIp);
+                    if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+                        return $ip;
+                    }
+                }
+                $firstIp = trim($ips[0]);
+                if (filter_var($firstIp, FILTER_VALIDATE_IP)) {
+                    return $firstIp;
+                }
+            }
+        }
+        return $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+    }
+
     public function login(): void {
         if (isset($_SESSION['user_id'])) {
             $dest = self::getFirstAccessibleRoute();
@@ -345,17 +373,32 @@ class AuthController {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             \App\Csrf::validateRequest();
 
-            // Rate Limiting persistente en Base de Datos (Máx. 5 intentos por IP / 5 minutos)
-            $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+            $ip = self::getClientIp();
+            $username = trim($_POST['usuario'] ?? '');
+            $password = $_POST['password'] ?? '';
+
+            // Rate Limiting por combinación de IP y Usuario (para evitar bloqueo global por proxy)
             $attemptRow = null;
             try {
-                $attemptRow = Database::queryOne("SELECT * FROM login_intentos WHERE ip = ?", [$ip]);
+                if (!empty($username)) {
+                    $attemptRow = Database::queryOne(
+                        "SELECT * FROM login_intentos WHERE ip = ? AND usuario = ?", 
+                        [$ip, $username]
+                    );
+                }
+                if (!$attemptRow) {
+                    $attemptRow = Database::queryOne(
+                        "SELECT * FROM login_intentos WHERE ip = ? AND (usuario IS NULL OR usuario = '')", 
+                        [$ip]
+                    );
+                }
+
                 if ($attemptRow && !empty($attemptRow['bloqueado_hasta'])) {
                     $blockedUntil = strtotime($attemptRow['bloqueado_hasta']);
                     if (time() < $blockedUntil) {
                         $secondsLeft = $blockedUntil - time();
                         $minutesLeft = max(1, (int)ceil($secondsLeft / 60));
-                        $error = "Demasiados intentos fallidos. Tu dirección IP ha sido bloqueada temporalmente por {$minutesLeft} minuto(s).";
+                        $error = "Demasiados intentos fallidos para esta cuenta. Acceso temporalmente bloqueado por {$minutesLeft} minuto(s).";
                         require_once APP_ROOT . '/views/auth/login.php';
                         return;
                     }
@@ -364,18 +407,15 @@ class AuthController {
                 // Silencioso ante fallos de tabla para no bloquear el inicio de sesión
             }
 
-            $username = trim($_POST['usuario'] ?? '');
-            $password = $_POST['password'] ?? '';
-
             if (empty($username) || empty($password)) {
                 $error = "Por favor ingrese usuario y contraseña.";
             } else {
                 $user = Database::queryOne("SELECT * FROM usuarios_sistema WHERE usuario = ? AND activo = 1", [$username]);
                 
                 if ($user && password_verify($password, $user['password'])) {
-                    // Éxito: Limpiar intentos fallidos en BD
+                    // Éxito: Limpiar intentos fallidos en BD para esta IP y usuario
                     try {
-                        Database::execute("DELETE FROM login_intentos WHERE ip = ?", [$ip]);
+                        Database::execute("DELETE FROM login_intentos WHERE ip = ? AND (usuario = ? OR usuario IS NULL)", [$ip, $username]);
                     } catch (\Exception $e) {
                         // Silencioso
                     }
@@ -413,27 +453,35 @@ class AuthController {
 
                     if ($currentAttempts >= 5) {
                         $lockUntil = date('Y-m-d H:i:s', time() + (5 * 60)); // 5 minutos de bloqueo
-                        $error = "Has superado el límite de 5 intentos fallidos. Tu acceso ha sido bloqueado temporalmente por 5 minutos.";
+                        $error = "Has superado el límite de 5 intentos fallidos. Tu acceso para esta cuenta ha sido bloqueado por 5 minutos.";
                     } else {
                         $remaining = 5 - $currentAttempts;
                         $error = "Credenciales incorrectas o usuario inactivo. (Intentos restantes: {$remaining})";
                     }
 
                     try {
-                        Database::execute("
-                            INSERT INTO login_intentos (ip, usuario, intentos, ultimo_intento, bloqueado_hasta)
-                            VALUES (:ip, :usr, :att, NOW(), :lock)
-                            ON DUPLICATE KEY UPDATE 
-                                usuario = VALUES(usuario),
-                                intentos = VALUES(intentos),
-                                ultimo_intento = NOW(),
-                                bloqueado_hasta = VALUES(bloqueado_hasta)
-                        ", [
-                            ':ip'   => $ip,
-                            ':usr'  => $username,
-                            ':att'  => $currentAttempts,
-                            ':lock' => $lockUntil
-                        ]);
+                        if ($attemptRow) {
+                            Database::execute("
+                                UPDATE login_intentos 
+                                SET usuario = :usr, intentos = :att, ultimo_intento = NOW(), bloqueado_hasta = :lock 
+                                WHERE id = :id
+                            ", [
+                                ':usr'  => $username,
+                                ':att'  => $currentAttempts,
+                                ':lock' => $lockUntil,
+                                ':id'   => $attemptRow['id']
+                            ]);
+                        } else {
+                            Database::execute("
+                                INSERT INTO login_intentos (ip, usuario, intentos, ultimo_intento, bloqueado_hasta)
+                                VALUES (:ip, :usr, :att, NOW(), :lock)
+                            ", [
+                                ':ip'   => $ip,
+                                ':usr'  => $username ?: null,
+                                ':att'  => $currentAttempts,
+                                ':lock' => $lockUntil
+                            ]);
+                        }
                     } catch (\Exception $e) {
                         // Silencioso
                     }

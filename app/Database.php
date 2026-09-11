@@ -113,23 +113,42 @@ class Database {
      * @return mixed Retorno de la función ejecutada
      * @throws Throwable
      */
-    public static function transaction(callable $callback) {
+    public static function transaction(callable $callback, int $maxRetries = 3) {
         $alreadyInTransaction = self::inTransaction();
-        if (!$alreadyInTransaction) {
-            self::beginTransaction();
+        if ($alreadyInTransaction) {
+            return $callback();
         }
 
-        try {
-            $result = $callback();
-            if (!$alreadyInTransaction) {
+        $attempts = 0;
+        while (true) {
+            $attempts++;
+            self::beginTransaction();
+
+            try {
+                $result = $callback();
                 self::commit();
+                return $result;
+            } catch (Throwable $e) {
+                if (self::inTransaction()) {
+                    self::rollBack();
+                }
+
+                $isDeadlock = false;
+                if ($e instanceof PDOException) {
+                    $code = (string)$e->getCode();
+                    $driverCode = $e->errorInfo[1] ?? 0;
+                    if ($code === '40001' || $driverCode === 1213 || $driverCode === 1205) {
+                        $isDeadlock = true;
+                    }
+                }
+
+                if ($isDeadlock && $attempts < $maxRetries) {
+                    usleep(random_int(20000, 80000)); // 20ms - 80ms backoff
+                    continue;
+                }
+
+                throw $e;
             }
-            return $result;
-        } catch (Throwable $e) {
-            if (!$alreadyInTransaction && self::inTransaction()) {
-                self::rollBack();
-            }
-            throw $e;
         }
     }
 }
