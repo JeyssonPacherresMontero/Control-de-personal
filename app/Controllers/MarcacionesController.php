@@ -1,9 +1,12 @@
 <?php
+declare(strict_types=1);
+
 namespace App\Controllers;
 
 use App\Database;
 use App\Services\AttendanceCalculator;
 use App\Services\EventStore;
+
 
 require_once __DIR__ . '/../Services/EventStore.php';
 

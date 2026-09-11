@@ -17,7 +17,8 @@ DB_CONFIG = {
     'password': os.getenv('DB_PASS', ''),
     'database': os.getenv('DB_NAME', 'control_personal'),
     'charset': 'utf8mb4',
-    'autocommit': True
+    'autocommit': True,
+    'init_command': "SET time_zone = '-05:00'"
 }
 
 ZK_CONFIG = {

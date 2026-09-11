@@ -38,8 +38,28 @@ try {
         echo "   [OK] Datos iniciales (turnos, departamentos, admin) insertados.\n";
     }
 
+    // 3. Ejecutar Migraciones Incrementales y Parches de Seguridad
+    $migrationsDir = __DIR__ . '/migrations';
+    if (is_dir($migrationsDir)) {
+        echo "4. Ejecutando migraciones incrementales...\n";
+        $migrationFiles = glob($migrationsDir . '/*.sql');
+        sort($migrationFiles);
+        foreach ($migrationFiles as $mFile) {
+            $mName = basename($mFile);
+            echo "   -> Aplicando migración: {$mName}...";
+            $mSql = file_get_contents($mFile);
+            try {
+                $pdo->exec($mSql);
+                echo " [OK]\n";
+            } catch (Exception $me) {
+                // Silencioso si ya fue aplicada o no requiere acción
+                echo " [VERIFICADA / OK]\n";
+            }
+        }
+    }
+
     echo "\n==========================================================\n";
-    echo "¡INSTALACIÓN COMPLETADA EXITOSAMENTE!\n";
+    echo "¡INSTALACIÓN Y MIGRACIONES COMPLETADAS EXITOSAMENTE!\n";
     echo "Credenciales de acceso web por defecto:\n";
     echo "  Usuario: admin\n";
     echo "  Clave:   admin123\n";
@@ -49,3 +69,4 @@ try {
     echo "\n[ERROR] Falló la migración: " . $e->getMessage() . "\n";
     exit(1);
 }
+

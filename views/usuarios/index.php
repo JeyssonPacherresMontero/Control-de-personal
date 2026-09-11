@@ -292,6 +292,23 @@
                             </div>
                         </div>
 
+                        <div class="row" id="row_supervisor_depto" style="display: none;">
+                            <div class="col-md-12">
+                                <div class="form-group mb-2 p-2 bg-light rounded border">
+                                    <label class="small font-weight-bold text-primary"><i class="fa-solid fa-building-user mr-1"></i> Departamento / Área Asignada al Supervisor <span class="text-danger">*</span></label>
+                                    <select name="departamento_id" id="usr_departamento_id" class="form-control form-control-sm">
+                                        <option value="">-- Seleccionar Área que Supervisa --</option>
+                                        <?php if (!empty($departamentos)): ?>
+                                            <?php foreach ($departamentos as $dep): ?>
+                                                <option value="<?= $dep['id'] ?>"><?= htmlspecialchars($dep['nombre']) ?></option>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </select>
+                                    <small class="text-muted">El supervisor solo podrá ver y gestionar personal y justificaciones de este departamento.</small>
+                                </div>
+                            </div>
+                        </div>
+
 
                         <div class="row mt-2">
                             <div class="col-12">
@@ -547,11 +564,15 @@ function openNewUserModal() {
     rolSelect.disabled = false;
     rolSelect.value = 'RRHH';
     document.getElementById('usr_admin_badge').style.display = 'none';
+    if (document.getElementById('usr_departamento_id')) {
+        document.getElementById('usr_departamento_id').value = '';
+    }
 
     document.getElementById('usr_activo').checked = true;
 
     // Preset inicial por defecto
     setPresetRRHH();
+    onRoleChange('RRHH');
     $('#modalUsuario').modal('show');
 }
 
@@ -579,6 +600,10 @@ function openEditUserModal(u) {
         rolSelect.disabled = false;
         rolSelect.value = inArray(u.rol, ['RRHH', 'SUPERVISOR', 'CONSULTA']) ? u.rol : 'RRHH';
         adminBadge.style.display = 'none';
+    }
+
+    if (document.getElementById('usr_departamento_id')) {
+        document.getElementById('usr_departamento_id').value = u.departamento_id || '';
     }
 
     document.getElementById('usr_activo').checked = (parseInt(u.activo) === 1);
@@ -771,11 +796,24 @@ function toggleUserStatus(userId, username, currentStatus) {
 
 function onRoleChange(role) {
     var adminNotice = document.getElementById('adminNotice');
+    var rowSupervisor = document.getElementById('row_supervisor_depto');
     if (role === 'ADMIN') {
         toggleAllModules(true);
         if (adminNotice) adminNotice.style.display = 'block';
     } else {
         if (adminNotice) adminNotice.style.display = 'none';
+    }
+
+    if (rowSupervisor) {
+        if (role === 'SUPERVISOR') {
+            rowSupervisor.style.display = 'block';
+        } else {
+            rowSupervisor.style.display = 'none';
+            var deptoSelect = document.getElementById('usr_departamento_id');
+            if (deptoSelect && role !== 'SUPERVISOR') {
+                deptoSelect.value = '';
+            }
+        }
     }
 }
 

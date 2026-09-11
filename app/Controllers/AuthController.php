@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 namespace App\Controllers;
 
 use App\Database;
@@ -7,7 +9,9 @@ class AuthController {
     public static function checkAuth(): void {
         $isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')
                   || isset($_GET['ajax'])
+                  || isset($_POST['ajax'])
                   || (isset($_SERVER['HTTP_ACCEPT']) && str_contains($_SERVER['HTTP_ACCEPT'], 'application/json'));
+
 
         if (!isset($_SESSION['user_id'])) {
             if ($isAjax) {
@@ -114,6 +118,7 @@ class AuthController {
                 'usuario' => $_SESSION['user_username'] ?? '',
                 'nombre' => $_SESSION['user_name'] ?? 'Usuario',
                 'rol' => $_SESSION['user_role'] ?? 'RRHH',
+                'departamento_id' => (int)($_SESSION['user_departamento_id'] ?? 0),
                 'email' => $_SESSION['user_email'] ?? '',
                 'ultimo_login' => $_SESSION['user_ultimo_login'] ?? '',
                 'permisos' => self::getPermissions()
@@ -121,6 +126,7 @@ class AuthController {
         }
         return null;
     }
+
 
     public static function role(): string {
         return $_SESSION['user_role'] ?? 'CONSULTA';
@@ -427,10 +433,12 @@ class AuthController {
                     $_SESSION['user_username'] = $user['usuario'];
                     $_SESSION['user_name'] = $user['nombre_completo'];
                     $_SESSION['user_role'] = $user['rol'];
+                    $_SESSION['user_departamento_id'] = (int)($user['departamento_id'] ?? 0);
                     $_SESSION['user_email'] = $user['email'] ?? '';
                     $_SESSION['user_ultimo_login'] = $user['ultimo_login'] ?? '';
                     $_SESSION['user_permisos_version'] = (int)($user['permisos_version'] ?? 1);
                     $_SESSION['last_activity'] = time();
+
 
                     $perms = !empty($user['permisos']) ? json_decode($user['permisos'], true) : null;
                     if (!is_array($perms)) {

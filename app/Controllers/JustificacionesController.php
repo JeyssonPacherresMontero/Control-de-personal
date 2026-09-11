@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 namespace App\Controllers;
 
 use App\Database;
@@ -7,6 +9,9 @@ use App\Services\AttendanceCalculator;
 class JustificacionesController {
     public function index(): void {
         AuthController::checkAuth();
+        $userRole = AuthController::role();
+        $currentUser = AuthController::user();
+        $supervisorDeptoId = (int)($currentUser['departamento_id'] ?? 0);
 
         $fechaInicio = $_GET['fecha_inicio'] ?? date('Y-m-01');
         $fechaFin = $_GET['fecha_fin'] ?? date('Y-m-d');
@@ -24,6 +29,15 @@ class JustificacionesController {
             ':f2' => $fechaFin
         ];
 
+        // Alcance Departamental estricto para SUPERVISOR
+        if ($userRole === 'SUPERVISOR' && $supervisorDeptoId > 0) {
+            $sql .= " AND e.departamento_id = :sup_depto";
+            $params[':sup_depto'] = $supervisorDeptoId;
+            $empleados = Database::query("SELECT id, codigo_reloj, dni, nombres, apellidos FROM empleados WHERE activo = 1 AND departamento_id = ? ORDER BY apellidos ASC", [$supervisorDeptoId]);
+        } else {
+            $empleados = Database::query("SELECT id, codigo_reloj, dni, nombres, apellidos FROM empleados WHERE activo = 1 ORDER BY apellidos ASC");
+        }
+
         if ($estado !== 'TODOS') {
             $sql .= " AND j.estado = :estado";
             $params[':estado'] = $estado;
@@ -32,7 +46,6 @@ class JustificacionesController {
         $sql .= " ORDER BY j.creado_en DESC";
 
         $justificaciones = Database::query($sql, $params);
-        $empleados = Database::query("SELECT id, codigo_reloj, dni, nombres, apellidos FROM empleados WHERE activo = 1 ORDER BY apellidos ASC");
 
         require_once APP_ROOT . '/views/justificaciones/index.php';
     }
@@ -41,6 +54,10 @@ class JustificacionesController {
         AuthController::checkAuth();
         AuthController::requireRole(['ADMIN', 'RRHH', 'SUPERVISOR'], 'justificaciones');
         \App\Csrf::validateRequest();
+
+        $userRole = AuthController::role();
+        $currentUser = AuthController::user();
+        $supervisorDeptoId = (int)($currentUser['departamento_id'] ?? 0);
 
         $idEmpleado = (int)($_POST['id_empleado'] ?? 0);
         $tipo = $_POST['tipo'] ?? 'TARDANZA';
@@ -51,6 +68,15 @@ class JustificacionesController {
         if ($idEmpleado <= 0 || empty($motivo)) {
             header('Location: ?route=justificaciones&error=campos_requeridos');
             exit;
+        }
+
+        // Validación de alcance para SUPERVISOR: solo empleados de su departamento asignado
+        if ($userRole === 'SUPERVISOR' && $supervisorDeptoId > 0) {
+            $empCheck = Database::queryOne("SELECT id FROM empleados WHERE id = ? AND departamento_id = ? AND activo = 1", [$idEmpleado, $supervisorDeptoId]);
+            if (!$empCheck) {
+                header('Location: ?route=justificaciones&error=fuera_de_alcance');
+                exit;
+            }
         }
 
         // Validación lógica de rango de fechas
@@ -112,9 +138,6 @@ class JustificacionesController {
         // Segregación de Funciones (Separation of Duties - SoD):
         // - Si es SUPERVISOR: el estado es 'PENDIENTE' para revisión por RRHH / Admin. No se auto-aprueba ni recalcula asistencia aún.
         // - Si es ADMIN o RRHH: se aprueba de forma directa y se recalcula la asistencia.
-        $userRole = AuthController::role();
-        $currentUser = AuthController::user();
-
         if ($userRole === 'SUPERVISOR') {
             $estado = 'PENDIENTE';
             $aprobadoPor = null;
@@ -137,6 +160,7 @@ class JustificacionesController {
                 $calculator = new AttendanceCalculator(ATTENDANCE_DEBOUNCE_MINUTES);
                 $calculator->processDateRange($fechaInicio, $fechaFin);
             }
+
 
             $msgKey = ($estado === 'PENDIENTE') ? 'solicitud_enviada' : 'guardado';
             header("Location: ?route=justificaciones&msg={$msgKey}");

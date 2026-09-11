@@ -1,7 +1,10 @@
 <?php
+declare(strict_types=1);
+
 namespace App\Controllers;
 
 use App\Database;
+
 
 class EmpleadosController {
     public function index(): void {

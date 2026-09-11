@@ -170,7 +170,7 @@
 <!-- MODAL REGISTRAR JUSTIFICACIÓN -->
 <div class="modal fade" id="modalJustificacion" tabindex="-1">
     <div class="modal-dialog">
-        <form method="POST" action="?route=justificaciones&action=guardar" enctype="multipart/form-data" class="modal-content">
+        <form method="POST" action="?route=justificaciones&action=guardar" enctype="multipart/form-data" class="modal-content" onsubmit="return validateJustificacionForm(event);">
             <?= csrf_field() ?>
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title font-weight-bold"><i class="fa-solid fa-file-signature mr-2"></i> Nueva Justificación / Permiso</h5>
@@ -243,6 +243,17 @@
     </div>
 </div>
 <script>
+function validateJustificacionForm(e) {
+    const fInicio = document.querySelector('#modalJustificacion input[name="fecha_inicio"]').value;
+    const fFin = document.querySelector('#modalJustificacion input[name="fecha_fin"]').value;
+    if (fInicio && fFin && fInicio > fFin) {
+        if (e) e.preventDefault();
+        alert('Error: La fecha de inicio (' + fInicio + ') no puede ser posterior a la fecha de fin (' + fFin + ').');
+        return false;
+    }
+    return true;
+}
+
 $(document).ready(function() {
     if ($.fn.select2) {
         $('#modalJustificacion select[name="id_empleado"]').select2({

@@ -1,10 +1,13 @@
 <?php
+declare(strict_types=1);
+
 /**
  * ==========================================================
  * SISTEMA DE CONTROL DE PERSONAL Y ASISTENCIA - ZKTECO
  * Archivo Principal de Configuración
  * ==========================================================
  */
+
 
 // Cargar variables de entorno desde archivo .env si existe
 $envFile = __DIR__ . '/../.env';

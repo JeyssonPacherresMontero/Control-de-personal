@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 namespace App\Controllers;
 
 use App\Database;
@@ -104,8 +106,20 @@ class DispositivosController {
                   || isset($_POST['ajax'])
                   || (isset($_SERVER['HTTP_ACCEPT']) && str_contains($_SERVER['HTTP_ACCEPT'], 'application/json'));
 
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            if ($isAjax) {
+                http_response_code(405);
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'error' => 'Método HTTP no permitido. Se requiere POST con token CSRF.'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            header('Location: ?route=dispositivos&msg=metodo_no_permitido');
+            exit;
+        }
+
         // Validar CSRF
         \App\Security\Csrf::validate();
+
 
         $id = (int)($_POST['id'] ?? ($_GET['id'] ?? 0));
         $mode = $_POST['mode'] ?? ($_GET['mode'] ?? 'incremental'); // 'incremental', 'today' o 'full'

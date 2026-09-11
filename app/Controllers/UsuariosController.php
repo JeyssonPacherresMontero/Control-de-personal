@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 namespace App\Controllers;
 
 use App\Database;
@@ -9,14 +11,17 @@ class UsuariosController {
         AuthController::requireRole('ADMIN', 'dashboard');
 
         $usuarios = Database::query("
-            SELECT u.id, u.usuario, u.nombre_completo, u.email, u.rol, u.permisos, u.activo, 
+            SELECT u.id, u.usuario, u.nombre_completo, u.email, u.rol, u.departamento_id, u.permisos, u.activo, 
                    COALESCE(u.permisos_version, 1) as permisos_version, u.ultimo_login, u.creado_en,
+                   d.nombre as departamento_nombre,
                    (SELECT COUNT(*) FROM plantillas_biometricas pb WHERE pb.codigo_reloj = u.usuario AND pb.tipo = 'HUELLA') as huellas_count,
                    (SELECT COUNT(*) FROM plantillas_biometricas pb WHERE pb.codigo_reloj = u.usuario AND pb.tipo = 'FACIAL') as facial_count
             FROM usuarios_sistema u 
+            LEFT JOIN departamentos d ON u.departamento_id = d.id
             ORDER BY u.id ASC
         ");
 
+        $departamentos = Database::query("SELECT * FROM departamentos WHERE activo = 1 ORDER BY nombre ASC");
         $dispositivos = Database::query("SELECT * FROM dispositivos WHERE activo = 1 ORDER BY id ASC");
         $modulosDisponibles = AuthController::getAvailableModules();
         $currentUser = AuthController::user();
@@ -35,6 +40,7 @@ class UsuariosController {
         $email = trim($_POST['email'] ?? '');
         $password = $_POST['password'] ?? '';
         $rol = $_POST['rol'] ?? 'RRHH';
+        $departamentoId = !empty($_POST['departamento_id']) ? (int)$_POST['departamento_id'] : null;
         $activo = isset($_POST['activo']) ? 1 : 0;
         
         // Regla de Seguridad Estricta: Solo puede existir un único Administrador en el sistema.
@@ -108,7 +114,7 @@ class UsuariosController {
                     Database::execute("
                         UPDATE usuarios_sistema 
                         SET usuario = :usr, nombre_completo = :nom, email = :email, 
-                            password = :pass, rol = :rol, permisos = :perms, activo = :act,
+                            password = :pass, rol = :rol, departamento_id = :depto, permisos = :perms, activo = :act,
                             permisos_version = COALESCE(permisos_version, 1) + 1
                         WHERE id = :id
                     ", [
@@ -117,6 +123,7 @@ class UsuariosController {
                         ':email' => $email ?: null,
                         ':pass'  => $passHash,
                         ':rol'   => $rol,
+                        ':depto' => $departamentoId,
                         ':perms' => $permisosJson,
                         ':act'   => $activo,
                         ':id'    => $id
@@ -125,7 +132,7 @@ class UsuariosController {
                     Database::execute("
                         UPDATE usuarios_sistema 
                         SET usuario = :usr, nombre_completo = :nom, email = :email, 
-                            rol = :rol, permisos = :perms, activo = :act,
+                            rol = :rol, departamento_id = :depto, permisos = :perms, activo = :act,
                             permisos_version = COALESCE(permisos_version, 1) + 1
                         WHERE id = :id
                     ", [
@@ -133,6 +140,7 @@ class UsuariosController {
                         ':nom'   => $nombre,
                         ':email' => $email ?: null,
                         ':rol'   => $rol,
+                        ':depto' => $departamentoId,
                         ':perms' => $permisosJson,
                         ':act'   => $activo,
                         ':id'    => $id
@@ -154,14 +162,15 @@ class UsuariosController {
 
                 Database::execute("
                     INSERT INTO usuarios_sistema 
-                    (usuario, password, nombre_completo, email, rol, permisos, activo, permisos_version)
-                    VALUES (:usr, :pass, :nom, :email, :rol, :perms, :act, 1)
+                    (usuario, password, nombre_completo, email, rol, departamento_id, permisos, activo, permisos_version)
+                    VALUES (:usr, :pass, :nom, :email, :rol, :depto, :perms, :act, 1)
                 ", [
                     ':usr'   => $usuario,
                     ':pass'  => $passHash,
                     ':nom'   => $nombre,
                     ':email' => $email ?: null,
                     ':rol'   => $rol,
+                    ':depto' => $departamentoId,
                     ':perms' => $permisosJson,
                     ':act'   => $activo
                 ]);
@@ -180,6 +189,7 @@ class UsuariosController {
             exit;
         }
     }
+
 
     /**
      * Permite al Administrador restablecer la contraseña de cualquier usuario

@@ -95,9 +95,16 @@
 
                             <div class="d-flex justify-content-between align-items-center pt-2 border-top">
                                 <span class="small text-muted"><i class="fa-solid fa-users mr-1 text-primary"></i> <b><?= $t['total_empleados'] ?></b> trabajadores</span>
-                                <button class="btn btn-outline-primary btn-sm" onclick="openEditTurnoModal(<?= htmlspecialchars(json_encode($t)) ?>)">
-                                     <i class="fa-solid fa-pen mr-1"></i> Editar Horario
-                                </button>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-primary btn-sm" onclick="openEditTurnoModal(<?= htmlspecialchars(json_encode($t)) ?>)">
+                                         <i class="fa-solid fa-pen mr-1"></i> Editar
+                                    </button>
+                                    <?php if ($currentUser['rol'] === 'ADMIN' || $currentUser['rol'] === 'RRHH'): ?>
+                                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="confirmDeleteTurno(<?= $t['id'] ?>, '<?= htmlspecialchars(addslashes($t['nombre'])) ?>', <?= (int)$t['total_empleados'] ?>)" title="Eliminar / Desactivar Turno">
+                                            <i class="fa-solid fa-trash-can"></i>
+                                        </button>
+                                    <?php endif; ?>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -108,10 +115,17 @@
     </div>
 </section>
 
+<!-- Formulario oculto para eliminación segura de turnos -->
+<form id="formDeleteTurno" method="POST" action="?route=turnos&action=eliminar" style="display:none;">
+    <?= csrf_field() ?>
+    <input type="hidden" name="id" id="delete_turno_id">
+</form>
+
 <!-- MODAL CONFIGURACIÓN DE TURNO -->
 <div class="modal fade" id="modalTurno" tabindex="-1">
     <div class="modal-dialog">
-        <form method="POST" action="?route=turnos&action=guardar" class="modal-content">
+        <form method="POST" action="?route=turnos&action=guardar" class="modal-content" onsubmit="return validateTurnoForm(event)">
+
             <?= csrf_field() ?>
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title font-weight-bold" id="turnoModalTitle">Configuración de Turno</h5>
@@ -287,6 +301,50 @@ function openEditTurnoModal(t) {
     updateTolerancePreview();
     $('#modalTurno').modal('show');
 }
+
+function validateTurnoForm(e) {
+
+    const entrada = document.getElementById('tur_entrada').value;
+    const salida = document.getElementById('tur_salida').value;
+    const esNocturno = document.getElementById('tur_nocturno').checked;
+
+    if (!esNocturno && entrada && salida) {
+        if (entrada >= salida) {
+            e.preventDefault();
+            Swal.fire({
+                icon: 'warning',
+                title: 'Horario Inválido',
+                text: 'En turnos regulares (no nocturnos), la hora de entrada debe ser menor a la hora de salida.',
+                confirmButtonColor: '#1d4ed8'
+            });
+            return false;
+        }
+    }
+    return true;
+}
+
+function confirmDeleteTurno(id, nombre, totalEmpleados) {
+    const msg = totalEmpleados > 0
+        ? `El turno "${nombre}" tiene ${totalEmpleados} empleado(s) asignado(s). Será desactivado para proteger la consistencia de los contratos y registros.`
+        : `¿Estás seguro de eliminar el turno "${nombre}"?`;
+
+    Swal.fire({
+        title: 'Confirmar Acción',
+        text: msg,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sí, continuar',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            document.getElementById('delete_turno_id').value = id;
+            document.getElementById('formDeleteTurno').submit();
+        }
+    });
+}
 </script>
+
 
 <?php require_once APP_ROOT . '/views/layout/footer.php'; ?>

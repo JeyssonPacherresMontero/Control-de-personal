@@ -50,7 +50,8 @@ class AttendanceSynchronizer:
                     database=DB_CONFIG['database'],
                     charset=DB_CONFIG['charset'],
                     cursorclass=DictCursor,
-                    autocommit=True
+                    autocommit=True,
+                    init_command=DB_CONFIG.get('init_command', "SET time_zone = '-05:00'")
                 )
             return self.db_conn
         except Exception as e:
