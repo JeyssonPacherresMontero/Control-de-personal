@@ -580,32 +580,50 @@ if (!empty($deptoId)) {
                 <!-- SELECTOR DE EMPLEADO Y FECHA CUANDO SE ABRE DESDE BOTÓN SUPERIOR -->
                 <div class="card mb-3 border bg-white shadow-none" id="edit_empleado_selector_card" style="border-radius: 8px; display: none;">
                     <div class="card-header py-2 bg-white border-bottom">
-                        <span class="font-weight-bold text-dark small text-uppercase"><i class="fa-solid fa-user-plus text-primary mr-1"></i> Seleccionar Empleado y Fecha</span>
+                        <span class="font-weight-bold text-dark small text-uppercase">Seleccionar Empleado y Fecha</span>
                     </div>
                     <div class="card-body p-3">
                         <div class="row align-items-center">
                             <div class="col-md-8 mb-2">
-                                <label class="small font-weight-bold text-secondary mb-1"><i class="fa-solid fa-user mr-1"></i> Buscar y Seleccionar Trabajador <span class="text-danger">*</span></label>
-                                <select id="edit_worker_select" class="form-control form-control-sm font-weight-bold select2-worker" style="width: 100%;" onchange="onWorkerSelected(this)">
-                                    <option value="">-- Buscar o seleccionar trabajador por Nombre o DNI --</option>
-                                    <?php foreach ($empleados as $emp): ?>
-                                        <option value="<?= $emp['id'] ?>" 
-                                                data-nombres="<?= htmlspecialchars($emp['nombres']) ?>"
-                                                data-apellidos="<?= htmlspecialchars($emp['apellidos']) ?>"
-                                                data-dni="<?= htmlspecialchars($emp['dni']) ?>"
-                                                data-reloj="<?= htmlspecialchars($emp['codigo_reloj']) ?>"
-                                                data-turno="<?= htmlspecialchars($emp['turno_nombre'] ?? 'Turno General') ?>"
-                                                data-hent="<?= !empty($emp['hora_entrada']) ? substr($emp['hora_entrada'], 0, 5) : '08:00' ?>"
-                                                data-hsal="<?= !empty($emp['hora_salida']) ? substr($emp['hora_salida'], 0, 5) : '17:00' ?>"
-                                                data-tol="<?= $emp['tolerancia_minutos'] ?? 10 ?>">
-                                            <?= htmlspecialchars($emp['apellidos'] . ' ' . $emp['nombres']) ?> &mdash; DNI: <?= htmlspecialchars($emp['dni']) ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
+                                <label class="small font-weight-bold text-secondary mb-1">Buscar y Seleccionar Trabajador <span class="text-danger">*</span></label>
+                                
+                                <div class="worker-search-wrapper" id="edit_search_container">
+                                    <input type="text" 
+                                           id="edit_worker_search_input" 
+                                           class="form-control" 
+                                           style="height: 38px; font-size: 0.88rem;"
+                                           placeholder="Escribe nombre, apellido o DNI del trabajador..." 
+                                           autocomplete="off"
+                                           oninput="filtrarTrabajadoresEnVivo(this.value, 'edit')"
+                                           onkeydown="navegarResultadosTrabajador(event, 'edit')"
+                                           onfocus="filtrarTrabajadoresEnVivo(this.value, 'edit')">
+
+                                    <!-- Dropdown flotante con resultados filtrados -->
+                                    <div id="edit_worker_results" class="worker-search-dropdown" style="display: none;"></div>
+                                </div>
+
+                                <!-- Tarjeta de confirmación del trabajador seleccionado -->
+                                <div id="edit_worker_selected_badge" class="mt-2" style="display: none;">
+                                    <div class="d-flex align-items-center justify-content-between p-2 rounded border" style="background-color: #f8fafc; border-color: #cbd5e1 !important;">
+                                        <div>
+                                            <div class="font-weight-bold text-dark" id="edit_badge_nombre" style="font-size: 0.88rem;">--</div>
+                                            <div class="text-muted small" style="font-size: 0.76rem;">
+                                                DNI: <strong class="text-dark" id="edit_badge_dni">--</strong>
+                                                <span class="mx-1">&bull;</span>
+                                                Reloj ID: <strong class="text-dark" id="edit_badge_reloj">--</strong>
+                                                <span class="mx-1">&bull;</span>
+                                                Turno: <strong class="text-primary" id="edit_badge_turno">--</strong>
+                                            </div>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary font-weight-bold" onclick="deseleccionarTrabajador('edit')">
+                                            Cambiar
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                             <div class="col-md-4 mb-2">
-                                <label class="small font-weight-bold text-secondary mb-1"><i class="fa-regular fa-calendar mr-1"></i> Fecha de Asistencia <span class="text-danger">*</span></label>
-                                <input type="date" id="edit_fecha_picker" class="form-control form-control-sm" value="<?= date('Y-m-d') ?>" onchange="onDatePickerChanged(this.value)">
+                                <label class="small font-weight-bold text-secondary mb-1">Fecha de Asistencia <span class="text-danger">*</span></label>
+                                <input type="date" id="edit_fecha_picker" class="form-control" style="height: 38px;" value="<?= date('Y-m-d') ?>" onchange="onDatePickerChanged(this.value)">
                             </div>
                         </div>
                     </div>
@@ -725,23 +743,54 @@ if (!empty($deptoId)) {
             </div>
             
             <div class="modal-body p-4 bg-light">
-                <!-- BUSCADOR INTERACTIVO DE TRABAJADOR -->
+                <!-- BUSCADOR INTERACTIVO EN VIVO DE TRABAJADOR POR NOMBRE, DNI O RELOJ -->
                 <div class="card border bg-white shadow-none mb-3" style="border-radius: 8px;">
                     <div class="card-header py-2 bg-white border-bottom">
-                        <span class="font-weight-bold text-dark small text-uppercase"><i class="fa-solid fa-user-shield text-primary mr-1"></i> Seleccionar Trabajador</span>
+                        <span class="font-weight-bold text-dark small text-uppercase">
+                            Seleccionar Trabajador <span class="text-danger">*</span>
+                        </span>
                     </div>
                     <div class="card-body p-3">
-                        <div class="form-group mb-0">
-                            <label class="small font-weight-bold text-secondary mb-1">Buscar y Seleccionar Trabajador <span class="text-danger">*</span></label>
-                            <select name="id_empleado" id="just_empleado_select" class="form-control form-control-sm select2-worker" style="width: 100%;" required>
-                                <option value="">-- Buscar o seleccionar trabajador por Nombre o DNI --</option>
-                                <?php foreach ($empleados as $emp): ?>
-                                    <option value="<?= $emp['id'] ?>">
-                                        <?= htmlspecialchars($emp['apellidos'] . ' ' . $emp['nombres']) ?> &mdash; DNI: <?= htmlspecialchars($emp['dni']) ?> (ID: <?= htmlspecialchars($emp['codigo_reloj']) ?>)
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
+                        <input type="hidden" name="id_empleado" id="just_empleado_select" value="" required>
+
+                        <!-- Input de búsqueda por nombre o DNI -->
+                        <div class="worker-search-wrapper" id="just_search_container">
+                            <input type="text" 
+                                   id="just_worker_search_input" 
+                                   class="form-control" 
+                                   style="height: 38px; font-size: 0.88rem;"
+                                   placeholder="Escribe nombre, apellido o DNI del trabajador..." 
+                                   autocomplete="off"
+                                   oninput="filtrarTrabajadoresEnVivo(this.value, 'just')"
+                                   onkeydown="navegarResultadosTrabajador(event, 'just')"
+                                   onfocus="filtrarTrabajadoresEnVivo(this.value, 'just')">
+
+                            <!-- Dropdown flotante con resultados filtrados -->
+                            <div id="just_worker_results" class="worker-search-dropdown" style="display: none;"></div>
                         </div>
+
+                        <!-- Tarjeta del Trabajador Seleccionado -->
+                        <div id="just_worker_selected_badge" class="mt-2" style="display: none;">
+                            <div class="d-flex align-items-center justify-content-between p-2 rounded border" style="background-color: #f8fafc; border-color: #cbd5e1 !important;">
+                                <div>
+                                    <div class="font-weight-bold text-dark" id="just_badge_nombre" style="font-size: 0.9rem;">--</div>
+                                    <div class="text-muted small" style="font-size: 0.78rem;">
+                                        DNI: <strong class="text-dark" id="just_badge_dni">--</strong>
+                                        <span class="mx-1">&bull;</span>
+                                        Reloj ID: <strong class="text-dark" id="just_badge_reloj">--</strong>
+                                        <span class="mx-1">&bull;</span>
+                                        Área: <span id="just_badge_depto">--</span>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-secondary font-weight-bold" onclick="deseleccionarTrabajador('just')" title="Cambiar de trabajador">
+                                    Cambiar
+                                </button>
+                            </div>
+                        </div>
+
+                        <small class="form-text text-muted mt-1" id="just_worker_hint">
+                            Escribe el nombre o DNI para buscar y seleccionar.
+                        </small>
                     </div>
                 </div>
 
@@ -795,10 +844,306 @@ if (!empty($deptoId)) {
     </div>
 </div>
 
+<style>
+.worker-search-wrapper {
+    position: relative;
+}
+.worker-search-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 1060;
+    background: #ffffff;
+    max-height: 270px;
+    overflow-y: auto;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.15), 0 8px 10px -6px rgba(0,0,0,0.1);
+}
+.worker-search-item {
+    cursor: pointer;
+    padding: 8px 12px;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: background-color 0.15s ease;
+}
+.worker-search-item:last-child {
+    border-bottom: none;
+}
+.worker-search-item:hover, .worker-search-item.active {
+    background-color: #eff6ff !important;
+}
+.worker-search-item mark {
+    background-color: #fef08a;
+    color: #0f172a;
+    font-weight: 700;
+    padding: 0 2px;
+    border-radius: 2px;
+}
+</style>
+
 <script>
 // =========================================================================
-// GESTIÓN ADMINISTRATIVA DE ASISTENCIA: EDICIÓN DE HORAS Y JUSTIFICACIÓN
+// GESTIÓN ADMINISTRATIVA DE ASISTENCIA: MOTOR DE BÚSQUEDA RÁPIDA DE TRABAJADOR
 // =========================================================================
+
+// Catálogo de trabajadores para búsqueda instantánea en memoria (0ms latencia)
+const LISTA_EMPLEADOS = <?= json_encode(array_values(array_map(function($emp) {
+    return [
+        'id' => (int)$emp['id'],
+        'nombres' => $emp['nombres'] ?? '',
+        'apellidos' => $emp['apellidos'] ?? '',
+        'nombre_completo' => trim(($emp['apellidos'] ?? '') . ' ' . ($emp['nombres'] ?? '')),
+        'dni' => $emp['dni'] ?? '',
+        'codigo_reloj' => (string)($emp['codigo_reloj'] ?? ''),
+        'departamento' => $emp['departamento_nombre'] ?? 'General',
+        'turno' => $emp['turno_nombre'] ?? 'Turno General',
+        'hora_entrada' => !empty($emp['hora_entrada']) ? substr($emp['hora_entrada'], 0, 5) : '08:00',
+        'hora_salida' => !empty($emp['hora_salida']) ? substr($emp['hora_salida'], 0, 5) : '17:00',
+        'tolerancia' => (int)($emp['tolerancia_minutos'] ?? 10),
+    ];
+}, $empleados)), JSON_UNESCAPED_UNICODE) ?>;
+
+function normalizarTexto(txt) {
+    if (!txt) return '';
+    return txt.toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+    return text.toString().replace(/[&<>"']/g, m => map[m]);
+}
+
+function resaltarCoincidencias(textoOriginal, query) {
+    if (!query || !textoOriginal) return escapeHtml(textoOriginal);
+    const tokens = normalizarTexto(query).split(/\s+/).filter(t => t.length > 0);
+    if (tokens.length === 0) return escapeHtml(textoOriginal);
+    const escaped = tokens.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    const regex = new RegExp(`(${escaped.join('|')})`, 'gi');
+    return escapeHtml(textoOriginal).replace(regex, '<mark>$1</mark>');
+}
+
+// Filtrar trabajadores en tiempo real al escribir
+function filtrarTrabajadoresEnVivo(query, tipo) {
+    const resultsContainer = document.getElementById(`${tipo}_worker_results`);
+    if (!resultsContainer) return;
+
+    const qNorm = normalizarTexto(query);
+    const tokens = qNorm.split(/\s+/).filter(t => t.length > 0);
+
+    let matches = [];
+    if (tokens.length === 0) {
+        // Si el buscador está vacío, mostrar los primeros 15 trabajadores
+        matches = LISTA_EMPLEADOS.slice(0, 15);
+    } else {
+        matches = LISTA_EMPLEADOS.filter(emp => {
+            const nomNorm = normalizarTexto(emp.nombre_completo);
+            const dniNorm = normalizarTexto(emp.dni);
+            const relojNorm = normalizarTexto(emp.codigo_reloj);
+            const deptoNorm = normalizarTexto(emp.departamento);
+            const haystack = `${nomNorm} ${dniNorm} ${relojNorm} ${deptoNorm}`;
+
+            return tokens.every(tok => haystack.includes(tok));
+        }).slice(0, 25);
+    }
+
+    if (matches.length === 0) {
+        resultsContainer.innerHTML = `
+            <div class="p-3 text-center text-muted small">
+                No se encontraron trabajadores con "<strong>${escapeHtml(query)}</strong>"
+            </div>
+        `;
+    } else {
+        let html = '';
+        matches.forEach((emp, idx) => {
+            const activeClass = idx === 0 && tokens.length > 0 ? 'active' : '';
+            html += `
+                <div class="worker-search-item ${activeClass}" data-id="${emp.id}" onclick="seleccionarTrabajador(${emp.id}, '${tipo}')">
+                    <div class="py-1">
+                        <div class="font-weight-bold text-dark mb-0" style="font-size: 0.88rem;">
+                            ${resaltarCoincidencias(emp.nombre_completo, query)}
+                        </div>
+                        <div class="text-muted small" style="font-size: 0.76rem;">
+                            DNI: <strong>${resaltarCoincidencias(emp.dni, query)}</strong>
+                            <span class="mx-1">&bull;</span>
+                            Reloj: <strong>${resaltarCoincidencias(emp.codigo_reloj, query)}</strong>
+                            <span class="mx-1">&bull;</span>
+                            ${escapeHtml(emp.departamento)}
+                        </div>
+                    </div>
+                    <div>
+                        <span class="badge badge-light border text-primary font-weight-bold" style="font-size: 0.72rem;">
+                            Elegir
+                        </span>
+                    </div>
+                </div>
+            `;
+        });
+        resultsContainer.innerHTML = html;
+    }
+
+    resultsContainer.style.display = 'block';
+}
+
+// Seleccionar un trabajador desde la lista
+function seleccionarTrabajador(empId, tipo) {
+    const emp = LISTA_EMPLEADOS.find(e => e.id == empId);
+    if (!emp) return;
+
+    // Cerrar dropdown de búsqueda
+    const resultsContainer = document.getElementById(`${tipo}_worker_results`);
+    if (resultsContainer) resultsContainer.style.display = 'none';
+
+    // Ocultar wrapper del buscador y mostrar tarjeta de seleccionado
+    const searchContainer = document.getElementById(`${tipo}_search_container`);
+    const badgeContainer = document.getElementById(`${tipo}_worker_selected_badge`);
+
+    if (searchContainer) searchContainer.style.display = 'none';
+    if (badgeContainer) badgeContainer.style.display = 'block';
+
+    const nombreEl = document.getElementById(`${tipo}_badge_nombre`);
+    if (nombreEl) nombreEl.innerText = emp.nombre_completo;
+
+    const dniEl = document.getElementById(`${tipo}_badge_dni`);
+    if (dniEl) dniEl.innerText = emp.dni || '--';
+
+    const relojEl = document.getElementById(`${tipo}_badge_reloj`);
+    if (relojEl) relojEl.innerText = emp.codigo_reloj || '--';
+
+    const deptoEl = document.getElementById(`${tipo}_badge_depto`);
+    if (deptoEl) deptoEl.innerText = emp.departamento || 'General';
+
+    const turnoEl = document.getElementById(`${tipo}_badge_turno`);
+    if (turnoEl) turnoEl.innerText = emp.turno || 'General';
+
+    if (tipo === 'just') {
+        const inputHidden = document.getElementById('just_empleado_select');
+        if (inputHidden) inputHidden.value = emp.id;
+
+        const hintEl = document.getElementById('just_worker_hint');
+        if (hintEl) hintEl.style.display = 'none';
+
+        // Auto-enfocar el siguiente campo (Tipo de Justificación)
+        setTimeout(() => {
+            const nextField = document.getElementById('just_tipo');
+            if (nextField) nextField.focus();
+        }, 150);
+    } else if (tipo === 'edit') {
+        const inputHidden = document.getElementById('edit_id_empleado');
+        if (inputHidden) inputHidden.value = emp.id;
+
+        document.getElementById('edit_prog_entrada').value = emp.hora_entrada || '08:00';
+        document.getElementById('edit_prog_salida').value = emp.hora_salida || '17:00';
+        document.getElementById('edit_tolerancia').value = emp.tolerancia || 10;
+        document.getElementById('edit_turno_info').innerText = `${emp.hora_entrada || '08:00'} - ${emp.hora_salida || '17:00'} (Turno: ${emp.turno || 'General'})`;
+
+        calculateRealtimeAdminAttendance();
+
+        setTimeout(() => {
+            const nextField = document.getElementById('edit_hora_entrada');
+            if (nextField) nextField.focus();
+        }, 150);
+    }
+}
+
+// Deseleccionar trabajador para buscar otro
+function deseleccionarTrabajador(tipo) {
+    const resultsContainer = document.getElementById(`${tipo}_worker_results`);
+    if (resultsContainer) resultsContainer.style.display = 'none';
+
+    const searchContainer = document.getElementById(`${tipo}_search_container`);
+    const badgeContainer = document.getElementById(`${tipo}_worker_selected_badge`);
+
+    if (searchContainer) searchContainer.style.display = 'block';
+    if (badgeContainer) badgeContainer.style.display = 'none';
+
+    if (tipo === 'just') {
+        const inputHidden = document.getElementById('just_empleado_select');
+        if (inputHidden) inputHidden.value = '';
+
+        const hintEl = document.getElementById('just_worker_hint');
+        if (hintEl) hintEl.style.display = 'block';
+    } else if (tipo === 'edit') {
+        const inputHidden = document.getElementById('edit_id_empleado');
+        if (inputHidden) inputHidden.value = '0';
+    }
+
+    const input = document.getElementById(`${tipo}_worker_search_input`);
+    if (input) {
+        input.value = '';
+        input.focus();
+        filtrarTrabajadoresEnVivo('', tipo);
+    }
+}
+
+// Limpiar campo de búsqueda
+function limpiarBusquedaTrabajador(tipo) {
+    const input = document.getElementById(`${tipo}_worker_search_input`);
+    if (input) {
+        input.value = '';
+        input.focus();
+        filtrarTrabajadoresEnVivo('', tipo);
+    }
+}
+
+// Navegación con teclado en los resultados (flechas arriba/abajo, Enter, Escape)
+function navegarResultadosTrabajador(e, tipo) {
+    const resultsContainer = document.getElementById(`${tipo}_worker_results`);
+    if (!resultsContainer || resultsContainer.style.display === 'none') return;
+
+    const items = Array.from(resultsContainer.querySelectorAll('.worker-search-item'));
+    if (items.length === 0) return;
+
+    let currentIndex = items.findIndex(item => item.classList.contains('active'));
+
+    if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (currentIndex === -1 || currentIndex >= items.length - 1) {
+            currentIndex = 0;
+        } else {
+            currentIndex++;
+        }
+        items.forEach((it, idx) => it.classList.toggle('active', idx === currentIndex));
+        if (items[currentIndex]) items[currentIndex].scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (currentIndex <= 0) {
+            currentIndex = items.length - 1;
+        } else {
+            currentIndex--;
+        }
+        items.forEach((it, idx) => it.classList.toggle('active', idx === currentIndex));
+        if (items[currentIndex]) items[currentIndex].scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (currentIndex >= 0 && items[currentIndex]) {
+            items[currentIndex].click();
+        } else if (items.length > 0) {
+            items[0].click();
+        }
+    } else if (e.key === 'Escape') {
+        resultsContainer.style.display = 'none';
+    }
+}
+
+// Cerrar desplegable al hacer clic fuera
+document.addEventListener('click', function(e) {
+    const justContainer = document.getElementById('just_search_container');
+    const editContainer = document.getElementById('edit_search_container');
+
+    if (justContainer && !justContainer.contains(e.target)) {
+        const res = document.getElementById('just_worker_results');
+        if (res) res.style.display = 'none';
+    }
+    if (editContainer && !editContainer.contains(e.target)) {
+        const res = document.getElementById('edit_worker_results');
+        if (res) res.style.display = 'none';
+    }
+});
 
 function openAdminEditModal(rec, focusField = 'entrada') {
     document.getElementById('edit_id').value = rec.id || 0;
@@ -857,10 +1202,7 @@ function openAsignarHorasModal() {
     document.getElementById('edit_empleado_card').style.display = 'none';
     document.getElementById('edit_empleado_selector_card').style.display = 'block';
 
-    const select = document.getElementById('edit_worker_select');
-    if (select.options.length > 1) {
-        $('#edit_worker_select').val(select.options[1].value).trigger('change');
-    }
+    deseleccionarTrabajador('edit');
 
     document.getElementById('edit_hora_entrada').value = '';
     document.getElementById('edit_hora_salida').value = '';
@@ -1032,7 +1374,7 @@ function submitAdminEditAttendance(e) {
 
 function openJustificarAdminModal() {
     $('#formJustificarAdmin')[0].reset();
-    $('#just_empleado_select').val('').trigger('change');
+    deseleccionarTrabajador('just');
     document.getElementById('just_fecha_inicio').value = '<?= date('Y-m-d') ?>';
     document.getElementById('just_fecha_fin').value = '<?= date('Y-m-d') ?>';
     $('#modalJustificarAdmin').modal('show');
@@ -1040,7 +1382,7 @@ function openJustificarAdminModal() {
 
 function openQuickJustifyModal(rec) {
     $('#formJustificarAdmin')[0].reset();
-    $('#just_empleado_select').val(rec.id_empleado).trigger('change');
+    seleccionarTrabajador(rec.id_empleado, 'just');
     document.getElementById('just_fecha_inicio').value = rec.fecha;
     document.getElementById('just_fecha_fin').value = rec.fecha;
     document.getElementById('just_motivo').value = `Justificación oficial de asistencia del día ${rec.fecha}`;
@@ -1054,9 +1396,14 @@ function submitJustificarAdmin(e) {
         Swal.fire({
             icon: 'warning',
             title: 'Trabajador requerido',
-            text: 'Por favor selecciona un trabajador de la lista.',
+            text: 'Por favor busca y selecciona un trabajador de la lista antes de guardar.',
             confirmButtonColor: '#1d4ed8'
         });
+        const inp = document.getElementById('just_worker_search_input');
+        if (inp) {
+            inp.focus();
+            filtrarTrabajadoresEnVivo('', 'just');
+        }
         return;
     }
 
@@ -1102,22 +1449,31 @@ function submitJustificarAdmin(e) {
     });
 }
 
-$(document).ready(function() {
-    if ($.fn.select2) {
-        $('#edit_worker_select').select2({
-            theme: 'bootstrap4',
-            dropdownParent: $('#modalEditarAsistencia'),
-            placeholder: '-- Buscar o seleccionar trabajador --',
-            width: '100%'
-        }).on('change', function() {
-            onWorkerSelected(this);
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.jQuery) {
+        $('#modalJustificarAdmin').on('shown.bs.modal', function () {
+            const empId = document.getElementById('just_empleado_select')?.value;
+            if (!empId) {
+                const inp = document.getElementById('just_worker_search_input');
+                if (inp) {
+                    inp.focus();
+                    filtrarTrabajadoresEnVivo('', 'just');
+                }
+            }
         });
 
-        $('#just_empleado_select').select2({
-            theme: 'bootstrap4',
-            dropdownParent: $('#modalJustificarAdmin'),
-            placeholder: '-- Buscar o seleccionar trabajador --',
-            width: '100%'
+        $('#modalEditarAsistencia').on('shown.bs.modal', function () {
+            const selectorCard = document.getElementById('edit_empleado_selector_card');
+            if (selectorCard && selectorCard.style.display !== 'none') {
+                const empId = document.getElementById('edit_id_empleado')?.value;
+                if (!empId || empId === '0') {
+                    const inp = document.getElementById('edit_worker_search_input');
+                    if (inp) {
+                        inp.focus();
+                        filtrarTrabajadoresEnVivo('', 'edit');
+                    }
+                }
+            }
         });
     }
 });

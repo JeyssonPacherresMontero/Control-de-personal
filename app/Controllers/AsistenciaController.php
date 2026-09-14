@@ -135,9 +135,17 @@ class AsistenciaController {
             LIMIT $perPage OFFSET $offset
         ";
 
-        $asistencias = Database::query($sql, $params);
         $departamentos = Database::query("SELECT * FROM departamentos WHERE activo = 1 ORDER BY nombre ASC");
-        $empleados = Database::query("SELECT id, codigo_reloj, dni, nombres, apellidos, departamento_id FROM empleados WHERE activo = 1 ORDER BY apellidos ASC, nombres ASC");
+        $empleados = Database::query("
+            SELECT e.id, e.codigo_reloj, e.dni, e.nombres, e.apellidos, e.departamento_id,
+                   d.nombre as departamento_nombre,
+                   t.nombre as turno_nombre, t.hora_entrada, t.hora_salida, t.tolerancia_minutos
+            FROM empleados e
+            LEFT JOIN departamentos d ON e.departamento_id = d.id
+            LEFT JOIN turnos t ON e.turno_id = t.id
+            WHERE e.activo = 1
+            ORDER BY e.apellidos ASC, e.nombres ASC
+        ");
 
         require_once APP_ROOT . '/views/asistencia/index.php';
     }

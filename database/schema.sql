@@ -214,11 +214,13 @@ CREATE TABLE IF NOT EXISTS `usuarios_sistema` (
     `nombre_completo` VARCHAR(120) NOT NULL,
     `email` VARCHAR(100) NULL,
     `rol` ENUM('ADMIN', 'RRHH', 'SUPERVISOR', 'CONSULTA') DEFAULT 'RRHH',
+    `departamento_id` INT NULL,
     `permisos` TEXT NULL COMMENT 'JSON array de módulos permitidos en el menú',
     `activo` TINYINT(1) DEFAULT 1,
     `permisos_version` INT DEFAULT 1,
     `ultimo_login` DATETIME NULL,
-    `creado_en` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    `creado_en` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT `fk_usuarios_departamento` FOREIGN KEY (`departamento_id`) REFERENCES `departamentos` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 13. TABLA: EVENT STORE (EVENT SOURCING PARA MARCACIONES Y ASISTENCIA)

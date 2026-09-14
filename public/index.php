@@ -98,7 +98,12 @@ switch ($route) {
 
     case 'dashboard':
         AuthController::requirePermission('dashboard');
-        (new DashboardController())->index();
+        $controller = new DashboardController();
+        if ($action === 'tendencia_datos') {
+            $controller->getTendenciaDatos();
+        } else {
+            $controller->index();
+        }
         break;
 
     case 'asistencia':

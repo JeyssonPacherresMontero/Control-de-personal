@@ -154,6 +154,18 @@ class DashboardController {
             }
         }
 
+        $totalesTendencia = [
+            'presentes' => array_sum($chartPresentes),
+            'tardanzas' => array_sum($chartTardanzas),
+            'faltas'    => array_sum($chartFaltas)
+        ];
+        $totalesTendencia['total'] = $totalesTendencia['presentes'] + $totalesTendencia['tardanzas'] + $totalesTendencia['faltas'];
+        $totalesTendencia['porc_presentes'] = $totalesTendencia['total'] > 0 ? round(($totalesTendencia['presentes'] / $totalesTendencia['total']) * 100, 1) : 0;
+        $totalesTendencia['porc_tardanzas'] = $totalesTendencia['total'] > 0 ? round(($totalesTendencia['tardanzas'] / $totalesTendencia['total']) * 100, 1) : 0;
+        $totalesTendencia['porc_faltas']    = $totalesTendencia['total'] > 0 ? round(($totalesTendencia['faltas'] / $totalesTendencia['total']) * 100, 1) : 0;
+
+        $listaDepartamentos = Database::query("SELECT id, nombre FROM departamentos WHERE activo = 1 ORDER BY nombre ASC");
+
         // 6. TI & Dispositivos Biométricos
         $dispositivos = Database::query("SELECT * FROM dispositivos ORDER BY id ASC");
         $dispositivosOnline = 0;
@@ -229,5 +241,138 @@ class DashboardController {
         } finally {
             Database::execute("SELECT RELEASE_LOCK(?)", [$lockName]);
         }
+    }
+
+    /**
+     * Endpoint AJAX: Retorna datos de tendencia filtrados por rango de tiempo y departamento
+     */
+    public function getTendenciaDatos(): void {
+        AuthController::checkAuth();
+        AuthController::requirePermission('dashboard');
+
+        $currentUser = AuthController::user();
+        $periodo = $_GET['periodo'] ?? '7d';
+        $deptoId = !empty($_GET['departamento_id']) && $_GET['departamento_id'] !== 'all' 
+            ? (int)$_GET['departamento_id'] 
+            : null;
+
+        // Si el usuario es SUPERVISOR con departamento asignado, forzar su departamento
+        if (($currentUser['rol'] ?? '') === 'SUPERVISOR' && !empty($currentUser['departamento_id'])) {
+            $deptoId = (int)$currentUser['departamento_id'];
+        }
+
+        $today = date('Y-m-d');
+        $labelPeriodo = 'Últimos 7 Días';
+
+        switch ($periodo) {
+            case '15d':
+                $fechaInicio = date('Y-m-d', strtotime("-14 days"));
+                $fechaFin = $today;
+                $labelPeriodo = 'Últimos 15 Días';
+                break;
+            case '30d':
+                $fechaInicio = date('Y-m-d', strtotime("-29 days"));
+                $fechaFin = $today;
+                $labelPeriodo = 'Últimos 30 Días';
+                break;
+            case 'mes_actual':
+                $fechaInicio = date('Y-m-01');
+                $fechaFin = $today;
+                $labelPeriodo = 'Este Mes (' . date('m/Y') . ')';
+                break;
+            case 'mes_anterior':
+                $fechaInicio = date('Y-m-01', strtotime('first day of last month'));
+                $fechaFin = date('Y-m-t', strtotime('last month'));
+                $labelPeriodo = 'Mes Anterior (' . date('m/Y', strtotime('last month')) . ')';
+                break;
+            case '7d':
+            default:
+                $periodo = '7d';
+                $fechaInicio = date('Y-m-d', strtotime("-6 days"));
+                $fechaFin = $today;
+                $labelPeriodo = 'Últimos 7 Días';
+                break;
+        }
+
+        $params = [$fechaInicio, $fechaFin];
+        $deptoSql = "";
+        if ($deptoId !== null) {
+            $deptoSql = "AND e.departamento_id = ?";
+            $params[] = $deptoId;
+        }
+
+        $tendenciaRows = Database::query("
+            SELECT 
+                a.fecha,
+                SUM(CASE WHEN a.estado = 'PRESENTE' THEN 1 ELSE 0 END) as presentes,
+                SUM(CASE WHEN a.estado = 'TARDANZA' THEN 1 ELSE 0 END) as tardanzas,
+                SUM(CASE WHEN a.estado = 'FALTA' OR a.estado = 'FALTA_INJUSTIFICADA' THEN 1 ELSE 0 END) as faltas
+            FROM asistencia_diaria a
+            JOIN empleados e ON e.id = a.id_empleado
+            WHERE a.fecha BETWEEN ? AND ?
+            $deptoSql
+            GROUP BY a.fecha
+            ORDER BY a.fecha ASC
+        ", $params);
+
+        $tendenciaMap = [];
+        foreach ($tendenciaRows as $tr) {
+            $tendenciaMap[$tr['fecha']] = $tr;
+        }
+
+        $chartLabels = [];
+        $chartPresentes = [];
+        $chartTardanzas = [];
+        $chartFaltas = [];
+
+        $current = strtotime($fechaInicio);
+        $end = strtotime($fechaFin);
+
+        while ($current <= $end) {
+            $dStr = date('Y-m-d', $current);
+            $chartLabels[] = date('d/m', $current);
+            if (isset($tendenciaMap[$dStr])) {
+                $chartPresentes[] = (int)$tendenciaMap[$dStr]['presentes'];
+                $chartTardanzas[] = (int)$tendenciaMap[$dStr]['tardanzas'];
+                $chartFaltas[] = (int)$tendenciaMap[$dStr]['faltas'];
+            } else {
+                $chartPresentes[] = 0;
+                $chartTardanzas[] = 0;
+                $chartFaltas[] = 0;
+            }
+            $current = strtotime("+1 day", $current);
+        }
+
+        $totalPresentes = array_sum($chartPresentes);
+        $totalTardanzas = array_sum($chartTardanzas);
+        $totalFaltas = array_sum($chartFaltas);
+        $totalGeneral = $totalPresentes + $totalTardanzas + $totalFaltas;
+
+        $porcPresentes = $totalGeneral > 0 ? round(($totalPresentes / $totalGeneral) * 100, 1) : 0;
+        $porcTardanzas = $totalGeneral > 0 ? round(($totalTardanzas / $totalGeneral) * 100, 1) : 0;
+        $porcFaltas = $totalGeneral > 0 ? round(($totalFaltas / $totalGeneral) * 100, 1) : 0;
+
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'success' => true,
+            'periodo' => $periodo,
+            'labelPeriodo' => $labelPeriodo,
+            'labels' => $chartLabels,
+            'datasets' => [
+                'presentes' => $chartPresentes,
+                'tardanzas' => $chartTardanzas,
+                'faltas' => $chartFaltas
+            ],
+            'totales' => [
+                'presentes' => $totalPresentes,
+                'tardanzas' => $totalTardanzas,
+                'faltas' => $totalFaltas,
+                'total_general' => $totalGeneral,
+                'porc_presentes' => $porcPresentes,
+                'porc_tardanzas' => $porcTardanzas,
+                'porc_faltas' => $porcFaltas
+            ]
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
     }
 }

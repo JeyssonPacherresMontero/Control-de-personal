@@ -509,16 +509,89 @@
             <!-- GRÁFICOS Y ANÁLISIS RRHH (2 COLUMNAS BALANCEADAS) -->
             <div class="row">
                 <div class="col-lg-7 mb-2">
-                    <!-- Tendencia 7 Días -->
-                    <div class="card mb-2">
-                        <div class="card-header d-flex justify-content-between align-items-center py-2 px-3">
-                            <h3 class="card-title font-weight-bold" style="font-size: 0.88rem;">
-                                <i class="fa-solid fa-chart-line mr-2 text-primary"></i> Tendencia de Asistencia (Últimos 7 Días)
-                            </h3>
-                            <span class="badge-pill-custom badge-pill-neutral" style="font-size: 0.68rem;">Últimos 7 días</span>
+                    <!-- Tendencia de Asistencia con Filtro y Leyenda de Datos -->
+                    <div class="card mb-2 shadow-sm">
+                        <div class="card-header d-flex flex-wrap justify-content-between align-items-center py-2 px-3 gap-2">
+                            <div class="d-flex align-items-center">
+                                <h3 class="card-title font-weight-bold mb-0" style="font-size: 0.88rem;">
+                                    <i class="fa-solid fa-chart-line mr-2 text-primary"></i> Tendencia de Asistencia
+                                </h3>
+                            </div>
+
+                            <!-- CONTROLES DE FILTRO -->
+                            <div class="d-flex align-items-center flex-wrap" style="gap: 6px;">
+                                <!-- Filtro Departamento -->
+                                <div class="input-group input-group-sm" style="width: auto;">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text bg-light text-muted border-right-0 py-0" style="font-size: 0.72rem; padding: 2px 6px;">
+                                            <i class="fa-solid fa-building text-primary"></i>
+                                        </span>
+                                    </div>
+                                    <select id="filtro-tendencia-depto" class="form-control form-control-sm border-left-0 py-0" style="font-size: 0.75rem; height: 27px;" onchange="filtrarTendencia()">
+                                        <option value="all">Todas las Áreas</option>
+                                        <?php if (!empty($listaDepartamentos)): ?>
+                                            <?php foreach ($listaDepartamentos as $dep): ?>
+                                                <option value="<?= $dep['id'] ?>"><?= htmlspecialchars($dep['nombre']) ?></option>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </select>
+                                </div>
+
+                                <!-- Filtro Rango de Tiempo -->
+                                <div class="input-group input-group-sm" style="width: auto;">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text bg-light text-muted border-right-0 py-0" style="font-size: 0.72rem; padding: 2px 6px;">
+                                            <i class="fa-regular fa-calendar text-primary"></i>
+                                        </span>
+                                    </div>
+                                    <select id="filtro-tendencia-periodo" class="form-control form-control-sm border-left-0 py-0 font-weight-bold" style="font-size: 0.75rem; height: 27px;" onchange="filtrarTendencia()">
+                                        <option value="7d" selected>Últimos 7 días</option>
+                                        <option value="15d">Últimos 15 días</option>
+                                        <option value="30d">Últimos 30 días</option>
+                                        <option value="mes_actual">Este Mes</option>
+                                        <option value="mes_anterior">Mes Anterior</option>
+                                    </select>
+                                </div>
+
+                                <!-- Spinner AJAX -->
+                                <div id="tendencia-loading" class="spinner-border spinner-border-sm text-primary ml-1" role="status" style="display: none; width: 0.9rem; height: 0.9rem;">
+                                    <span class="sr-only">Cargando...</span>
+                                </div>
+                            </div>
                         </div>
+
+                        <!-- ÚNICA LEYENDA DINÁMICA E INTERACTIVA (CLICKABLE PARA OCULTAR/MOSTRAR SERIES) -->
+                        <div class="px-3 py-1.5 bg-light border-bottom d-flex flex-wrap justify-content-between align-items-center" style="font-size: 0.76rem; background-color: #f8fafc !important;">
+                            <div class="d-flex flex-wrap align-items-center" style="gap: 14px;">
+                                <span class="d-inline-flex align-items-center legend-item-btn" id="legend-item-presentes" onclick="toggleTendenciaDataset(0)" title="Clic para ocultar o mostrar 'Presentes' en el gráfico" style="cursor: pointer; user-select: none; transition: all 0.2s ease;">
+                                    <span style="width: 10px; height: 10px; border-radius: 2px; display: inline-block; background-color: #10b981; margin-right: 5px;"></span>
+                                    <span class="text-muted mr-1">Presentes:</span>
+                                    <strong class="text-success" id="leyenda-total-presentes"><?= $totalesTendencia['presentes'] ?? 0 ?></strong>
+                                    <span class="badge badge-light border text-success ml-1 font-weight-bold" id="leyenda-porc-presentes" style="font-size: 0.68rem;"><?= $totalesTendencia['porc_presentes'] ?? 0 ?>%</span>
+                                </span>
+
+                                <span class="d-inline-flex align-items-center legend-item-btn" id="legend-item-tardanzas" onclick="toggleTendenciaDataset(1)" title="Clic para ocultar o mostrar 'Tardanzas' en el gráfico" style="cursor: pointer; user-select: none; transition: all 0.2s ease;">
+                                    <span style="width: 10px; height: 10px; border-radius: 2px; display: inline-block; background-color: #f59e0b; margin-right: 5px;"></span>
+                                    <span class="text-muted mr-1">Tardanzas:</span>
+                                    <strong class="text-warning" id="leyenda-total-tardanzas"><?= $totalesTendencia['tardanzas'] ?? 0 ?></strong>
+                                    <span class="badge badge-light border text-warning ml-1 font-weight-bold" id="leyenda-porc-tardanzas" style="font-size: 0.68rem;"><?= $totalesTendencia['porc_tardanzas'] ?? 0 ?>%</span>
+                                </span>
+
+                                <span class="d-inline-flex align-items-center legend-item-btn" id="legend-item-faltas" onclick="toggleTendenciaDataset(2)" title="Clic para ocultar o mostrar 'Faltas' en el gráfico" style="cursor: pointer; user-select: none; transition: all 0.2s ease;">
+                                    <span style="width: 10px; height: 10px; border-radius: 2px; display: inline-block; background-color: #f43f5e; margin-right: 5px;"></span>
+                                    <span class="text-muted mr-1">Faltas:</span>
+                                    <strong class="text-danger" id="leyenda-total-faltas"><?= $totalesTendencia['faltas'] ?? 0 ?></strong>
+                                    <span class="badge badge-light border text-danger ml-1 font-weight-bold" id="leyenda-porc-faltas" style="font-size: 0.68rem;"><?= $totalesTendencia['porc_faltas'] ?? 0 ?>%</span>
+                                </span>
+                            </div>
+
+                            <div class="text-secondary small">
+                                Total: <strong class="text-dark font-weight-bold" id="leyenda-total-general"><?= $totalesTendencia['total'] ?? 0 ?></strong>
+                            </div>
+                        </div>
+
                         <div class="card-body p-3">
-                            <div style="height: 190px; position: relative;">
+                            <div style="height: 195px; position: relative;">
                                 <canvas id="tendenciaChart"></canvas>
                             </div>
                         </div>
@@ -913,12 +986,71 @@
 
             <div class="row">
                 <div class="col-lg-7 mb-2">
-                    <div class="card mb-2">
-                        <div class="card-header py-2 px-3">
-                            <h3 class="card-title font-weight-bold" style="font-size: 0.88rem;"><i class="fa-solid fa-chart-line mr-2 text-primary"></i> Tendencia de Asistencia (Últimos 7 Días)</h3>
+                    <div class="card mb-2 shadow-sm">
+                        <div class="card-header d-flex flex-wrap justify-content-between align-items-center py-2 px-3 gap-2">
+                            <div class="d-flex align-items-center flex-wrap">
+                                <h3 class="card-title font-weight-bold mb-0" style="font-size: 0.88rem;">
+                                    <i class="fa-solid fa-chart-line mr-2 text-primary"></i> Tendencia de Asistencia
+                                </h3>
+                            </div>
+
+                            <!-- CONTROLES DE FILTRO -->
+                            <div class="d-flex align-items-center flex-wrap" style="gap: 6px;">
+                                <!-- Filtro Rango de Tiempo -->
+                                <div class="input-group input-group-sm" style="width: auto;">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text bg-light text-muted border-right-0 py-0" style="font-size: 0.72rem; padding: 2px 6px;">
+                                            <i class="fa-regular fa-calendar text-primary"></i>
+                                        </span>
+                                    </div>
+                                    <select id="filtro-tendencia-periodo-consulta" class="form-control form-control-sm border-left-0 py-0 font-weight-bold" style="font-size: 0.75rem; height: 27px;" onchange="filtrarTendencia('consulta')">
+                                        <option value="7d" selected>Últimos 7 días</option>
+                                        <option value="15d">Últimos 15 días</option>
+                                        <option value="30d">Últimos 30 días</option>
+                                        <option value="mes_actual">Este Mes</option>
+                                        <option value="mes_anterior">Mes Anterior</option>
+                                    </select>
+                                </div>
+
+                                <!-- Spinner AJAX -->
+                                <div id="tendencia-loading-consulta" class="spinner-border spinner-border-sm text-primary ml-1" role="status" style="display: none; width: 0.9rem; height: 0.9rem;">
+                                    <span class="sr-only">Cargando...</span>
+                                </div>
+                            </div>
                         </div>
+
+                        <!-- ÚNICA LEYENDA DINÁMICA E INTERACTIVA (CLICKABLE PARA OCULTAR/MOSTRAR SERIES) -->
+                        <div class="px-3 py-1.5 bg-light border-bottom d-flex flex-wrap justify-content-between align-items-center" style="font-size: 0.76rem; background-color: #f8fafc !important;">
+                            <div class="d-flex flex-wrap align-items-center" style="gap: 14px;">
+                                <span class="d-inline-flex align-items-center legend-item-btn" id="legend-item-presentes-consulta" onclick="toggleTendenciaDataset(0, 'consulta')" title="Clic para ocultar o mostrar 'Presentes' en el gráfico" style="cursor: pointer; user-select: none; transition: all 0.2s ease;">
+                                    <span style="width: 10px; height: 10px; border-radius: 2px; display: inline-block; background-color: #10b981; margin-right: 5px;"></span>
+                                    <span class="text-muted mr-1">Presentes:</span>
+                                    <strong class="text-success" id="leyenda-total-presentes-consulta"><?= $totalesTendencia['presentes'] ?? 0 ?></strong>
+                                    <span class="badge badge-light border text-success ml-1 font-weight-bold" id="leyenda-porc-presentes-consulta" style="font-size: 0.68rem;"><?= $totalesTendencia['porc_presentes'] ?? 0 ?>%</span>
+                                </span>
+
+                                <span class="d-inline-flex align-items-center legend-item-btn" id="legend-item-tardanzas-consulta" onclick="toggleTendenciaDataset(1, 'consulta')" title="Clic para ocultar o mostrar 'Tardanzas' en el gráfico" style="cursor: pointer; user-select: none; transition: all 0.2s ease;">
+                                    <span style="width: 10px; height: 10px; border-radius: 2px; display: inline-block; background-color: #f59e0b; margin-right: 5px;"></span>
+                                    <span class="text-muted mr-1">Tardanzas:</span>
+                                    <strong class="text-warning" id="leyenda-total-tardanzas-consulta"><?= $totalesTendencia['tardanzas'] ?? 0 ?></strong>
+                                    <span class="badge badge-light border text-warning ml-1 font-weight-bold" id="leyenda-porc-tardanzas-consulta" style="font-size: 0.68rem;"><?= $totalesTendencia['porc_tardanzas'] ?? 0 ?>%</span>
+                                </span>
+
+                                <span class="d-inline-flex align-items-center legend-item-btn" id="legend-item-faltas-consulta" onclick="toggleTendenciaDataset(2, 'consulta')" title="Clic para ocultar o mostrar 'Faltas' en el gráfico" style="cursor: pointer; user-select: none; transition: all 0.2s ease;">
+                                    <span style="width: 10px; height: 10px; border-radius: 2px; display: inline-block; background-color: #f43f5e; margin-right: 5px;"></span>
+                                    <span class="text-muted mr-1">Faltas:</span>
+                                    <strong class="text-danger" id="leyenda-total-faltas-consulta"><?= $totalesTendencia['faltas'] ?? 0 ?></strong>
+                                    <span class="badge badge-light border text-danger ml-1 font-weight-bold" id="leyenda-porc-faltas-consulta" style="font-size: 0.68rem;"><?= $totalesTendencia['porc_faltas'] ?? 0 ?>%</span>
+                                </span>
+                            </div>
+
+                            <div class="text-secondary small">
+                                Total: <strong class="text-dark font-weight-bold" id="leyenda-total-general-consulta"><?= $totalesTendencia['total'] ?? 0 ?></strong>
+                            </div>
+                        </div>
+
                         <div class="card-body p-3">
-                            <div style="height: 200px; position: relative;">
+                            <div style="height: 195px; position: relative;">
                                 <canvas id="tendenciaChart"></canvas>
                             </div>
                         </div>
@@ -1039,10 +1171,10 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     };
 
-    // 1. Gráfico de Tendencia 7 Días
+    // 1. Gráfico de Tendencia (Con datos dinámicos en Leyenda y Filtros AJAX)
     const ctxTendencia = document.getElementById('tendenciaChart')?.getContext('2d');
     if (ctxTendencia) {
-        new Chart(ctxTendencia, {
+        window.tendenciaChartInstance = new Chart(ctxTendencia, {
             type: 'line',
             data: {
                 labels: <?= json_encode($chartLabels) ?>,
@@ -1087,8 +1219,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 maintainAspectRatio: false,
                 plugins: {
                     legend: {
-                        position: 'top',
-                        labels: { boxWidth: 10, font: { size: 11, family: "'Plus Jakarta Sans', sans-serif" } }
+                        display: false
                     },
                     tooltip: {
                         backgroundColor: '#0f172a',
@@ -1110,6 +1241,96 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     }
+
+    // Función para alternar visibilidad de una serie desde la leyenda interactiva
+    window.toggleTendenciaDataset = function(index, tipo) {
+        if (!window.tendenciaChartInstance) return;
+        const chart = window.tendenciaChartInstance;
+        const isVisible = chart.isDatasetVisible(index);
+        
+        if (isVisible) {
+            chart.hide(index);
+        } else {
+            chart.show(index);
+        }
+        
+        const itemIds = ['legend-item-presentes', 'legend-item-tardanzas', 'legend-item-faltas'];
+        const sufijo = tipo === 'consulta' ? '-consulta' : '';
+        const el = document.getElementById(itemIds[index] + sufijo) || document.getElementById(itemIds[index]);
+        if (el) {
+            el.style.opacity = isVisible ? '0.38' : '1';
+            el.style.textDecoration = isVisible ? 'line-through' : 'none';
+        }
+    };
+
+    // Función global para filtrar dinámicamente el gráfico de tendencia
+    window.filtrarTendencia = function(tipo) {
+        const isConsulta = tipo === 'consulta';
+        const sufijo = isConsulta ? '-consulta' : '';
+        
+        const periodoSelect = document.getElementById('filtro-tendencia-periodo' + sufijo) 
+                           || document.getElementById('filtro-tendencia-periodo');
+        const deptoSelect = document.getElementById('filtro-tendencia-depto' + sufijo) 
+                         || document.getElementById('filtro-tendencia-depto');
+        const spinner = document.getElementById('tendencia-loading' + sufijo) 
+                     || document.getElementById('tendencia-loading');
+        const badge = document.getElementById('tendencia-badge-periodo' + sufijo) 
+                   || document.getElementById('tendencia-badge-periodo');
+
+        const periodo = periodoSelect ? periodoSelect.value : '7d';
+        const depto = deptoSelect ? deptoSelect.value : 'all';
+
+        if (spinner) spinner.style.display = 'inline-block';
+
+        fetch(`?route=dashboard&action=tendencia_datos&periodo=${encodeURIComponent(periodo)}&departamento_id=${encodeURIComponent(depto)}`, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (spinner) spinner.style.display = 'none';
+            if (!data.success) {
+                console.error('Error al cargar datos de tendencia:', data.error);
+                return;
+            }
+
+            if (badge && data.labelPeriodo) {
+                badge.textContent = data.labelPeriodo;
+            }
+
+            // Actualizar datos del gráfico de forma animada
+            if (window.tendenciaChartInstance) {
+                window.tendenciaChartInstance.data.labels = data.labels;
+                window.tendenciaChartInstance.data.datasets[0].data = data.datasets.presentes;
+                window.tendenciaChartInstance.data.datasets[1].data = data.datasets.tardanzas;
+                window.tendenciaChartInstance.data.datasets[2].data = data.datasets.faltas;
+                window.tendenciaChartInstance.update();
+            }
+
+            // Actualizar las cifras numéricas de la barra de leyenda
+            if (data.totales) {
+                const ids = isConsulta ? '-consulta' : '';
+                const elPres = document.getElementById('leyenda-total-presentes' + ids);
+                const elTard = document.getElementById('leyenda-total-tardanzas' + ids);
+                const elFalt = document.getElementById('leyenda-total-faltas' + ids);
+                const elTot = document.getElementById('leyenda-total-general' + ids);
+                const elPorcPres = document.getElementById('leyenda-porc-presentes' + ids);
+                const elPorcTard = document.getElementById('leyenda-porc-tardanzas' + ids);
+                const elPorcFalt = document.getElementById('leyenda-porc-faltas' + ids);
+
+                if (elPres) elPres.textContent = data.totales.presentes.toLocaleString();
+                if (elTard) elTard.textContent = data.totales.tardanzas.toLocaleString();
+                if (elFalt) elFalt.textContent = data.totales.faltas.toLocaleString();
+                if (elTot) elTot.textContent = data.totales.total_general.toLocaleString();
+                if (elPorcPres) elPorcPres.textContent = data.totales.porc_presentes + '%';
+                if (elPorcTard) elPorcTard.textContent = data.totales.porc_tardanzas + '%';
+                if (elPorcFalt) elPorcFalt.textContent = data.totales.porc_faltas + '%';
+            }
+        })
+        .catch(err => {
+            if (spinner) spinner.style.display = 'none';
+            console.error('Fallo en petición de tendencia:', err);
+        });
+    };
 
     // 2. Gráfico de Dona: Distribución Hoy con porcentaje y tooltip enriquecido
     const ctxDist = document.getElementById('distribucionChart')?.getContext('2d');

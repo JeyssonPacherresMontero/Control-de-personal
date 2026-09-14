@@ -57,13 +57,28 @@
                     <button type="button" class="close" data-dismiss="alert">&times;</button>
                 </div>
             <?php elseif ($_GET['msg'] === 'eliminado'): ?>
-                <div class="alert alert-warning alert-dismissible fade show mb-3" role="alert">
-                    <i class="fa-solid fa-trash mr-2"></i> Usuario eliminado del sistema.
+                <div class="alert alert-success alert-dismissible fade show mb-3" role="alert">
+                    <i class="fa-solid fa-circle-check mr-2"></i> Usuario eliminado definitivamente del sistema.
                     <button type="button" class="close" data-dismiss="alert">&times;</button>
                 </div>
-            <?php elseif ($_GET['msg'] === 'error_admin_protegido' || $_GET['msg'] === 'error_auto_eliminar' || $_GET['msg'] === 'error_auto_desactivar'): ?>
+            <?php elseif ($_GET['msg'] === 'error_admin_protegido'): ?>
                 <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
-                    <i class="fa-solid fa-shield-halved mr-2"></i> Acción no permitida: El usuario Administrador principal del sistema está protegido y no puede ser eliminado, desactivado ni modificado a otro rol.
+                    <i class="fa-solid fa-shield-halved mr-2"></i> Acción denegada: La cuenta de Administrador principal está protegida y no puede ser eliminada ni desactivada.
+                    <button type="button" class="close" data-dismiss="alert">&times;</button>
+                </div>
+            <?php elseif ($_GET['msg'] === 'error_auto_desactivar'): ?>
+                <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+                    <i class="fa-solid fa-triangle-exclamation mr-2"></i> Acción no permitida: No puedes desactivar tu propia cuenta mientras estás en sesión activa.
+                    <button type="button" class="close" data-dismiss="alert">&times;</button>
+                </div>
+            <?php elseif ($_GET['msg'] === 'error_auto_eliminar'): ?>
+                <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+                    <i class="fa-solid fa-triangle-exclamation mr-2"></i> Acción no permitida: No puedes eliminar tu propia cuenta mientras estás en sesión activa.
+                    <button type="button" class="close" data-dismiss="alert">&times;</button>
+                </div>
+            <?php elseif ($_GET['msg'] === 'error_db'): ?>
+                <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+                    <i class="fa-solid fa-triangle-exclamation mr-2"></i> Ocurrió un error en la base de datos al procesar la solicitud.
                     <button type="button" class="close" data-dismiss="alert">&times;</button>
                 </div>
             <?php endif; ?>
@@ -193,20 +208,16 @@
                                         <i class="fa-solid fa-fingerprint"></i>
                                     </button>
 
-                                    <?php if ($u['id'] !== ($currentUser['id'] ?? 0)): ?>
-                                        <!-- Cambiar Estado (Activar/Desactivar) vía POST seguro -->
-                                        <button type="button" class="btn btn-xs btn-outline-secondary mr-1" id="btn-toggle-status-<?= $u['id'] ?>" title="<?= $u['activo'] ? 'Desactivar Usuario' : 'Activar Usuario' ?>" onclick="toggleUserStatus(<?= $u['id'] ?>, '<?= htmlspecialchars($u['usuario'], ENT_QUOTES) ?>', <?= $u['activo'] ? 1 : 0 ?>)">
-                                            <i class="fa-solid <?= $u['activo'] ? 'fa-user-slash text-warning' : 'fa-user-check text-success' ?>"></i>
+                                    <?php if ($u['id'] !== ($currentUser['id'] ?? 0) && $u['rol'] !== 'ADMIN'): ?>
+                                        <!-- Cambiar Estado (Activar / Desactivar) -->
+                                        <button type="button" class="btn btn-xs <?= $u['activo'] ? 'btn-outline-warning' : 'btn-outline-success' ?> mr-1" id="btn-toggle-status-<?= $u['id'] ?>" title="<?= $u['activo'] ? 'Desactivar Usuario' : 'Activar Usuario' ?>" onclick="toggleUserStatus(<?= $u['id'] ?>, '<?= htmlspecialchars($u['usuario'], ENT_QUOTES) ?>', <?= $u['activo'] ? 1 : 0 ?>)">
+                                            <i class="fa-solid <?= $u['activo'] ? 'fa-user-slash' : 'fa-user-check' ?>"></i>
                                         </button>
 
-                                        <!-- Eliminar Usuario -->
-                                        <form method="POST" action="?route=usuarios&action=eliminar" style="display:inline;" onsubmit="return confirm('¿Estás seguro de eliminar este usuario definitivamente?');">
-                                            <?= csrf_field() ?>
-                                            <input type="hidden" name="id" value="<?= $u['id'] ?>">
-                                            <button type="submit" class="btn btn-xs btn-outline-danger" title="Eliminar Usuario">
-                                                <i class="fa-solid fa-trash"></i>
-                                            </button>
-                                        </form>
+                                        <!-- Eliminar Usuario Definitivamente -->
+                                        <button type="button" class="btn btn-xs btn-outline-danger" title="Eliminar Usuario Definitivamente" onclick="deleteUser(<?= $u['id'] ?>, '<?= htmlspecialchars($u['usuario'], ENT_QUOTES) ?>')">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
                                     <?php endif; ?>
                                 </td>
                             </tr>
@@ -747,14 +758,14 @@ function submitResetPassword() {
     });
 }
 
-// CAMBIAR ESTADO DE USUARIO (ACTIVAR / DESACTIVAR) VÍA POST
+// CAMBIAR ESTADO DE USUARIO (ACTIVAR / DESACTIVAR) VÍA AJAX SEGURO
 function toggleUserStatus(userId, username, currentStatus) {
     const actionText = currentStatus ? 'desactivar' : 'activar';
-    const confirmBtnColor = currentStatus ? '#dc2626' : '#16a34a';
+    const confirmBtnColor = currentStatus ? '#f59e0b' : '#16a34a';
 
     Swal.fire({
         title: `¿Deseas ${actionText} a ${username}?`,
-        text: currentStatus ? 'El usuario no podrá iniciar sesión en el sistema mientras esté inactivo.' : 'El usuario volverá a tener acceso con sus credenciales habituales.',
+        text: currentStatus ? 'El usuario no podrá iniciar sesión en el sistema mientras esté inactivo.' : 'El usuario volverá a tener acceso con sus credenciales y permisos habituales.',
         icon: currentStatus ? 'warning' : 'question',
         showCancelButton: true,
         confirmButtonColor: confirmBtnColor,
@@ -763,13 +774,25 @@ function toggleUserStatus(userId, username, currentStatus) {
         cancelButtonText: 'Cancelar'
     }).then(function(result) {
         if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Actualizando estado...',
+                allowOutsideClick: false,
+                didOpen: function() { Swal.showLoading(); }
+            });
+
+            const token = window._csrfToken || '<?= csrf_token() ?>';
             const fd = new FormData();
             fd.append('id', userId);
+            fd.append('_csrf', token);
+            fd.append('_csrf_token', token);
 
             fetch('?route=usuarios&action=cambiar_estado', {
                 method: 'POST',
                 body: fd,
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                headers: { 
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': token
+                }
             })
             .then(function(res) { return res.json(); })
             .then(function(data) {
@@ -789,6 +812,63 @@ function toggleUserStatus(userId, username, currentStatus) {
             })
             .catch(function() {
                 Swal.fire('Error', 'Fallo de red al intentar cambiar el estado.', 'error');
+            });
+        }
+    });
+}
+
+// ELIMINAR USUARIO DEFINITIVAMENTE VÍA AJAX SEGURO
+function deleteUser(userId, username) {
+    Swal.fire({
+        title: `¿Eliminar a ${username}?`,
+        html: `¿Estás seguro de que deseas <b>eliminar definitivamente</b> al usuario <b>${username}</b> del sistema?<br><br><span class="text-danger small font-weight-bold"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Esta acción es irreversible y borrará la cuenta por completo de la base de datos.</span>`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: '<i class="fa-solid fa-trash mr-1"></i> Sí, eliminar definitivamente',
+        cancelButtonText: 'Cancelar'
+    }).then(function(result) {
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Eliminando usuario...',
+                text: 'Procesando eliminación física en el servidor',
+                allowOutsideClick: false,
+                didOpen: function() { Swal.showLoading(); }
+            });
+
+            const token = window._csrfToken || '<?= csrf_token() ?>';
+            const fd = new FormData();
+            fd.append('id', userId);
+            fd.append('_csrf', token);
+            fd.append('_csrf_token', token);
+
+            fetch('?route=usuarios&action=eliminar', {
+                method: 'POST',
+                body: fd,
+                headers: { 
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': token
+                }
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Usuario Eliminado!',
+                        text: data.message || 'El usuario ha sido eliminado definitivamente.',
+                        timer: 1600,
+                        showConfirmButton: false
+                    }).then(function() {
+                        window.location.reload();
+                    });
+                } else {
+                    Swal.fire('No se pudo eliminar', data.error || 'Ocurrió un error al eliminar.', 'error');
+                }
+            })
+            .catch(function() {
+                Swal.fire('Error', 'Fallo de red al intentar eliminar el usuario.', 'error');
             });
         }
     });
