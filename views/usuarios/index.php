@@ -101,7 +101,7 @@
         <!-- MAIN TABLE CARD -->
         <div class="card">
             <div class="card-body p-0 table-responsive">
-                <table class="table table-hover table-sm mb-0">
+                <table class="table table-hover datatable text-nowrap table-sm mb-0">
                     <thead>
                         <tr>
                             <th style="width: 45px;" class="text-center">ID</th>

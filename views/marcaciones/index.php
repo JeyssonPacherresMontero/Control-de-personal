@@ -169,10 +169,10 @@ if (!empty($dispositivoId)) {
                         </button>
                     <?php endif; ?>
 
-                    <a href="?route=marcaciones&fecha_inicio=<?= $fechaInicio ?>&fecha_fin=<?= $fechaFin ?>&dispositivo_id=<?= $dispositivoId ?>&tipo=<?= $tipo ?? '' ?>&search=<?= urlencode($search ?? '') ?>&export=excel" class="btn btn-success btn-sm" title="Descargar reporte en Excel">
+                    <a href="?route=marcaciones&fecha_inicio=<?= urlencode($fechaInicio) ?>&fecha_fin=<?= urlencode($fechaFin) ?>&dispositivo_id=<?= urlencode((string)($dispositivoId ?? '')) ?>&tipo=<?= urlencode((string)($tipo ?? '')) ?>&search=<?= urlencode($search ?? '') ?>&export=excel" class="btn btn-success btn-sm" title="Descargar reporte en Excel">
                         <i class="fa-solid fa-file-excel mr-1"></i> Excel
                     </a>
-                    <a href="?route=marcaciones&fecha_inicio=<?= $fechaInicio ?>&fecha_fin=<?= $fechaFin ?>&dispositivo_id=<?= $dispositivoId ?>&tipo=<?= $tipo ?? '' ?>&search=<?= urlencode($search ?? '') ?>&export=csv" class="btn btn-outline-secondary btn-sm" title="Exportar archivo CSV">
+                    <a href="?route=marcaciones&fecha_inicio=<?= urlencode($fechaInicio) ?>&fecha_fin=<?= urlencode($fechaFin) ?>&dispositivo_id=<?= urlencode((string)($dispositivoId ?? '')) ?>&tipo=<?= urlencode((string)($tipo ?? '')) ?>&search=<?= urlencode($search ?? '') ?>&export=csv" class="btn btn-outline-secondary btn-sm" title="Exportar archivo CSV">
                         <i class="fa-solid fa-file-csv mr-1"></i> CSV
                     </a>
                     <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print()" title="Imprimir reporte oficial o Guardar como PDF">
@@ -213,6 +213,7 @@ if (!empty($dispositivoId)) {
                             <option value="refrigerio" <?= ($tipo ?? '') === 'refrigerio' ? 'selected' : '' ?>>Todos los Refrigerios</option>
                             <option value="refrigerio_salida" <?= ($tipo ?? '') === 'refrigerio_salida' ? 'selected' : '' ?>>Salida a Refrigerio</option>
                             <option value="refrigerio_entrada" <?= ($tipo ?? '') === 'refrigerio_entrada' ? 'selected' : '' ?>>Retorno de Refrigerio</option>
+                            <option value="desconocido" <?= ($tipo ?? '') === 'desconocido' ? 'selected' : '' ?>>Otras / Desconocidas</option>
                         </select>
                     </div>
 
@@ -221,51 +222,100 @@ if (!empty($dispositivoId)) {
                         <input type="text" name="search" class="form-control form-control-sm" placeholder="Nombre, DNI o ID..." value="<?= htmlspecialchars($search ?? '') ?>">
                     </div>
 
-                    <div class="col-md-1 col-sm-4 mb-2">
-                        <button type="submit" class="btn btn-primary btn-sm btn-block" title="Filtrar resultados" style="height: 34px;">
-                            <i class="fa-solid fa-filter mr-1"></i> Filtrar
+                    <div class="col-md-1 col-sm-4 mb-2 d-flex" style="gap: 4px;">
+                        <button type="submit" class="btn btn-primary btn-sm flex-fill" title="Filtrar resultados" style="height: 34px;">
+                            <i class="fa-solid fa-filter"></i>
                         </button>
+                        <a href="?route=marcaciones" class="btn btn-outline-secondary btn-sm" title="Limpiar filtros" style="height: 34px; display: inline-flex; align-items: center; justify-content: center;">
+                            <i class="fa-solid fa-rotate-left"></i>
+                        </a>
                     </div>
                 </form>
             </div>
         </div>
 
         <!-- MAIN TABLE CARD -->
+        <style>
+            .table-marcaciones-fit {
+                width: 100% !important;
+                table-layout: auto;
+            }
+            .table-marcaciones-fit th,
+            .table-marcaciones-fit td {
+                padding: 0.42rem 0.45rem !important;
+                vertical-align: middle !important;
+                font-size: 0.815rem !important;
+            }
+            .table-marcaciones-fit th {
+                font-size: 0.73rem !important;
+                white-space: nowrap;
+                letter-spacing: 0.02em !important;
+            }
+            .table-marcaciones-fit .cell-nowrap {
+                white-space: nowrap !important;
+            }
+            .table-marcaciones-fit .badge-pill-custom {
+                padding: 2px 6px !important;
+                font-size: 0.70rem !important;
+                white-space: nowrap;
+            }
+        </style>
         <div class="card">
             <div class="card-body p-0 table-responsive">
-                <table class="table table-hover text-nowrap table-sm">
+                <table class="table table-hover table-sm table-marcaciones-fit mb-0">
                     <thead>
                         <tr>
-                            <th class="text-center" style="width: 80px;">N° Registro</th>
-                            <th class="text-center">Fecha y Hora</th>
-                            <th class="text-center">ID en Reloj</th>
-                            <th>Empleado Identificado</th>
-                            <th>Reloj Biométrico</th>
-                            <th class="text-center">Tipo de Marcación</th>
-                            <th class="text-center">Método de Verificación</th>
-                            <th class="text-center">Estado Procesado</th>
-                            <th class="text-center no-print">Trazabilidad Event Sourcing</th>
+                            <th class="text-center cell-nowrap" style="width: 55px;">N° Reg</th>
+                            <th class="text-center cell-nowrap" style="width: 90px;">Fecha</th>
+                            <th class="text-center cell-nowrap" style="width: 80px;">Hora</th>
+                            <th class="text-center cell-nowrap" style="width: 85px;">ID Reloj</th>
+                            <th style="min-width: 160px;">Empleado Identificado</th>
+                            <th style="min-width: 130px;">Reloj Biométrico</th>
+                            <th class="text-center cell-nowrap" style="width: 95px;">Tipo</th>
+                            <th class="text-center cell-nowrap" style="width: 110px;">Verificación</th>
+                            <th class="text-center cell-nowrap" style="width: 90px;">Estado</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($marcaciones as $m): ?>
+                        <?php if (empty($marcaciones)): ?>
                             <tr>
-                                <td class="text-center text-muted font-monospace small">#<?= $m['id'] ?></td>
-                                <td class="text-center font-weight-bold text-dark font-monospace small"><?= $m['fecha_hora'] ?></td>
-                                <td class="text-center"><span class="badge-pill-custom badge-pill-neutral">ID: <?= htmlspecialchars($m['codigo_reloj']) ?></span></td>
+                                <td colspan="9" class="text-center py-5 text-muted">
+                                    <i class="fa-solid fa-folder-open fa-2x mb-2 d-block text-secondary"></i>
+                                    <div>No se encontraron marcaciones para los filtros seleccionados.</div>
+                                    <a href="?route=marcaciones" class="btn btn-xs btn-outline-primary mt-2">
+                                        <i class="fa-solid fa-rotate-left mr-1"></i> Reestablecer filtros
+                                    </a>
+                                </td>
+                            </tr>
+                        <?php else: ?>
+                        <?php foreach ($marcaciones as $m): ?>
+                            <?php
+                                $fechaRaw = !empty($m['fecha_hora']) ? substr($m['fecha_hora'], 0, 10) : '';
+                                $horaRaw  = !empty($m['fecha_hora']) ? substr($m['fecha_hora'], 11, 8) : '--:--:--';
+                                $fechaFmt = $fechaRaw ? date('d/m/Y', strtotime($fechaRaw)) : '--';
+                            ?>
+                            <tr>
+                                <td class="text-center text-muted font-monospace small cell-nowrap">#<?= $m['id'] ?></td>
+                                <td class="text-center font-monospace small text-dark font-weight-bold cell-nowrap">
+                                    <i class="fa-regular fa-calendar mr-1 text-muted"></i><?= $fechaFmt ?>
+                                </td>
+                                <td class="text-center font-monospace small text-primary font-weight-bold cell-nowrap">
+                                    <i class="fa-regular fa-clock mr-1 text-secondary"></i><?= $horaRaw ?>
+                                </td>
+                                <td class="text-center cell-nowrap"><span class="badge-pill-custom badge-pill-neutral">ID: <?= htmlspecialchars($m['codigo_reloj']) ?></span></td>
                                 <td>
                                     <?php if (!empty($m['nombres'])): ?>
-                                        <div class="font-weight-bold text-dark"><?= htmlspecialchars($m['apellidos'] . ' ' . $m['nombres']) ?></div>
+                                        <div class="font-weight-bold text-dark" style="line-height: 1.25;"><?= htmlspecialchars($m['apellidos'] . ' ' . $m['nombres']) ?></div>
                                         <small class="text-muted">DNI: <?= htmlspecialchars($m['dni']) ?></small>
                                     <?php else: ?>
                                         <span class="badge-pill-custom badge-pill-tardanza"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Sin vincular</span>
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <div class="text-dark font-weight-bold"><?= htmlspecialchars($m['dispositivo_nombre'] ?? 'Desconocido') ?></div>
+                                    <div class="text-dark font-weight-bold" style="line-height: 1.25;"><?= htmlspecialchars($m['dispositivo_nombre'] ?? 'Desconocido') ?></div>
                                     <small class="text-muted font-monospace"><?= htmlspecialchars($m['dispositivo_ip'] ?? '') ?></small>
                                 </td>
-                                <td class="text-center">
+                                <td class="text-center cell-nowrap">
                                     <?php
                                         $t = strtolower($m['tipo']);
                                         if ($t === 'entrada') echo '<span class="badge-pill-custom badge-pill-presente"><i class="fa-solid fa-arrow-right-to-bracket mr-1"></i> Entrada</span>';
@@ -274,50 +324,41 @@ if (!empty($dispositivoId)) {
                                         else echo '<span class="badge-pill-custom badge-pill-neutral">Marcación</span>';
                                     ?>
                                 </td>
-                                <td class="text-center">
+                                <td class="text-center cell-nowrap">
                                     <span class="small">
                                     <?php
                                         $verif = strtolower($m['tipo_verificacion'] ?? '');
                                         if (str_contains($verif, 'huella') || $verif === 'fingerprint') {
-                                             echo '<i class="fa-solid fa-fingerprint text-primary mr-1"></i> Huella Dactilar';
+                                             echo '<i class="fa-solid fa-fingerprint text-primary mr-1"></i> Huella';
                                         } elseif (str_contains($verif, 'facial') || str_contains($verif, 'face')) {
                                             echo '<i class="fa-solid fa-camera text-info mr-1"></i> Facial';
                                         } elseif (str_contains($verif, 'tarjeta') || str_contains($verif, 'card') || str_contains($verif, 'rfid')) {
-                                            echo '<i class="fa-solid fa-id-card text-success mr-1"></i> Tarjeta RFID';
+                                            echo '<i class="fa-solid fa-id-card text-success mr-1"></i> Tarjeta';
                                         } elseif (str_contains($verif, 'manual')) {
-                                            echo '<i class="fa-solid fa-keyboard text-secondary mr-1"></i> Manual RRHH';
+                                            echo '<i class="fa-solid fa-keyboard text-secondary mr-1"></i> Manual';
                                         } elseif (str_contains($verif, 'clave') || str_contains($verif, 'pin') || str_contains($verif, 'password')) {
-                                            echo '<i class="fa-solid fa-key text-warning mr-1"></i> Contraseña o PIN';
+                                            echo '<i class="fa-solid fa-key text-warning mr-1"></i> PIN';
                                         } else {
                                             echo '<i class="fa-solid fa-check text-muted mr-1"></i> ' . htmlspecialchars($m['tipo_verificacion'] ?: 'Biométrico');
                                         }
                                     ?>
                                     </span>
                                 </td>
-                                <td class="text-center">
+                                <td class="text-center cell-nowrap">
                                     <?php if ($m['procesado']): ?>
                                         <span class="badge-pill-custom badge-pill-presente"><i class="fa-solid fa-circle-check mr-1"></i> Procesado</span>
                                     <?php else: ?>
                                         <span class="badge-pill-custom badge-pill-tardanza"><i class="fa-solid fa-clock mr-1"></i> Pendiente</span>
                                     <?php endif; ?>
                                 </td>
-                                <td class="text-center no-print">
-                                    <?php if (!empty($m['id_empleado'])): ?>
-                                        <button class="btn btn-xs btn-outline-info" onclick="openTimelineModal(<?= $m['id_empleado'] ?>, '<?= substr($m['fecha_hora'], 0, 10) ?>', '<?= htmlspecialchars(addslashes(($m['apellidos'] ?? '') . ' ' . ($m['nombres'] ?? ''))) ?>')" title="Ver auditoría de eventos">
-                                             <i class="fa-solid fa-timeline mr-1"></i> Eventos
-                                        </button>
-                                    <?php else: ?>
-                                        <span class="text-muted small">-</span>
-                                    <?php endif; ?>
-                                </td>
                             </tr>
                         <?php endforeach; ?>
+                        <?php endif; ?>
                     </tbody>
                     <tfoot class="thead-light">
                         <tr class="font-weight-bold">
-                            <th colspan="7" class="text-right">TOTAL DE MARCACIONES EN EL PERÍODO:</th>
+                            <th colspan="8" class="text-right">TOTAL DE MARCACIONES EN EL PERÍODO:</th>
                             <th class="text-center text-success"><?= $kpiTotalMarcaciones ?></th>
-                            <th class="no-print"></th>
                         </tr>
                     </tfoot>
                 </table>
@@ -441,142 +482,8 @@ if (!empty($dispositivoId)) {
         </form>
     </div>
 </div>
-<!-- MODAL EVENT SOURCING: LÍNEA DE TIEMPO DE AUDITORÍA Y TRAZABILIDAD -->
-<div class="modal fade" id="modalTimelineEventos" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-dark text-white">
-                <h5 class="modal-title font-weight-bold">
-                    <i class="fa-solid fa-timeline text-info mr-2"></i> Trazabilidad y Event Sourcing
-                </h5>
-                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
-            </div>
-            <div class="modal-body p-4 bg-light">
-                <div class="d-flex justify-content-between align-items-center bg-white p-3 rounded shadow-sm mb-4 border">
-                    <div>
-                        <h6 class="font-weight-bold mb-1 text-primary" id="timelineEmpleadoNombre">Cargando empleado...</h6>
-                        <small class="text-muted"><i class="fa-solid fa-id-card mr-1"></i> DNI: <span id="timelineEmpleadoDni">--</span> | ID Reloj: <span id="timelineEmpleadoReloj">--</span></small>
-                    </div>
-                    <div class="text-right">
-                        <span class="badge badge-light border px-2 py-1 font-weight-bold text-secondary" id="timelineFecha">--</span>
-                        <div class="small text-muted mt-1" id="timelineTotalEventos">-- eventos registrados</div>
-                    </div>
-                </div>
-
-                <div id="timelineLoading" class="text-center py-5">
-                    <div class="spinner-border text-primary" role="status"></div>
-                    <div class="small text-muted mt-2 font-weight-bold">Recuperando flujo de eventos inmutables desde el Event Store...</div>
-                </div>
-
-                <div id="timelineContent" class="timeline" style="display: none;"></div>
-
-                <div id="timelineEmpty" class="alert alert-secondary text-center py-4" style="display: none;">
-                    <i class="fa-solid fa-inbox fa-2x mb-2 text-muted"></i>
-                    <div>No se encontraron eventos registrados para este día.</div>
-                </div>
-            </div>
-            <div class="modal-footer justify-content-between bg-white">
-                <span class="small text-muted"><i class="fa-solid fa-shield-halved mr-1"></i> Log inmutable respaldado por arquitectura Event Sourcing</span>
-                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cerrar</button>
-            </div>
-        </div>
-    </div>
-</div>
 
 <script>
-function openTimelineModal(empId, fecha, nombreEmp) {
-    document.getElementById('timelineEmpleadoNombre').innerText = nombreEmp;
-    document.getElementById('timelineFecha').innerText = fecha;
-    document.getElementById('timelineEmpleadoDni').innerText = '...';
-    document.getElementById('timelineEmpleadoReloj').innerText = '...';
-    document.getElementById('timelineTotalEventos').innerText = 'Cargando...';
-    
-    document.getElementById('timelineLoading').style.display = 'block';
-    document.getElementById('timelineContent').style.display = 'none';
-    document.getElementById('timelineEmpty').style.display = 'none';
-
-    $('#modalTimelineEventos').modal('show');
-
-    fetch(`?route=asistencia&action=historial_eventos&id_empleado=${empId}&fecha=${fecha}`)
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById('timelineLoading').style.display = 'none';
-
-            if (!data.success || !data.events || data.events.length === 0) {
-                document.getElementById('timelineEmpty').style.display = 'block';
-                document.getElementById('timelineTotalEventos').innerText = '0 eventos';
-                return;
-            }
-
-            if (data.empleado) {
-                document.getElementById('timelineEmpleadoNombre').innerText = `${data.empleado.apellidos} ${data.empleado.nombres}`;
-                document.getElementById('timelineEmpleadoDni').innerText = data.empleado.dni || '--';
-                document.getElementById('timelineEmpleadoReloj').innerText = data.empleado.codigo_reloj || '--';
-            }
-
-            document.getElementById('timelineTotalEventos').innerText = `${data.total} evento(s) inmutable(s)`;
-
-            const container = document.getElementById('timelineContent');
-            container.innerHTML = '';
-
-            let timelineHtml = `
-                <div class="time-label">
-                    <span class="bg-primary text-white font-weight-bold px-3 py-1 rounded shadow-sm">${data.fecha}</span>
-                </div>
-            `;
-
-            data.events.forEach((ev, idx) => {
-                const disp = ev.display || {};
-                const hora = ev.created_at ? ev.created_at.substr(11, 8) : '--:--';
-                const version = ev.version ? `<span class="badge badge-light border ml-1">v${ev.version}</span>` : '';
-                
-                let detailsHtml = '';
-                if (disp.details && Object.keys(disp.details).length > 0) {
-                    detailsHtml = '<div class="row mt-2 pt-2 border-top small text-muted">';
-                    for (const [k, v] of Object.entries(disp.details)) {
-                        detailsHtml += `<div class="col-sm-6 mb-1"><strong>${k}:</strong> <span class="text-dark">${v}</span></div>`;
-                    }
-                    detailsHtml += '</div>';
-                }
-
-                timelineHtml += `
-                    <div>
-                        <i class="fa-solid ${disp.icon || 'fa-circle'} bg-info"></i>
-                        <div class="timeline-item shadow-sm">
-                            <span class="time font-weight-bold text-secondary"><i class="fas fa-clock mr-1"></i>${hora} ${version}</span>
-                            <h3 class="timeline-header">
-                                <span class="badge ${disp.badgeClass || 'badge-secondary'} mr-2">${ev.event_type}</span>
-                                <strong>${disp.title || ev.event_type}</strong>
-                            </h3>
-                            <div class="timeline-body">
-                                <p class="mb-0 text-dark">${disp.description || ''}</p>
-                                ${detailsHtml}
-                            </div>
-                            <div class="timeline-footer py-1 px-3 bg-light d-flex justify-content-between align-items-center">
-                                <small class="text-muted"><i class="fa-solid fa-user-shield mr-1"></i> Originado por: <strong>${ev.created_by || 'SYSTEM'}</strong></small>
-                                <small class="text-muted"><i class="fa-solid fa-network-wired mr-1"></i> IP: ${ev.ip_address || '127.0.0.1'}</small>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-
-            timelineHtml += `
-                <div>
-                    <i class="fas fa-clock bg-gray"></i>
-                </div>
-            `;
-
-            container.innerHTML = timelineHtml;
-            container.style.display = 'block';
-        })
-        .catch(err => {
-            console.error(err);
-            document.getElementById('timelineLoading').style.display = 'none';
-            document.getElementById('timelineEmpty').innerText = 'Error al cargar los eventos de auditoría.';
-            document.getElementById('timelineEmpty').style.display = 'block';
-        });
-}
 
 $(document).ready(function() {
     if ($.fn.select2) {

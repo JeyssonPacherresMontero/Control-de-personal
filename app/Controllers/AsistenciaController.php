@@ -14,9 +14,56 @@ class AsistenciaController {
     public function index(): void {
         AuthController::checkAuth();
 
-        $fechaInicio = $_GET['fecha_inicio'] ?? date('Y-m-01');
-        $fechaFin = $_GET['fecha_fin'] ?? date('Y-m-d');
+        $userRole = AuthController::role();
+        $currentUser = AuthController::user();
+        $supervisorDeptoId = (int)($currentUser['departamento_id'] ?? 0);
+
+        $fechaInicio = !empty($_GET['fecha_inicio']) ? trim($_GET['fecha_inicio']) : date('Y-m-01');
+        $fechaFin = !empty($_GET['fecha_fin']) ? trim($_GET['fecha_fin']) : date('Y-m-d');
+        if ($fechaInicio > $fechaFin) {
+            $tmp = $fechaInicio;
+            $fechaInicio = $fechaFin;
+            $fechaFin = $tmp;
+        }
+
+        // Auto-calcular días faltantes en asistencia_diaria para el rango solicitado (hasta 31 días)
+        try {
+            $db = Database::getInstance()->getConnection();
+            $dInicio = new \DateTime($fechaInicio);
+            $dFin = new \DateTime($fechaFin);
+            $diffDias = $dInicio->diff($dFin)->days;
+
+            if ($diffDias <= 31) {
+                $stmtCheck = $db->prepare("SELECT DISTINCT fecha FROM asistencia_diaria WHERE fecha BETWEEN :f1 AND :f2");
+                $stmtCheck->execute([':f1' => $fechaInicio, ':f2' => $fechaFin]);
+                $existingDates = $stmtCheck->fetchAll(\PDO::FETCH_COLUMN);
+                $existingSet = array_flip($existingDates);
+
+                $calc = null;
+                $period = new \DatePeriod($dInicio, new \DateInterval('P1D'), (clone $dFin)->modify('+1 day'));
+                foreach ($period as $dt) {
+                    $currDate = $dt->format('Y-m-d');
+                    if (!isset($existingSet[$currDate])) {
+                        $stmtMarc = $db->prepare("SELECT 1 FROM marcaciones WHERE fecha_hora >= :d1 AND fecha_hora <= :d2 LIMIT 1");
+                        $stmtMarc->execute([':d1' => "$currDate 00:00:00", ':d2' => "$currDate 23:59:59"]);
+                        if ($stmtMarc->fetchColumn() || $diffDias === 0) {
+                            if (!$calc) {
+                                $calc = new AttendanceCalculator(ATTENDANCE_DEBOUNCE_MINUTES);
+                            }
+                            $calc->processDate($currDate);
+                        }
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            error_log("Error auto-calculating missing attendance: " . $e->getMessage());
+        }
+
         $deptoId = !empty($_GET['departamento_id']) ? (int)$_GET['departamento_id'] : null;
+        if ($userRole === 'SUPERVISOR' && $supervisorDeptoId > 0) {
+            $deptoId = $supervisorDeptoId;
+        }
+
         $estado = !empty($_GET['estado']) ? trim($_GET['estado']) : null;
         $search = !empty($_GET['search']) ? trim($_GET['search']) : null;
 
@@ -39,7 +86,11 @@ class AsistenciaController {
 
         if (!empty($estado) && strtolower($estado) !== 'todos') {
             $estadoUpper = strtoupper($estado);
-            if ($estadoUpper === 'FALTA') {
+            if ($estadoUpper === 'PRESENTE') {
+                $where .= " AND a.estado = 'PRESENTE' AND a.hora_entrada_real IS NOT NULL";
+            } elseif ($estadoUpper === 'PENDIENTE') {
+                $where .= " AND (a.estado = 'PENDIENTE' OR a.hora_entrada_real IS NULL) AND a.estado NOT IN ('FALTA', 'FALTA_INJUSTIFICADA', 'JUSTIFICADO', 'PERMISO', 'VACACIONES', 'DESCANSO')";
+            } elseif ($estadoUpper === 'FALTA') {
                 $where .= " AND (a.estado = 'FALTA' OR a.estado = 'FALTA_INJUSTIFICADA')";
             } elseif ($estadoUpper === 'JUSTIFICADO') {
                 $where .= " AND (a.estado = 'JUSTIFICADO' OR a.estado = 'PERMISO' OR a.estado = 'VACACIONES' OR a.estado = 'LICENCIA')";
@@ -52,18 +103,20 @@ class AsistenciaController {
         }
 
         if ($search) {
-            $where .= " AND (e.nombres LIKE :search1 OR e.apellidos LIKE :search2 OR e.dni LIKE :search3 OR e.codigo_reloj LIKE :search4)";
+            $where .= " AND (e.nombres LIKE :search1 OR e.apellidos LIKE :search2 OR e.dni LIKE :search3 OR e.codigo_reloj LIKE :search4 OR CONCAT(e.apellidos, ' ', e.nombres) LIKE :search5 OR CONCAT(e.nombres, ' ', e.apellidos) LIKE :search6)";
             $params[':search1'] = "%$search%";
             $params[':search2'] = "%$search%";
             $params[':search3'] = "%$search%";
             $params[':search4'] = "%$search%";
+            $params[':search5'] = "%$search%";
+            $params[':search6'] = "%$search%";
         }
 
         // 1. Agregación de KPIs directamente en MySQL para máxima velocidad
         $kpiSql = "
             SELECT 
                 COUNT(*) as total,
-                SUM(CASE WHEN a.estado = 'PRESENTE' THEN 1 ELSE 0 END) as presentes,
+                SUM(CASE WHEN a.estado = 'PRESENTE' AND a.hora_entrada_real IS NOT NULL THEN 1 ELSE 0 END) as presentes,
                 SUM(CASE WHEN a.estado = 'TARDANZA' THEN 1 ELSE 0 END) as tardanzas,
                 SUM(CASE WHEN a.estado = 'FALTA' OR a.estado = 'FALTA_INJUSTIFICADA' THEN 1 ELSE 0 END) as faltas,
                 SUM(CASE WHEN a.estado IN ('JUSTIFICADO', 'PERMISO', 'VACACIONES', 'LICENCIA') THEN 1 ELSE 0 END) as justificados,
@@ -135,7 +188,12 @@ class AsistenciaController {
             LIMIT $perPage OFFSET $offset
         ";
 
-        $departamentos = Database::query("SELECT * FROM departamentos WHERE activo = 1 ORDER BY nombre ASC");
+        $asistencias = Database::query($sql, $params);
+        if ($userRole === 'SUPERVISOR' && $supervisorDeptoId > 0) {
+            $departamentos = Database::query("SELECT * FROM departamentos WHERE id = ?", [$supervisorDeptoId]);
+        } else {
+            $departamentos = Database::query("SELECT * FROM departamentos WHERE activo = 1 ORDER BY nombre ASC");
+        }
         $empleados = Database::query("
             SELECT e.id, e.codigo_reloj, e.dni, e.nombres, e.apellidos, e.departamento_id,
                    d.nombre as departamento_nombre,
@@ -152,7 +210,7 @@ class AsistenciaController {
 
     public function recalcular(): void {
         AuthController::checkAuth();
-        AuthController::requireRole(['ADMIN', 'RRHH'], 'asistencia');
+        AuthController::requireRole('ADMIN', 'asistencia');
         \App\Security\Csrf::validate();
 
         $fechaInicio = $_POST['fecha_inicio'] ?? date('Y-m-d');
@@ -250,7 +308,7 @@ class AsistenciaController {
             $actual = Database::queryOne("
                 SELECT a.*, e.nombres, e.apellidos, e.dni, e.codigo_reloj,
                        t.hora_entrada as turno_hora_entrada, t.hora_salida as turno_hora_salida,
-                       t.tolerancia_minutos, t.tolerancia_falta_minutos, t.minutos_refrigerio
+                       t.tolerancia_minutos, t.tolerancia_falta_minutos, t.minutos_refrigerio, t.es_nocturno
                 FROM asistencia_diaria a
                 JOIN empleados e ON a.id_empleado = e.id
                 LEFT JOIN turnos t ON a.id_turno = t.id
@@ -361,13 +419,89 @@ class AsistenciaController {
                     ':ent_real'   => $horaEntradaReal,
                     ':sal_real'   => $horaSalidaReal,
                     ':estado'     => $estado,
-                    ':obs'        => $observaciones ?: 'Corrección de horario efectuada por el Administrador',
+                    ':obs'        => !empty($observaciones) ? $observaciones : null,
                     ':tardanza'   => $minutosTardanza,
                     ':trabajados' => $minutosTrabajados,
                     ':extra'      => $minutosExtra,
                     ':temprana'   => $minutosSalidaTemprana,
                     ':id'         => $id
                 ]);
+
+                // Sincronización oficial bidireccional automática con la tabla marcaciones
+                $empId = (int)$actual['id_empleado'];
+                $codReloj = (string)($actual['codigo_reloj'] ?? $empId);
+                $fecha = $actual['fecha'];
+
+                // 1. Sincronizar Entrada Oficial en marcaciones
+                $mEntrada = null;
+                if (!empty($horaEntradaReal)) {
+                    $mEntrada = Database::queryOne("
+                        SELECT id FROM marcaciones 
+                        WHERE (id_empleado = :emp_id OR codigo_reloj = :cod_reloj)
+                          AND tipo = 'entrada'
+                          AND DATE(fecha_hora) = :fecha
+                        ORDER BY id ASC LIMIT 1
+                    ", [':emp_id' => $empId, ':cod_reloj' => $codReloj, ':fecha' => $fecha]);
+
+                    if (!$mEntrada) {
+                        $mEntrada = Database::queryOne("
+                            SELECT id FROM marcaciones 
+                            WHERE (id_empleado = :emp_id OR codigo_reloj = :cod_reloj)
+                              AND DATE(fecha_hora) = :fecha
+                            ORDER BY fecha_hora ASC LIMIT 1
+                        ", [':emp_id' => $empId, ':cod_reloj' => $codReloj, ':fecha' => $fecha]);
+                    }
+
+                    if ($mEntrada) {
+                        Database::execute("
+                            UPDATE marcaciones 
+                            SET fecha_hora = :fhora, tipo = 'entrada', procesado = 1 
+                            WHERE id = :mid
+                        ", [':fhora' => $horaEntradaReal, ':mid' => $mEntrada['id']]);
+                    } else {
+                        Database::execute("
+                            INSERT INTO marcaciones 
+                            (id_empleado, codigo_reloj, id_dispositivo, fecha_hora, tipo, tipo_verificacion, procesado, creado_en)
+                            VALUES (?, ?, 1, ?, 'entrada', 'ADMIN_OFICIAL', 1, NOW())
+                        ", [$empId, $codReloj, $horaEntradaReal]);
+                    }
+                }
+
+                // 2. Sincronizar Salida Oficial en marcaciones
+                if (!empty($horaSalidaReal)) {
+                    $mSalida = Database::queryOne("
+                        SELECT id FROM marcaciones 
+                        WHERE (id_empleado = :emp_id OR codigo_reloj = :cod_reloj)
+                          AND tipo = 'salida'
+                          AND (DATE(fecha_hora) = :fecha OR DATE(fecha_hora) = DATE_ADD(:fecha2, INTERVAL 1 DAY))
+                        ORDER BY id DESC LIMIT 1
+                    ", [':emp_id' => $empId, ':cod_reloj' => $codReloj, ':fecha' => $fecha, ':fecha2' => $fecha]);
+
+                    if (!$mSalida) {
+                        $excludeEntId = !empty($mEntrada['id']) ? "AND id != " . (int)$mEntrada['id'] : "";
+                        $mSalida = Database::queryOne("
+                            SELECT id FROM marcaciones 
+                            WHERE (id_empleado = :emp_id OR codigo_reloj = :cod_reloj)
+                              AND (DATE(fecha_hora) = :fecha OR DATE(fecha_hora) = DATE_ADD(:fecha2, INTERVAL 1 DAY))
+                              $excludeEntId
+                            ORDER BY fecha_hora DESC LIMIT 1
+                        ", [':emp_id' => $empId, ':cod_reloj' => $codReloj, ':fecha' => $fecha, ':fecha2' => $fecha]);
+                    }
+
+                    if ($mSalida) {
+                        Database::execute("
+                            UPDATE marcaciones 
+                            SET fecha_hora = :fhora, tipo = 'salida', procesado = 1 
+                            WHERE id = :mid
+                        ", [':fhora' => $horaSalidaReal, ':mid' => $mSalida['id']]);
+                    } else {
+                        Database::execute("
+                            INSERT INTO marcaciones 
+                            (id_empleado, codigo_reloj, id_dispositivo, fecha_hora, tipo, tipo_verificacion, procesado, creado_en)
+                            VALUES (?, ?, 1, ?, 'salida', 'ADMIN_OFICIAL', 1, NOW())
+                        ", [$empId, $codReloj, $horaSalidaReal]);
+                    }
+                }
 
                 // Event Sourcing: Registrar evento inmutable de modificación administrativa de horario
                 try {
@@ -510,7 +644,7 @@ class AsistenciaController {
                             WHERE id = :id
                         ", [
                             ':estado' => $estadoAsistencia,
-                            ':obs'    => "Justificado por Administración: $motivo",
+                            ':obs'    => $motivo,
                             ':id'     => $existing['id']
                         ]);
                     } else {
@@ -520,7 +654,7 @@ class AsistenciaController {
                             (id_empleado, id_turno, fecha, estado, observaciones, manual, procesado_en)
                             VALUES (?, ?, ?, ?, ?, 1, NOW())
                             ON DUPLICATE KEY UPDATE estado = VALUES(estado), observaciones = VALUES(observaciones), manual = 1
-                        ", [$idEmpleado, $emp['turno_id'] ?: 1, $dStr, $estadoAsistencia, "Justificado por Administración: $motivo"]);
+                        ", [$idEmpleado, $emp['turno_id'] ?: 1, $dStr, $estadoAsistencia, $motivo]);
                     }
 
                     // Event Sourcing
@@ -570,6 +704,7 @@ class AsistenciaController {
 
     public function historialEventos(): void {
         AuthController::checkAuth();
+        AuthController::requireRole('ADMIN', 'asistencia');
         session_write_close(); // Liberar bloqueo de sesión para consultas AJAX concurrentes
 
         $empId = (int)($_GET['id_empleado'] ?? 0);

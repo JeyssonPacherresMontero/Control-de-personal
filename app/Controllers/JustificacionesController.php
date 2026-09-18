@@ -13,29 +13,48 @@ class JustificacionesController {
         $currentUser = AuthController::user();
         $supervisorDeptoId = (int)($currentUser['departamento_id'] ?? 0);
 
-        $fechaInicio = $_GET['fecha_inicio'] ?? date('Y-m-01');
-        $fechaFin = $_GET['fecha_fin'] ?? date('Y-m-d');
-        $estado = $_GET['estado'] ?? 'TODOS';
+        $todasFechas = isset($_GET['todas_fechas']) && $_GET['todas_fechas'] === '1';
+        $fechaInicio = !empty($_GET['fecha_inicio']) ? trim($_GET['fecha_inicio']) : ($todasFechas ? '' : date('Y-m-01'));
+        $fechaFin = !empty($_GET['fecha_fin']) ? trim($_GET['fecha_fin']) : ($todasFechas ? '' : date('Y-m-d'));
+        if (!empty($fechaInicio) && !empty($fechaFin) && $fechaInicio > $fechaFin) {
+            $tmp = $fechaInicio;
+            $fechaInicio = $fechaFin;
+            $fechaFin = $tmp;
+        }
+
+        $estado = !empty($_GET['estado']) ? strtoupper(trim($_GET['estado'])) : 'TODOS';
+        $tipo = !empty($_GET['tipo']) ? trim($_GET['tipo']) : 'TODOS';
+        $deptoId = !empty($_GET['departamento_id']) ? (int)$_GET['departamento_id'] : null;
+        if ($userRole === 'SUPERVISOR' && $supervisorDeptoId > 0) {
+            $deptoId = $supervisorDeptoId;
+        }
+        $search = !empty($_GET['search']) ? trim($_GET['search']) : null;
 
         $sql = "
             SELECT j.*, e.nombres, e.apellidos, e.dni, e.codigo_reloj, d.nombre as departamento_nombre
             FROM justificaciones j
             JOIN empleados e ON j.id_empleado = e.id
             LEFT JOIN departamentos d ON e.departamento_id = d.id
-            WHERE (j.fecha_inicio <= :f2 AND j.fecha_fin >= :f1)
+            WHERE 1=1
         ";
-        $params = [
-            ':f1' => $fechaInicio,
-            ':f2' => $fechaFin
-        ];
+        $params = [];
 
-        // Alcance Departamental estricto para SUPERVISOR
-        if ($userRole === 'SUPERVISOR' && $supervisorDeptoId > 0) {
-            $sql .= " AND e.departamento_id = :sup_depto";
-            $params[':sup_depto'] = $supervisorDeptoId;
-            $empleados = Database::query("SELECT id, codigo_reloj, dni, nombres, apellidos FROM empleados WHERE activo = 1 AND departamento_id = ? ORDER BY apellidos ASC", [$supervisorDeptoId]);
-        } else {
-            $empleados = Database::query("SELECT id, codigo_reloj, dni, nombres, apellidos FROM empleados WHERE activo = 1 ORDER BY apellidos ASC");
+        if (!empty($fechaInicio) && !empty($fechaFin)) {
+            $sql .= " AND (j.fecha_inicio <= :f2 AND j.fecha_fin >= :f1)";
+            $params[':f1'] = $fechaInicio;
+            $params[':f2'] = $fechaFin;
+        } elseif (!empty($fechaInicio)) {
+            $sql .= " AND j.fecha_fin >= :f1";
+            $params[':f1'] = $fechaInicio;
+        } elseif (!empty($fechaFin)) {
+            $sql .= " AND j.fecha_inicio <= :f2";
+            $params[':f2'] = $fechaFin;
+        }
+
+        // Alcance Departamental
+        if ($deptoId) {
+            $sql .= " AND e.departamento_id = :depto_id";
+            $params[':depto_id'] = $deptoId;
         }
 
         if ($estado !== 'TODOS') {
@@ -43,9 +62,46 @@ class JustificacionesController {
             $params[':estado'] = $estado;
         }
 
+        if ($tipo !== 'TODOS') {
+            $sql .= " AND j.tipo = :tipo";
+            $params[':tipo'] = $tipo;
+        }
+
+        if ($search) {
+            $sql .= " AND (e.nombres LIKE :s1 OR e.apellidos LIKE :s2 OR e.dni LIKE :s3 OR e.codigo_reloj LIKE :s4 OR CONCAT(e.apellidos, ' ', e.nombres) LIKE :s5 OR CONCAT(e.nombres, ' ', e.apellidos) LIKE :s6 OR j.motivo LIKE :s7)";
+            $params[':s1'] = "%$search%";
+            $params[':s2'] = "%$search%";
+            $params[':s3'] = "%$search%";
+            $params[':s4'] = "%$search%";
+            $params[':s5'] = "%$search%";
+            $params[':s6'] = "%$search%";
+            $params[':s7'] = "%$search%";
+        }
+
         $sql .= " ORDER BY j.creado_en DESC";
 
         $justificaciones = Database::query($sql, $params);
+
+        // Listado de empleados para el modal de registro
+        if ($userRole === 'SUPERVISOR' && $supervisorDeptoId > 0) {
+            $empleados = Database::query("SELECT id, codigo_reloj, dni, nombres, apellidos FROM empleados WHERE activo = 1 AND departamento_id = ? ORDER BY apellidos ASC", [$supervisorDeptoId]);
+            $departamentos = Database::query("SELECT * FROM departamentos WHERE id = ?", [$supervisorDeptoId]);
+        } else {
+            $empleados = Database::query("SELECT id, codigo_reloj, dni, nombres, apellidos FROM empleados WHERE activo = 1 ORDER BY apellidos ASC");
+            $departamentos = Database::query("SELECT * FROM departamentos WHERE activo = 1 ORDER BY nombre ASC");
+        }
+
+        // KPIs de justificaciones
+        $kpiTotal = count($justificaciones);
+        $kpiPendientes = 0;
+        $kpiAprobadas = 0;
+        $kpiRechazadas = 0;
+        foreach ($justificaciones as $jItem) {
+            $st = strtoupper($jItem['estado'] ?? '');
+            if ($st === 'PENDIENTE') $kpiPendientes++;
+            elseif ($st === 'APROBADO' || $st === 'APROBADA') $kpiAprobadas++;
+            elseif ($st === 'RECHAZADO' || $st === 'RECHAZADA') $kpiRechazadas++;
+        }
 
         require_once APP_ROOT . '/views/justificaciones/index.php';
     }

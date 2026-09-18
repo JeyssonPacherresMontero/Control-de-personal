@@ -28,13 +28,13 @@ class DashboardController {
         
         $statsHoy = Database::queryOne("
             SELECT 
-                SUM(CASE WHEN estado = 'PRESENTE' THEN 1 ELSE 0 END) as presentes,
-                SUM(CASE WHEN estado = 'TARDANZA' THEN 1 ELSE 0 END) as tardanzas,
-                SUM(CASE WHEN estado = 'FALTA' OR estado = 'FALTA_INJUSTIFICADA' THEN 1 ELSE 0 END) as faltas,
-                SUM(CASE WHEN estado = 'JUSTIFICADO' OR estado = 'PERMISO' OR estado = 'VACACIONES' THEN 1 ELSE 0 END) as justificados,
-                SUM(CASE WHEN estado = 'SALIDA_SIN_MARCAR' THEN 1 ELSE 0 END) as sin_salida,
-                SUM(minutos_tardanza) as total_minutos_tardanza,
-                SUM(minutos_extra) as total_minutos_extra
+                COALESCE(SUM(CASE WHEN estado = 'PRESENTE' AND hora_entrada_real IS NOT NULL THEN 1 ELSE 0 END), 0) as presentes,
+                COALESCE(SUM(CASE WHEN estado = 'TARDANZA' THEN 1 ELSE 0 END), 0) as tardanzas,
+                COALESCE(SUM(CASE WHEN estado = 'FALTA' OR estado = 'FALTA_INJUSTIFICADA' THEN 1 ELSE 0 END), 0) as faltas,
+                COALESCE(SUM(CASE WHEN estado = 'JUSTIFICADO' OR estado = 'PERMISO' OR estado = 'VACACIONES' THEN 1 ELSE 0 END), 0) as justificados,
+                COALESCE(SUM(CASE WHEN estado = 'SALIDA_SIN_MARCAR' THEN 1 ELSE 0 END), 0) as sin_salida,
+                COALESCE(SUM(minutos_tardanza), 0) as total_minutos_tardanza,
+                COALESCE(SUM(minutos_extra), 0) as total_minutos_extra
             FROM asistencia_diaria 
             WHERE fecha = ?
         ", [$today]) ?: [
@@ -50,10 +50,10 @@ class DashboardController {
         // 2. Métricas del Mes en Curso (RRHH)
         $statsMes = Database::queryOne("
             SELECT 
-                SUM(minutos_extra) as total_minutos_extra_mes,
-                SUM(minutos_tardanza) as total_minutos_tardanza_mes,
-                SUM(CASE WHEN estado = 'FALTA' OR estado = 'FALTA_INJUSTIFICADA' THEN 1 ELSE 0 END) as total_faltas_mes,
-                SUM(CASE WHEN estado = 'TARDANZA' THEN 1 ELSE 0 END) as total_tardanzas_mes
+                COALESCE(SUM(minutos_extra), 0) as total_minutos_extra_mes,
+                COALESCE(SUM(minutos_tardanza), 0) as total_minutos_tardanza_mes,
+                COALESCE(SUM(CASE WHEN estado = 'FALTA' OR estado = 'FALTA_INJUSTIFICADA' THEN 1 ELSE 0 END), 0) as total_faltas_mes,
+                COALESCE(SUM(CASE WHEN estado = 'TARDANZA' THEN 1 ELSE 0 END), 0) as total_tardanzas_mes
             FROM asistencia_diaria 
             WHERE fecha BETWEEN ? AND ?
         ", [$monthStart, $today]) ?: [
@@ -117,17 +117,31 @@ class DashboardController {
         // 5. Tendencia de Asistencia de los Últimos 7 Días (Chart.js Series)
         $diasAtras = 6;
         $fechaInicioTendencia = date('Y-m-d', strtotime("-$diasAtras days"));
+        $supervisorDeptoId = (($currentUser['rol'] ?? '') === 'SUPERVISOR' && !empty($currentUser['departamento_id'])) 
+            ? (int)$currentUser['departamento_id'] 
+            : null;
+        
+        $tendenciaParams = [$fechaInicioTendencia, $today];
+        $deptoJoin = "";
+        $deptoWhere = "";
+        if ($supervisorDeptoId) {
+            $deptoJoin = "JOIN empleados e ON a.id_empleado = e.id";
+            $deptoWhere = "AND e.departamento_id = ?";
+            $tendenciaParams[] = $supervisorDeptoId;
+        }
+
         $tendenciaRows = Database::query("
             SELECT 
-                fecha,
-                SUM(CASE WHEN estado = 'PRESENTE' THEN 1 ELSE 0 END) as presentes,
-                SUM(CASE WHEN estado = 'TARDANZA' THEN 1 ELSE 0 END) as tardanzas,
-                SUM(CASE WHEN estado = 'FALTA' OR estado = 'FALTA_INJUSTIFICADA' THEN 1 ELSE 0 END) as faltas
-            FROM asistencia_diaria
-            WHERE fecha BETWEEN ? AND ?
-            GROUP BY fecha
-            ORDER BY fecha ASC
-        ", [$fechaInicioTendencia, $today]);
+                a.fecha,
+                SUM(CASE WHEN a.estado = 'PRESENTE' AND a.hora_entrada_real IS NOT NULL THEN 1 ELSE 0 END) as presentes,
+                SUM(CASE WHEN a.estado = 'TARDANZA' THEN 1 ELSE 0 END) as tardanzas,
+                SUM(CASE WHEN a.estado = 'FALTA' OR a.estado = 'FALTA_INJUSTIFICADA' THEN 1 ELSE 0 END) as faltas
+            FROM asistencia_diaria a
+            $deptoJoin
+            WHERE a.fecha BETWEEN ? AND ? $deptoWhere
+            GROUP BY a.fecha
+            ORDER BY a.fecha ASC
+        ", $tendenciaParams);
 
         // Indexar por fecha para rellenar días sin registros
         $tendenciaMap = [];
@@ -304,7 +318,7 @@ class DashboardController {
         $tendenciaRows = Database::query("
             SELECT 
                 a.fecha,
-                SUM(CASE WHEN a.estado = 'PRESENTE' THEN 1 ELSE 0 END) as presentes,
+                SUM(CASE WHEN a.estado = 'PRESENTE' AND a.hora_entrada_real IS NOT NULL THEN 1 ELSE 0 END) as presentes,
                 SUM(CASE WHEN a.estado = 'TARDANZA' THEN 1 ELSE 0 END) as tardanzas,
                 SUM(CASE WHEN a.estado = 'FALTA' OR a.estado = 'FALTA_INJUSTIFICADA' THEN 1 ELSE 0 END) as faltas
             FROM asistencia_diaria a

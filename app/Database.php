@@ -10,6 +10,9 @@ require_once __DIR__ . '/../config/config.php';
 class Database {
     private static ?PDO $instance = null;
 
+    /**
+     * Retorna la instancia de conexión PDO (Patrón Singleton)
+     */
     public static function getConnection(): PDO {
         if (self::$instance === null) {
             try {
@@ -30,6 +33,33 @@ class Database {
             }
         }
         return self::$instance;
+    }
+
+    /**
+     * Retorna la instancia Singleton del gestor de base de datos.
+     * Soporta tanto Database::getInstance() como Database::getInstance()->getConnection().
+     */
+    public static function getInstance(): self {
+        static $singleton = null;
+        if ($singleton === null) {
+            $singleton = new self();
+        }
+        self::getConnection();
+        return $singleton;
+    }
+
+    /**
+     * Alias directo para obtener el objeto PDO nativo
+     */
+    public static function pdo(): PDO {
+        return self::getConnection();
+    }
+
+    /**
+     * Delegación dinámica de métodos PDO cuando se usa la instancia como objeto
+     */
+    public function __call(string $method, array $args) {
+        return self::getConnection()->$method(...$args);
     }
 
     public static function query(string $sql, array $params = []): array {

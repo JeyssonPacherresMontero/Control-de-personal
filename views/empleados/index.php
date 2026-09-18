@@ -261,25 +261,47 @@
                 <form method="GET" action="" class="row align-items-end">
                     <input type="hidden" name="route" value="empleados">
 
-                    <div class="col-md-4 col-sm-6 mb-2">
+                    <div class="col-md-3 col-sm-6 mb-2">
                         <label class="form-label-custom"><i class="fa-solid fa-building mr-1"></i> Departamento</label>
                         <select name="departamento_id" class="form-control form-control-sm">
                             <option value="">-- Todos los Departamentos --</option>
                             <?php foreach ($departamentos as $d): ?>
-                                <option value="<?= $d['id'] ?>" <?= $deptoId == $d['id'] ? 'selected' : '' ?>><?= htmlspecialchars($d['nombre']) ?></option>
+                                <option value="<?= $d['id'] ?>" <?= ($deptoId ?? '') == $d['id'] ? 'selected' : '' ?>><?= htmlspecialchars($d['nombre']) ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
 
-                    <div class="col-md-6 col-sm-6 mb-2">
+                    <div class="col-md-2 col-sm-6 mb-2">
+                        <label class="form-label-custom"><i class="fa-solid fa-business-time mr-1"></i> Turno</label>
+                        <select name="turno_id" class="form-control form-control-sm">
+                            <option value="">-- Todos los Turnos --</option>
+                            <?php foreach ($turnos as $t): ?>
+                                <option value="<?= $t['id'] ?>" <?= ($turnoId ?? '') == $t['id'] ? 'selected' : '' ?>><?= htmlspecialchars($t['nombre']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <div class="col-md-2 col-sm-6 mb-2">
+                        <label class="form-label-custom"><i class="fa-solid fa-tag mr-1"></i> Estado</label>
+                        <select name="estado" class="form-control form-control-sm">
+                            <option value="">-- Todos --</option>
+                            <option value="1" <?= ($estado ?? '') === '1' || ($estado ?? '') === 'ACTIVO' ? 'selected' : '' ?>>Activos</option>
+                            <option value="0" <?= ($estado ?? '') === '0' || ($estado ?? '') === 'INACTIVO' ? 'selected' : '' ?>>Inactivos</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-4 col-sm-8 mb-2">
                         <label class="form-label-custom"><i class="fa-solid fa-magnifying-glass mr-1"></i> Buscar por Nombre, DNI o ID</label>
                         <input type="text" name="search" class="form-control form-control-sm" placeholder="Ej: Perez, 70112233, 101..." value="<?= htmlspecialchars($search ?? '') ?>">
                     </div>
 
-                    <div class="col-md-2 col-sm-12 mb-2">
-                        <button type="submit" class="btn btn-primary btn-sm btn-block" style="height: 34px;">
-                            <i class="fa-solid fa-filter mr-1"></i> Filtrar
+                    <div class="col-md-1 col-sm-4 mb-2 d-flex" style="gap: 4px;">
+                        <button type="submit" class="btn btn-primary btn-sm flex-fill" title="Filtrar resultados" style="height: 34px;">
+                            <i class="fa-solid fa-filter"></i>
                         </button>
+                        <a href="?route=empleados" class="btn btn-outline-secondary btn-sm" title="Limpiar filtros" style="height: 34px; display: inline-flex; align-items: center; justify-content: center;">
+                            <i class="fa-solid fa-rotate-left"></i>
+                        </a>
                     </div>
                 </form>
             </div>

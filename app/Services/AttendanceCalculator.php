@@ -188,11 +188,10 @@ class AttendanceCalculator {
 
                     // Si el turno aún no empieza o está dentro del margen de llegada, no registrar falta prematura
                     if ($now < $dtLimitFalta) {
-                        $estado = 'PRESENTE';
+                        $estado = 'PENDIENTE';
                         $obs = 'En espera de ingreso laboral';
                         $recordsToUpsert[] = $this->buildRecordData($empId, $turnoId, $date, $emp['hora_entrada'] ?? null, $emp['hora_salida'] ?? null, null, null, null, null, 0, 0, 0, 0, $estado, $obs, $tolerancia);
                         $stats['processed']++;
-                        $stats['present']++;
                         continue;
                     }
                 }

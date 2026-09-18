@@ -9,8 +9,17 @@ use App\Database;
 class EmpleadosController {
     public function index(): void {
         AuthController::checkAuth();
+        $userRole = AuthController::role();
+        $currentUser = AuthController::user();
+        $supervisorDeptoId = (int)($currentUser['departamento_id'] ?? 0);
 
         $deptoId = !empty($_GET['departamento_id']) ? (int)$_GET['departamento_id'] : null;
+        if ($userRole === 'SUPERVISOR' && $supervisorDeptoId > 0) {
+            $deptoId = $supervisorDeptoId;
+        }
+
+        $turnoId = !empty($_GET['turno_id']) ? (int)$_GET['turno_id'] : null;
+        $estado = isset($_GET['estado']) && $_GET['estado'] !== '' && strtoupper($_GET['estado']) !== 'TODOS' ? trim($_GET['estado']) : null;
         $search = !empty($_GET['search']) ? trim($_GET['search']) : null;
 
         $sql = "
@@ -34,18 +43,37 @@ class EmpleadosController {
             $params[':depto_id'] = $deptoId;
         }
 
+        if ($turnoId) {
+            $sql .= " AND e.turno_id = :turno_id";
+            $params[':turno_id'] = $turnoId;
+        }
+
+        if ($estado !== null) {
+            if ($estado === '1' || strtoupper($estado) === 'ACTIVO') {
+                $sql .= " AND e.activo = 1";
+            } elseif ($estado === '0' || strtoupper($estado) === 'INACTIVO') {
+                $sql .= " AND e.activo = 0";
+            }
+        }
+
         if ($search) {
-            $sql .= " AND (e.nombres LIKE :s1 OR e.apellidos LIKE :s2 OR e.dni LIKE :s3 OR e.codigo_reloj LIKE :s4)";
+            $sql .= " AND (e.nombres LIKE :s1 OR e.apellidos LIKE :s2 OR e.dni LIKE :s3 OR e.codigo_reloj LIKE :s4 OR CONCAT(e.apellidos, ' ', e.nombres) LIKE :s5 OR CONCAT(e.nombres, ' ', e.apellidos) LIKE :s6)";
             $params[':s1'] = "%$search%";
             $params[':s2'] = "%$search%";
             $params[':s3'] = "%$search%";
             $params[':s4'] = "%$search%";
+            $params[':s5'] = "%$search%";
+            $params[':s6'] = "%$search%";
         }
 
         $sql .= " ORDER BY e.apellidos ASC, e.nombres ASC";
 
         $empleados = Database::query($sql, $params);
-        $departamentos = Database::query("SELECT * FROM departamentos WHERE activo = 1 ORDER BY nombre ASC");
+        if ($userRole === 'SUPERVISOR' && $supervisorDeptoId > 0) {
+            $departamentos = Database::query("SELECT * FROM departamentos WHERE id = ?", [$supervisorDeptoId]);
+        } else {
+            $departamentos = Database::query("SELECT * FROM departamentos WHERE activo = 1 ORDER BY nombre ASC");
+        }
         $cargos = Database::query("SELECT * FROM cargos WHERE activo = 1 ORDER BY nombre ASC");
         $turnos = Database::query("SELECT * FROM turnos WHERE activo = 1 ORDER BY nombre ASC");
         $dispositivos = Database::query("SELECT * FROM dispositivos WHERE activo = 1 ORDER BY id ASC");

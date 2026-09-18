@@ -14,8 +14,18 @@ class MarcacionesController {
     public function index(): void {
         AuthController::checkAuth();
 
-        $fechaInicio = $_GET['fecha_inicio'] ?? ($_GET['fecha'] ?? date('Y-m-01'));
-        $fechaFin = $_GET['fecha_fin'] ?? ($_GET['fecha'] ?? date('Y-m-d'));
+        $userRole = AuthController::role();
+        $currentUser = AuthController::user();
+        $supervisorDeptoId = (int)($currentUser['departamento_id'] ?? 0);
+
+        $fechaInicio = !empty($_GET['fecha_inicio']) ? trim($_GET['fecha_inicio']) : (!empty($_GET['fecha']) ? trim($_GET['fecha']) : date('Y-m-01'));
+        $fechaFin = !empty($_GET['fecha_fin']) ? trim($_GET['fecha_fin']) : (!empty($_GET['fecha']) ? trim($_GET['fecha']) : date('Y-m-d'));
+        if ($fechaInicio > $fechaFin) {
+            $tmp = $fechaInicio;
+            $fechaInicio = $fechaFin;
+            $fechaFin = $tmp;
+        }
+
         $dispositivoId = !empty($_GET['dispositivo_id']) ? (int)$_GET['dispositivo_id'] : null;
         $tipo = !empty($_GET['tipo']) ? trim($_GET['tipo']) : null;
         $search = !empty($_GET['search']) ? trim($_GET['search']) : null;
@@ -34,6 +44,11 @@ class MarcacionesController {
             ':dt_fin'    => $dtFin
         ];
 
+        if ($userRole === 'SUPERVISOR' && $supervisorDeptoId > 0) {
+            $where .= " AND e.departamento_id = :sup_depto";
+            $params[':sup_depto'] = $supervisorDeptoId;
+        }
+
         if ($dispositivoId) {
             $where .= " AND m.id_dispositivo = :disp_id";
             $params[':disp_id'] = $dispositivoId;
@@ -43,6 +58,8 @@ class MarcacionesController {
             $tipoLower = strtolower($tipo);
             if ($tipoLower === 'refrigerio' || $tipoLower === 'refrigerios') {
                 $where .= " AND (LOWER(m.tipo) LIKE '%refrigerio%' OR LOWER(m.tipo) LIKE '%break%')";
+            } elseif ($tipoLower === 'otros' || $tipoLower === 'desconocido') {
+                $where .= " AND (LOWER(m.tipo) NOT IN ('entrada', 'salida') AND LOWER(m.tipo) NOT LIKE '%refrigerio%' AND LOWER(m.tipo) NOT LIKE '%break%')";
             } else {
                 $where .= " AND LOWER(m.tipo) = :tipo";
                 $params[':tipo'] = $tipoLower;
@@ -50,11 +67,13 @@ class MarcacionesController {
         }
 
         if ($search) {
-            $where .= " AND (e.nombres LIKE :s1 OR e.apellidos LIKE :s2 OR e.dni LIKE :s3 OR m.codigo_reloj LIKE :s4)";
+            $where .= " AND (e.nombres LIKE :s1 OR e.apellidos LIKE :s2 OR e.dni LIKE :s3 OR m.codigo_reloj LIKE :s4 OR CONCAT(e.apellidos, ' ', e.nombres) LIKE :s5 OR CONCAT(e.nombres, ' ', e.apellidos) LIKE :s6)";
             $params[':s1'] = "%$search%";
             $params[':s2'] = "%$search%";
             $params[':s3'] = "%$search%";
             $params[':s4'] = "%$search%";
+            $params[':s5'] = "%$search%";
+            $params[':s6'] = "%$search%";
         }
 
         // 1. Agregación de KPIs directamente en SQL para máxima velocidad

@@ -292,6 +292,10 @@
             $.fn.select2.defaults.set('language', 'es');
         }
 
+        if ($.fn.DataTable) {
+            $.fn.dataTable.ext.errMode = 'console';
+        }
+
         if ($('.datatable').length) {
             $('.datatable').DataTable({
                 "responsive": true,

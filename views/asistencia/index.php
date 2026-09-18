@@ -1,6 +1,11 @@
 <?php 
 require_once APP_ROOT . '/views/layout/header.php'; 
 
+// Inicialización defensiva de colecciones
+$asistencias = $asistencias ?? [];
+$departamentos = $departamentos ?? [];
+$empleados = $empleados ?? [];
+
 // Cálculos de KPIs y métricas de asistencia para el período consultado (Precalculados en MySQL)
 $kpiTotal = (int)($kpis['total'] ?? count($asistencias));
 $kpiPresentes = (int)($kpis['presentes'] ?? 0);
@@ -202,7 +207,7 @@ if (!empty($deptoId)) {
                         </button>
                     <?php endif; ?>
 
-                    <?php if (in_array($userRole, ['ADMIN', 'RRHH'], true)): ?>
+                    <?php if ($userRole === 'ADMIN'): ?>
                         <form method="POST" action="?route=asistencia&action=recalcular" class="d-inline m-0">
                             <?= csrf_field() ?>
                             <input type="hidden" name="fecha_inicio" value="<?= htmlspecialchars($fechaInicio) ?>">
@@ -213,10 +218,10 @@ if (!empty($deptoId)) {
                         </form>
                     <?php endif; ?>
 
-                    <a href="?route=asistencia&fecha_inicio=<?= $fechaInicio ?>&fecha_fin=<?= $fechaFin ?>&departamento_id=<?= $deptoId ?>&estado=<?= $estado ?>&search=<?= urlencode($search ?? '') ?>&export=excel" class="btn btn-success btn-sm" title="Descargar reporte oficial en Excel">
+                    <a href="?route=asistencia&fecha_inicio=<?= urlencode($fechaInicio) ?>&fecha_fin=<?= urlencode($fechaFin) ?>&departamento_id=<?= urlencode((string)($deptoId ?? '')) ?>&estado=<?= urlencode((string)($estado ?? '')) ?>&search=<?= urlencode($search ?? '') ?>&export=excel" class="btn btn-success btn-sm" title="Descargar reporte oficial en Excel">
                         <i class="fa-solid fa-file-excel mr-1"></i> Excel
                     </a>
-                    <a href="?route=asistencia&fecha_inicio=<?= $fechaInicio ?>&fecha_fin=<?= $fechaFin ?>&departamento_id=<?= $deptoId ?>&estado=<?= $estado ?>&search=<?= urlencode($search ?? '') ?>&export=csv" class="btn btn-outline-secondary btn-sm" title="Descargar archivo CSV">
+                    <a href="?route=asistencia&fecha_inicio=<?= urlencode($fechaInicio) ?>&fecha_fin=<?= urlencode($fechaFin) ?>&departamento_id=<?= urlencode((string)($deptoId ?? '')) ?>&estado=<?= urlencode((string)($estado ?? '')) ?>&search=<?= urlencode($search ?? '') ?>&export=csv" class="btn btn-outline-secondary btn-sm" title="Descargar archivo CSV">
                         <i class="fa-solid fa-file-csv mr-1"></i> CSV
                     </a>
                     <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print()" title="Imprimir reporte oficial o Guardar como PDF">
@@ -255,6 +260,7 @@ if (!empty($deptoId)) {
                             <option value="PRESENTE" <?= ($estado ?? '') === 'PRESENTE' ? 'selected' : '' ?>>Puntuales (Presente)</option>
                             <option value="TARDANZA" <?= ($estado ?? '') === 'TARDANZA' ? 'selected' : '' ?>>Tardanzas</option>
                             <option value="FALTA" <?= ($estado ?? '') === 'FALTA' ? 'selected' : '' ?>>Faltas e Inasistencias</option>
+                            <option value="PENDIENTE" <?= ($estado ?? '') === 'PENDIENTE' ? 'selected' : '' ?>>En Espera / Sin Marcar</option>
                             <option value="JUSTIFICADO" <?= ($estado ?? '') === 'JUSTIFICADO' ? 'selected' : '' ?>>Justificados</option>
                             <option value="SALIDA_SIN_MARCAR" <?= ($estado ?? '') === 'SALIDA_SIN_MARCAR' ? 'selected' : '' ?>>Salidas sin Marcar</option>
                             <option value="INCIDENCIAS" <?= ($estado ?? '') === 'INCIDENCIAS' ? 'selected' : '' ?>>Todas las Incidencias</option>
@@ -266,10 +272,13 @@ if (!empty($deptoId)) {
                         <input type="text" name="search" class="form-control form-control-sm" placeholder="Nombre, DNI..." value="<?= htmlspecialchars($search ?? '') ?>">
                     </div>
 
-                    <div class="col-md-1 col-sm-4 mb-2">
-                        <button type="submit" class="btn btn-primary btn-sm btn-block" title="Filtrar resultados" style="height: 34px;">
-                            <i class="fa-solid fa-filter mr-1"></i> Filtrar
+                    <div class="col-md-1 col-sm-4 mb-2 d-flex" style="gap: 4px;">
+                        <button type="submit" class="btn btn-primary btn-sm flex-fill" title="Filtrar resultados" style="height: 34px;">
+                            <i class="fa-solid fa-filter"></i>
                         </button>
+                        <a href="?route=asistencia" class="btn btn-outline-secondary btn-sm" title="Limpiar filtros" style="height: 34px; display: inline-flex; align-items: center; justify-content: center;">
+                            <i class="fa-solid fa-rotate-left"></i>
+                        </a>
                     </div>
                 </form>
             </div>
@@ -284,18 +293,29 @@ if (!empty($deptoId)) {
                             <th class="text-center">Fecha</th>
                             <th>Empleado</th>
                             <th class="text-center">Turno</th>
-                            <th>Entrada (Prog. - Real)</th>
-                            <th>Salida (Prog. - Real)</th>
+                            <th class="text-center">Entrada</th>
+                            <th class="text-center">Salida</th>
                             <th class="text-center">Tardanza</th>
                             <th class="text-center">Tiempo Trabajado</th>
                             <th class="text-center">Horas Extras</th>
                             <th class="text-center">Estado</th>
-                            <?php if (in_array($userRole, ['ADMIN', 'RRHH'], true)): ?>
+                            <?php if ($userRole === 'ADMIN'): ?>
                                 <th class="text-center no-print">Acciones</th>
                             <?php endif; ?>
                         </tr>
                     </thead>
                     <tbody>
+                        <?php if (empty($asistencias)): ?>
+                            <tr>
+                                <td colspan="<?= $userRole === 'ADMIN' ? '10' : '9' ?>" class="text-center py-5 text-muted">
+                                    <i class="fa-solid fa-folder-open fa-2x mb-2 d-block text-secondary"></i>
+                                    <div>No se encontraron registros de asistencia para los filtros seleccionados.</div>
+                                    <a href="?route=asistencia" class="btn btn-xs btn-outline-primary mt-2">
+                                        <i class="fa-solid fa-rotate-left mr-1"></i> Reestablecer filtros
+                                    </a>
+                                </td>
+                            </tr>
+                        <?php else: ?>
                         <?php foreach ($asistencias as $a): ?>
                             <tr>
                                 <td class="text-center font-weight-bold text-dark font-monospace small"><?= $a['fecha'] ?></td>
@@ -306,40 +326,20 @@ if (!empty($deptoId)) {
                                 <td class="text-center">
                                     <span class="badge-pill-custom badge-pill-neutral"><?= htmlspecialchars($a['turno_nombre'] ?? 'Sin Turno') ?></span>
                                 </td>
-                                <td>
-                                    <div class="text-muted small"><i class="fa-regular fa-clock mr-1 text-secondary"></i>Prog.: <span class="font-monospace"><?= $a['hora_entrada_programada'] ? substr($a['hora_entrada_programada'], 0, 5) : '--:--' ?></span></div>
-                                    <div class="d-flex align-items-center justify-content-between mt-1 pt-1 border-top" style="gap: 4px;">
-                                        <div>
-                                            <span class="text-muted small">Real:</span> 
-                                            <span class="font-monospace small font-weight-bold <?= $a['minutos_tardanza'] > 0 ? 'text-danger' : ($a['hora_entrada_real'] ? 'text-success' : 'text-muted') ?>">
-                                                <?= $a['hora_entrada_real'] ? substr($a['hora_entrada_real'], 11, 5) : '--:--' ?>
-                                            </span>
-                                        </div>
-                                        <?php if ($userRole === 'ADMIN'): ?>
-                                            <button type="button" class="btn btn-xs btn-outline-primary py-0 px-2 shadow-sm font-weight-bold" 
-                                                    onclick="openAdminEditModal(<?= htmlspecialchars(json_encode($a)) ?>, 'entrada')" 
-                                                    title="Editar Hora de Entrada y Salida en la base de datos">
-                                                <i class="fa-solid fa-pen-to-square mr-1"></i>Editar
-                                            </button>
-                                        <?php endif; ?>
+                                <td class="text-center">
+                                    <div class="font-monospace font-weight-bold <?= $a['minutos_tardanza'] > 0 ? 'text-danger' : ($a['hora_entrada_real'] ? 'text-success' : 'text-muted') ?>" style="font-size: 0.95rem; line-height: 1.15;">
+                                        <?= $a['hora_entrada_real'] ? substr($a['hora_entrada_real'], 11, 5) : '--:--' ?>
+                                    </div>
+                                    <div class="small text-muted font-monospace" style="font-size: 0.74rem; line-height: 1.2; margin-top: 2px;">
+                                        <span style="color: #64748b;">Prog:</span> <?= $a['hora_entrada_programada'] ? substr($a['hora_entrada_programada'], 0, 5) : '--:--' ?>
                                     </div>
                                 </td>
-                                <td>
-                                    <div class="text-muted small"><i class="fa-regular fa-clock mr-1 text-secondary"></i>Prog.: <span class="font-monospace"><?= $a['hora_salida_programada'] ? substr($a['hora_salida_programada'], 0, 5) : '--:--' ?></span></div>
-                                    <div class="d-flex align-items-center justify-content-between mt-1 pt-1 border-top" style="gap: 4px;">
-                                        <div>
-                                            <span class="text-muted small">Real:</span> 
-                                            <span class="font-monospace small font-weight-bold <?= empty($a['hora_salida_real']) ? 'text-muted' : 'text-dark' ?>">
-                                                <?= $a['hora_salida_real'] ? substr($a['hora_salida_real'], 11, 5) : '--:--' ?>
-                                            </span>
-                                        </div>
-                                        <?php if ($userRole === 'ADMIN'): ?>
-                                            <button type="button" class="btn btn-xs btn-outline-primary py-0 px-2 shadow-sm font-weight-bold" 
-                                                    onclick="openAdminEditModal(<?= htmlspecialchars(json_encode($a)) ?>, 'salida')" 
-                                                    title="Asignar o editar hora de salida en la base de datos">
-                                                <i class="fa-solid fa-pen-to-square mr-1"></i>Editar
-                                            </button>
-                                        <?php endif; ?>
+                                <td class="text-center">
+                                    <div class="font-monospace font-weight-bold <?= empty($a['hora_salida_real']) ? 'text-muted' : 'text-dark' ?>" style="font-size: 0.95rem; line-height: 1.15;">
+                                        <?= $a['hora_salida_real'] ? substr($a['hora_salida_real'], 11, 5) : '--:--' ?>
+                                    </div>
+                                    <div class="small text-muted font-monospace" style="font-size: 0.74rem; line-height: 1.2; margin-top: 2px;">
+                                        <span style="color: #64748b;">Prog:</span> <?= $a['hora_salida_programada'] ? substr($a['hora_salida_programada'], 0, 5) : '--:--' ?>
                                     </div>
                                 </td>
                                 <td class="text-center">
@@ -367,10 +367,12 @@ if (!empty($deptoId)) {
                                     <?php
                                         $est = $a['estado'];
                                         $obs = $a['observaciones'] ?? '';
-                                        if ($est === 'PRESENTE' && str_contains($obs, 'Jornada en curso')) {
+                                        if ($est === 'PRESENTE' && !empty($a['hora_entrada_real']) && str_contains($obs, 'Jornada en curso')) {
                                             echo '<span class="badge-pill-custom badge-pill-presente"><i class="fa-solid fa-user-clock mr-1"></i>En Jornada</span>';
-                                        } elseif ($est === 'PRESENTE') {
+                                        } elseif ($est === 'PRESENTE' && !empty($a['hora_entrada_real'])) {
                                             echo '<span class="badge-pill-custom badge-pill-presente"><i class="fa-solid fa-check mr-1"></i>Presente</span>';
+                                        } elseif ($est === 'PENDIENTE' || (empty($a['hora_entrada_real']) && !in_array($est, ['FALTA', 'FALTA_INJUSTIFICADA', 'JUSTIFICADO', 'PERMISO', 'VACACIONES', 'DESCANSO'], true))) {
+                                            echo '<span class="badge-pill-custom badge-pill-neutral"><i class="fa-solid fa-hourglass-half mr-1"></i>En Espera</span>';
                                         } elseif ($est === 'TARDANZA') {
                                             echo '<span class="badge-pill-custom badge-pill-tardanza"><i class="fa-solid fa-clock mr-1"></i>Tardanza</span>';
                                         } elseif ($est === 'FALTA' || $est === 'FALTA_INJUSTIFICADA') {
@@ -395,23 +397,22 @@ if (!empty($deptoId)) {
                                         </div>
                                     <?php endif; ?>
                                 </td>
-                                <?php if (in_array($userRole, ['ADMIN', 'RRHH'], true)): ?>
+                                <?php if ($userRole === 'ADMIN'): ?>
                                     <td class="text-center no-print">
                                         <button class="btn btn-xs btn-outline-info mr-1" onclick="openTimelineModal(<?= $a['id_empleado'] ?>, '<?= $a['fecha'] ?>', '<?= htmlspecialchars(addslashes($a['apellidos'] . ' ' . $a['nombres'])) ?>')" title="Ver Trazabilidad y Auditoría de Eventos">
                                             <i class="fa-solid fa-timeline"></i> Eventos
                                         </button>
-                                        <?php if ($userRole === 'ADMIN'): ?>
-                                            <button class="btn btn-xs btn-primary mr-1" onclick="openAdminEditModal(<?= htmlspecialchars(json_encode($a)) ?>)" title="Modificar horas de entrada/salida y corregir asistencia oficialmente (Solo Administrador)">
-                                                <i class="fa-solid fa-clock-rotate-left"></i> Corregir
-                                            </button>
-                                            <button class="btn btn-xs btn-outline-warning" onclick="openQuickJustifyModal(<?= htmlspecialchars(json_encode($a)) ?>)" title="Registrar Justificación para este trabajador">
-                                                <i class="fa-solid fa-file-shield"></i> Justificar
-                                            </button>
-                                        <?php endif; ?>
+                                        <button class="btn btn-xs btn-primary mr-1" onclick="openAdminEditModal(<?= htmlspecialchars(json_encode($a)) ?>)" title="Modificar horas de entrada/salida y corregir asistencia oficialmente (Solo Administrador)">
+                                            <i class="fa-solid fa-clock-rotate-left"></i> Corregir
+                                        </button>
+                                        <button class="btn btn-xs btn-outline-warning" onclick="openQuickJustifyModal(<?= htmlspecialchars(json_encode($a)) ?>)" title="Registrar Justificación para este trabajador">
+                                            <i class="fa-solid fa-file-shield"></i> Justificar
+                                        </button>
                                     </td>
                                 <?php endif; ?>
                             </tr>
                         <?php endforeach; ?>
+                        <?php endif; ?>
                     </tbody>
                     <tfoot class="thead-light">
                         <tr class="font-weight-bold">
@@ -419,7 +420,7 @@ if (!empty($deptoId)) {
                             <th class="text-center text-warning"><?= $kpiMinTardanza > 0 ? "+{$kpiMinTardanza} min" : "0 min" ?></th>
                             <th class="text-center text-dark"><?= $kpiHorasTrab ?></th>
                             <th class="text-center text-info"><?= $kpiMinExtra > 0 ? "+{$kpiMinExtra} min" : "0 min" ?></th>
-                            <th colspan="<?= in_array($userRole, ['ADMIN', 'RRHH'], true) ? '2' : '1' ?>"><?= $kpiTotal ?> registros</th>
+                            <th colspan="<?= $userRole === 'ADMIN' ? '2' : '1' ?>"><?= $kpiTotal ?> registros</th>
                         </tr>
                     </tfoot>
                 </table>
@@ -491,7 +492,7 @@ if (!empty($deptoId)) {
     </div>
 </section>
 
-<?php if (in_array($userRole, ['ADMIN', 'RRHH'], true)): ?>
+<?php if ($userRole === 'ADMIN'): ?>
 <!-- MODAL EVENT SOURCING: LÍNEA DE TIEMPO DE AUDITORÍA Y TRAZABILIDAD -->
 <div class="modal fade" id="modalTimelineEventos" tabindex="-1" role="dialog" aria-labelledby="timelineTitle" aria-modal="true" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
@@ -552,26 +553,26 @@ if (!empty($deptoId)) {
             <input type="hidden" id="edit_prog_salida" value="17:00">
             <input type="hidden" id="edit_tolerancia" value="10">
             
-            <div class="modal-header bg-primary text-white py-3">
-                <h5 class="modal-title font-weight-bold d-flex align-items-center" id="modalEditarTitle">
-                    <i class="fa-solid fa-clock-rotate-left mr-2"></i> Modificar Horario de Asistencia
+            <div class="modal-header py-3" style="background-color: #0f172a; border-bottom: 1px solid #334155; color: #ffffff;">
+                <h5 class="modal-title font-weight-bold d-flex align-items-center text-white" id="modalEditarTitle">
+                    <i class="fa-solid fa-pen-to-square mr-2" style="color: #60a5fa;"></i> Modificar Horario de Asistencia
                 </h5>
                 <button type="button" class="close text-white" data-dismiss="modal" aria-label="Cerrar">&times;</button>
             </div>
             
             <div class="modal-body p-4 bg-light">
                 <!-- TARJETA INFORMATIVA DEL REGISTRO SELECCIONADO DESDE TABLA -->
-                <div class="card mb-3 border bg-white shadow-none" id="edit_empleado_card" style="border-radius: 8px;">
+                <div class="card mb-3 border bg-white shadow-none" id="edit_empleado_card" style="border-radius: 8px; border-color: #e2e8f0 !important;">
                     <div class="card-body p-3">
                         <div class="row align-items-center">
                             <div class="col-md-7">
-                                <span class="badge badge-primary px-2 py-1 mb-1 font-weight-bold" id="edit_badge_fecha">Fecha: --/--/----</span>
+                                <span class="badge px-2 py-1 mb-1 font-weight-bold" id="edit_badge_fecha" style="background-color: #334155; color: #f8fafc;">Fecha: --/--/----</span>
                                 <h6 class="font-weight-bold text-dark mb-1" id="edit_empleado_nombre">Empleado...</h6>
                                 <small class="text-muted"><i class="fa-solid fa-id-card mr-1"></i> DNI: <span id="edit_empleado_dni">--</span> | Cód. Reloj: <span id="edit_empleado_reloj">--</span></small>
                             </div>
                             <div class="col-md-5 text-md-right border-left pt-2 pt-md-0">
                                 <div class="small text-muted">Horario Oficial del Turno:</div>
-                                <strong class="text-primary font-monospace" id="edit_turno_info">08:00 - 17:00 (Tol: 10m)</strong>
+                                <strong class="font-monospace" id="edit_turno_info" style="color: #0f172a;">08:00 - 17:00 (Tol: 10m)</strong>
                             </div>
                         </div>
                     </div>
@@ -632,51 +633,47 @@ if (!empty($deptoId)) {
                 <!-- FORMULARIO DE EDICIÓN DIRECTA DE HORAS -->
                 <div class="card border bg-white shadow-none mb-3" style="border-radius: 8px;">
                     <div class="card-header py-2 bg-white border-bottom d-flex align-items-center justify-content-between">
-                        <span class="font-weight-bold text-dark small text-uppercase"><i class="fa-solid fa-stopwatch text-primary mr-1"></i> Horas Oficiales (Entrada y Salida)</span>
-                        <span class="badge badge-warning text-dark px-2 py-1"><i class="fa-solid fa-database mr-1"></i> Guardado directo</span>
+                        <span class="font-weight-bold text-dark small text-uppercase" style="letter-spacing: 0.03em;"><i class="fa-solid fa-clock-rotate-left text-primary mr-1"></i> Horas Oficiales (Entrada y Salida)</span>
+                        <span class="badge px-2 py-1" style="background-color: #f1f5f9; color: #334155; border: 1px solid #cbd5e1;"><i class="fa-solid fa-shield-halved mr-1 text-secondary"></i> Gestión Interna</span>
                     </div>
                     <div class="card-body p-3">
                         <div class="row">
                             <div class="col-md-6 mb-2">
-                                <label class="small font-weight-bold text-success d-flex justify-content-between align-items-center">
-                                    <span><i class="fa-solid fa-arrow-right-to-bracket mr-1"></i> Hora de Entrada Real</span>
+                                <label class="small font-weight-bold text-dark d-flex justify-content-between align-items-center">
+                                    <span><i class="fa-solid fa-arrow-right-to-bracket mr-1 text-primary"></i> Hora de Entrada Real</span>
                                     <div class="btn-group btn-group-xs">
-                                        <button type="button" class="btn btn-xs btn-outline-success py-0 px-1" onclick="setProgrammedTime('entrada')" title="Copiar hora programada del turno">
-                                            <i class="fa-regular fa-clock mr-1"></i>Turno
-                                        </button>
-                                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1" onclick="clearTime('entrada')" title="Borrar hora">
-                                            <i class="fa-solid fa-eraser"></i>
-                                        </button>
+                                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="setProgrammedTime('entrada')" title="Copiar hora programada del turno">Turno</button>
+                                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="clearTime('entrada')" title="Borrar hora"><i class="fa-solid fa-eraser"></i></button>
                                     </div>
                                 </label>
-                                <input type="time" name="hora_entrada_real" id="edit_hora_entrada" step="1" class="form-control form-control-lg font-monospace text-center font-weight-bold" style="font-size: 1.35rem; color: #047857; background: #f0fdf4;" oninput="calculateRealtimeAdminAttendance()">
+                                <input type="time" name="hora_entrada_real" id="edit_hora_entrada" step="1" class="form-control form-control-lg font-monospace text-center font-weight-bold" style="font-size: 1.35rem; color: #0f172a; background: #ffffff; border: 1.5px solid #cbd5e1;" oninput="calculateRealtimeAdminAttendance()">
                                 <small class="text-muted d-block mt-1"><i class="fa-solid fa-circle-info mr-1"></i> Hora efectiva de ingreso.</small>
                             </div>
                             <div class="col-md-6 mb-2">
-                                <label class="small font-weight-bold text-primary d-flex justify-content-between align-items-center">
-                                    <span><i class="fa-solid fa-arrow-right-from-bracket mr-1"></i> Hora de Salida Real</span>
+                                <label class="small font-weight-bold text-dark d-flex justify-content-between align-items-center">
+                                    <span><i class="fa-solid fa-arrow-right-from-bracket mr-1 text-primary"></i> Hora de Salida Real</span>
                                     <div class="btn-group btn-group-xs">
-                                        <button type="button" class="btn btn-xs btn-outline-primary py-0 px-1" onclick="setProgrammedTime('salida')" title="Copiar hora programada del turno">
-                                            <i class="fa-regular fa-clock mr-1"></i>Turno
-                                        </button>
-                                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1" onclick="clearTime('salida')" title="Borrar hora">
-                                            <i class="fa-solid fa-eraser"></i>
-                                        </button>
+                                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="setProgrammedTime('salida')" title="Copiar hora programada del turno">Turno</button>
+                                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="clearTime('salida')" title="Borrar hora"><i class="fa-solid fa-eraser"></i></button>
                                     </div>
                                 </label>
-                                <input type="time" name="hora_salida_real" id="edit_hora_salida" step="1" class="form-control form-control-lg font-monospace text-center font-weight-bold" style="font-size: 1.35rem; color: #1d4ed8; background: #eff6ff;" oninput="calculateRealtimeAdminAttendance()">
+                                <input type="time" name="hora_salida_real" id="edit_hora_salida" step="1" class="form-control form-control-lg font-monospace text-center font-weight-bold" style="font-size: 1.35rem; color: #0f172a; background: #ffffff; border: 1.5px solid #cbd5e1;" oninput="calculateRealtimeAdminAttendance()">
                                 <small class="text-muted d-block mt-1"><i class="fa-solid fa-circle-info mr-1"></i> Hora efectiva de retiro.</small>
                             </div>
                         </div>
 
-                        <!-- PREVIEW CALCULADO EN TIEMPO REAL -->
-                        <div class="alert alert-info py-2 px-3 mb-0 small mt-2" style="border-radius: 6px;" id="adminCalcAlert">
-                            <div class="d-flex align-items-center justify-content-between flex-wrap">
-                                <div>
-                                    <i class="fa-solid fa-calculator mr-1"></i> <strong>Recálculo Automático:</strong> <span id="adminCalcSummary">Ingresa las horas arriba</span>
+                        <!-- PREVIEW CALCULADO EN TIEMPO REAL CON ALTO CONTRASTE Y COLORES CORPORATIVOS -->
+                        <div class="p-3 mb-0 rounded border mt-3" style="background-color: #ffffff; border: 1px solid #cbd5e1 !important; box-shadow: 0 1px 3px rgba(0,0,0,0.03);" id="adminCalcAlert">
+                            <div class="d-flex align-items-center justify-content-between flex-wrap" style="gap: 8px;">
+                                <div class="text-dark" style="font-size: 0.86rem;">
+                                    <strong class="text-muted text-uppercase mr-2" style="font-size: 0.74rem; letter-spacing: 0.04em;">
+                                        <i class="fa-solid fa-calculator mr-1 text-primary"></i>Recálculo Automático:
+                                    </strong> 
+                                    <span id="adminCalcSummary" style="color: #0f172a; font-weight: 600;">Ingresa las horas de entrada y salida</span>
                                 </div>
-                                <div>
-                                    Estado sugerido: <strong class="badge badge-primary px-2 py-1" id="adminCalcStateBadge">--</strong>
+                                <div class="d-flex align-items-center" style="gap: 6px;">
+                                    <span class="text-muted small" style="font-size: 0.76rem;">Estado sugerido:</span>
+                                    <strong class="badge px-2 py-1 font-weight-bold" id="adminCalcStateBadge" style="font-size: 0.78rem;">--</strong>
                                 </div>
                             </div>
                         </div>
@@ -715,8 +712,8 @@ if (!empty($deptoId)) {
                 </div>
 
                 <div class="form-group mb-0">
-                    <label class="small font-weight-bold text-secondary">Motivo del Ajuste <span class="text-danger">*</span></label>
-                    <textarea name="observaciones" id="edit_obs" class="form-control form-control-sm" rows="2" placeholder="Ej: Corrección autorizada de marcación por Administración..." required></textarea>
+                    <label class="small font-weight-bold text-secondary">Observaciones <span class="text-muted font-weight-normal">(Opcional - dejar en blanco para reporte limpio sin anotaciones)</span></label>
+                    <textarea name="observaciones" id="edit_obs" class="form-control form-control-sm" rows="2" placeholder="Dejar en blanco para que el registro oficial permanezca limpio sin observaciones..."></textarea>
                 </div>
             </div>
             
@@ -1180,7 +1177,7 @@ function openAdminEditModal(rec, focusField = 'entrada') {
     document.getElementById('edit_estado').value = rec.estado || 'PRESENTE';
     document.getElementById('edit_tardanza').value = rec.minutos_tardanza || 0;
     document.getElementById('edit_extra').value = rec.minutos_extra || 0;
-    document.getElementById('edit_obs').value = rec.observaciones || 'Ajuste de horario por el Administrador';
+    document.getElementById('edit_obs').value = rec.observaciones || '';
 
     calculateRealtimeAdminAttendance();
     $('#modalEditarAsistencia').modal('show');
@@ -1209,7 +1206,7 @@ function openAsignarHorasModal() {
     document.getElementById('edit_estado').value = 'PRESENTE';
     document.getElementById('edit_tardanza').value = 0;
     document.getElementById('edit_extra').value = 0;
-    document.getElementById('edit_obs').value = 'Asignación de asistencia autorizada por Administración';
+    document.getElementById('edit_obs').value = '';
 
     calculateRealtimeAdminAttendance();
     $('#modalEditarAsistencia').modal('show');
@@ -1264,8 +1261,8 @@ function calculateRealtimeAdminAttendance() {
     const estadoSelect = document.getElementById('edit_estado');
 
     if (!entVal && !salVal) {
-        summaryEl.innerText = 'Sin horas ingresadas (se considerará Inasistencia o Falta Justificada)';
-        badgeEl.className = 'badge badge-secondary px-2 py-1';
+        summaryEl.innerText = 'Sin horas ingresadas';
+        badgeEl.className = 'badge badge-secondary px-2 py-1 font-weight-bold';
         badgeEl.innerText = 'SIN MARCAR';
         return;
     }
@@ -1285,11 +1282,11 @@ function calculateRealtimeAdminAttendance() {
         if (minReal <= minGrace) {
             computedTardanza = 0;
             suggestedState = 'PRESENTE';
-            summaryParts.push(`<span class="text-success font-weight-bold"><i class="fa-solid fa-check mr-1"></i>Puntual (Entrada: ${entVal})</span>`);
+            summaryParts.push(`<span class="font-weight-bold" style="color: #15803d !important;"><i class="fa-solid fa-circle-check mr-1"></i>Puntual (${entVal})</span>`);
         } else {
             computedTardanza = Math.max(0, minReal - minProg);
             suggestedState = 'TARDANZA';
-            summaryParts.push(`<span class="text-danger font-weight-bold"><i class="fa-solid fa-clock mr-1"></i>Tardanza: +${computedTardanza} min</span>`);
+            summaryParts.push(`<span class="font-weight-bold" style="color: #b91c1c !important;"><i class="fa-solid fa-clock mr-1"></i>Tardanza: +${computedTardanza} min</span>`);
         }
     }
 
@@ -1306,15 +1303,15 @@ function calculateRealtimeAdminAttendance() {
             const diffMin = minEnd - minStart;
             const hrs = Math.floor(diffMin / 60);
             const mins = diffMin % 60;
-            summaryParts.push(`<span class="text-primary font-weight-bold"><i class="fa-solid fa-business-time mr-1"></i>Permanencia: ${hrs}h ${mins}m</span>`);
+            summaryParts.push(`<span class="font-weight-bold" style="color: #0f172a !important;"><i class="fa-solid fa-business-time mr-1 text-secondary"></i>Permanencia: ${hrs}h ${mins}m</span>`);
 
             if (minEnd > minProgExit + 15) {
                 const diffExtra = minEnd - minProgExit;
-                summaryParts.push(`<span class="text-info font-weight-bold">+${diffExtra}m Extra</span>`);
+                summaryParts.push(`<span class="font-weight-bold" style="color: #1d4ed8 !important;">+${diffExtra}m Extra</span>`);
             }
         }
     } else if (entVal && !salVal) {
-        summaryParts.push(`<span class="text-warning font-weight-bold"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Salida sin registrar</span>`);
+        summaryParts.push(`<span class="font-weight-bold" style="color: #b45309 !important;"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Salida sin registrar</span>`);
     }
 
     tardanzaInput.value = computedTardanza;
@@ -1324,7 +1321,7 @@ function calculateRealtimeAdminAttendance() {
         estadoSelect.value = suggestedState;
     }
     
-    badgeEl.className = suggestedState === 'PRESENTE' ? 'badge badge-success px-2 py-1' : 'badge badge-danger px-2 py-1';
+    badgeEl.className = suggestedState === 'PRESENTE' ? 'badge badge-success px-2 py-1 font-weight-bold' : 'badge badge-danger px-2 py-1 font-weight-bold';
     badgeEl.innerText = suggestedState;
 }
 

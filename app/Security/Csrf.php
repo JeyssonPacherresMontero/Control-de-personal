@@ -17,6 +17,22 @@ class Csrf {
         return '<input type="hidden" name="_csrf" value="' . $token . '">';
     }
 
+    public static function validateRequest(): void {
+        self::validate();
+    }
+
+    public static function verify(?string $token = null): bool {
+        if ($token === null) {
+            $token = $_POST['_csrf'] 
+                  ?? $_POST['_csrf_token'] 
+                  ?? $_SERVER['HTTP_X_CSRF_TOKEN'] 
+                  ?? $_SERVER['HTTP_X_XSRF_TOKEN'] 
+                  ?? '';
+        }
+        $sessionToken = self::token();
+        return !empty($token) && hash_equals($sessionToken, (string)$token);
+    }
+
     public static function validate(): void {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             return;
