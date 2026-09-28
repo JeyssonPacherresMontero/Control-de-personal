@@ -254,3 +254,35 @@ Stack trace:
 #2 {main}
 
 
+[21-Sep-2026 10:05:39 America/Lima] PHP Warning:  require_once(c:/Users/JEYSSON/Downloads/Control de personal/config/database.php): Failed to open stream: No such file or directory in C:\Users\JEYSSON\.gemini\antigravity\brain\2739ee80-07bb-484a-98ad-30590c47ffe1\scratch\test_calculations.php on line 4
+[21-Sep-2026 10:05:39 America/Lima] [2026-09-21 10:05:39] Uncaught Exception: Failed opening required 'c:/Users/JEYSSON/Downloads/Control de personal/config/database.php' (include_path='C:\xampp\php\PEAR') in C:\Users\JEYSSON\.gemini\antigravity\brain\2739ee80-07bb-484a-98ad-30590c47ffe1\scratch\test_calculations.php:4
+Stack trace:
+#0 {main}
+
+
+[21-Sep-2026 10:08:26 America/Lima] PHP Warning:  require_once(c:/Users/JEYSSON/Downloads/Control de personal/config/database.php): Failed to open stream: No such file or directory in C:\Users\JEYSSON\.gemini\antigravity\brain\2739ee80-07bb-484a-98ad-30590c47ffe1\scratch\test_calculations.php on line 7
+[21-Sep-2026 10:08:26 America/Lima] [2026-09-21 10:08:26] Uncaught Exception: Failed opening required 'c:/Users/JEYSSON/Downloads/Control de personal/config/database.php' (include_path='C:\xampp\php\PEAR') in C:\Users\JEYSSON\.gemini\antigravity\brain\2739ee80-07bb-484a-98ad-30590c47ffe1\scratch\test_calculations.php:7
+Stack trace:
+#0 {main}
+
+
+[21-Sep-2026 10:09:01 America/Lima] [2026-09-21 10:09:01] Uncaught Exception: Method App\Services\AttendanceCalculator::processMarksForDay() does not exist in C:\Users\JEYSSON\.gemini\antigravity\brain\2739ee80-07bb-484a-98ad-30590c47ffe1\scratch\test_calculations.php:14
+Stack trace:
+#0 C:\Users\JEYSSON\.gemini\antigravity\brain\2739ee80-07bb-484a-98ad-30590c47ffe1\scratch\test_calculations.php(14): ReflectionClass->getMethod('processMarksFor...')
+#1 {main}
+
+
+[21-Sep-2026 10:11:04 America/Lima] [2026-09-21 10:11:04] Uncaught Exception: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'cargo' in 'field list' in C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php:72
+Stack trace:
+#0 C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php(72): PDO->prepare('SELECT id, dni,...')
+#1 C:\Users\JEYSSON\.gemini\antigravity\brain\2739ee80-07bb-484a-98ad-30590c47ffe1\scratch\test_employee_report.php(8): App\Database::queryOne('SELECT id, dni,...')
+#2 {main}
+
+
+[23-Sep-2026 15:56:57 America/Lima] [2026-09-23 15:56:57] Uncaught Exception: Method App\Services\AttendanceCalculator::calculateDailyAttendance() does not exist in C:\Users\JEYSSON\Downloads\Control de personal\tests\test_calculator.php:256
+Stack trace:
+#0 C:\Users\JEYSSON\Downloads\Control de personal\tests\test_calculator.php(256): ReflectionClass->getMethod('calculateDailyA...')
+#1 {main}
+
+
+[25-Sep-2026 12:43:59 America/Lima] [2026-09-25 12:43:59] [SECURITY AUDIT] Usuario 'test_operador_1790358239' (ID: 12) ELIMINADO DEFINITIVAMENTE por el Administrador 'admin' (ID: 1)

@@ -5,25 +5,25 @@
     <div class="modal fade" id="modalMiPerfilGlobal" tabindex="-1" role="dialog" aria-labelledby="modalMiPerfilTitle" aria-modal="true" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 520px;">
             <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
-                <div class="modal-header bg-white border-bottom py-3 px-4 d-flex align-items-center justify-content-between">
-                    <h5 class="modal-title font-weight-bold text-dark mb-0 d-flex align-items-center" id="modalMiPerfilTitle" style="font-size: 1.1rem;">
-                        <i class="fa-solid fa-circle-user text-primary mr-2 fa-lg"></i> Mi Perfil y Seguridad
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalMiPerfilTitle">
+                        <i class="fa-solid fa-circle-user"></i> Mi Perfil y Seguridad
                     </h5>
-                    <button type="button" class="close text-secondary" data-dismiss="modal" aria-label="Close" style="outline: none;">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
                 
-                <div class="modal-body p-4 bg-light">
+                <div class="modal-body p-3 bg-light">
                     <!-- TARJETA DE DATOS DEL USUARIO -->
                     <div class="card mb-3 border bg-white shadow-none" style="border-radius: 8px;">
                         <div class="card-body p-3">
                             <div class="d-flex align-items-center mb-3">
-                                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center mr-3 font-weight-bold" style="width: 46px; height: 46px; font-size: 1.2rem; flex-shrink: 0;">
+                                <div class="text-white rounded-circle d-flex align-items-center justify-content-center mr-3 font-weight-bold" style="width: 44px; height: 44px; font-size: 1.15rem; flex-shrink: 0; background-color: #1e3a8a;">
                                     <?= strtoupper(substr($currentUser['nombre'] ?? 'U', 0, 1)) ?>
                                 </div>
                                 <div class="overflow-hidden">
-                                    <h6 class="font-weight-bold text-dark mb-0 text-truncate" style="font-size: 0.98rem;"><?= htmlspecialchars($currentUser['nombre'] ?? 'Usuario') ?></h6>
+                                    <h6 class="font-weight-bold text-dark mb-0 text-truncate" style="font-size: 0.95rem;"><?= htmlspecialchars($currentUser['nombre'] ?? 'Usuario') ?></h6>
                                     <div class="d-flex align-items-center mt-1" style="gap: 5px;">
                                         <span class="badge-pill-custom <?= $roleBadgeClass ?>" style="font-size: 0.7rem;"><?= htmlspecialchars($roleLabel) ?></span>
                                         <span class="badge-pill-custom badge-pill-online" style="font-size: 0.7rem;"><i class="fa-solid fa-circle" style="font-size: 5px;"></i> En línea</span>
@@ -47,7 +47,7 @@
                     <!-- FORMULARIO DE CAMBIO DE CONTRASEÑA -->
                     <div class="card border bg-white shadow-none mb-0" style="border-radius: 8px;">
                         <div class="card-header bg-white py-2 px-3 border-bottom d-flex align-items-center">
-                            <i class="fa-solid fa-key text-primary mr-2"></i>
+                            <i class="fa-solid fa-key text-secondary mr-2"></i>
                             <span class="font-weight-bold text-dark small text-uppercase" style="letter-spacing: 0.04em;">Cambiar Contraseña de Acceso</span>
                         </div>
                         <div class="card-body p-3">
@@ -90,7 +90,7 @@
                                     </div>
                                 </div>
 
-                                <button type="submit" id="btnGuardarPass" class="btn btn-primary btn-sm btn-block py-2">
+                                <button type="submit" id="btnGuardarPass" class="btn btn-primary btn-sm btn-block py-2 font-weight-bold">
                                     <i class="fa-solid fa-floppy-disk mr-1"></i> Actualizar Contraseña
                                 </button>
                             </form>
@@ -98,11 +98,11 @@
                     </div>
                 </div>
 
-                <div class="modal-footer bg-white d-flex justify-content-between py-2 px-4 border-top">
+                <div class="modal-footer bg-white d-flex justify-content-between py-2 px-3 border-top">
                     <a href="?route=logout" class="btn btn-outline-danger btn-sm" onclick="return confirm('¿Estás seguro de que deseas cerrar tu sesión en el sistema?')">
                         <i class="fa-solid fa-right-from-bracket mr-1"></i> Cerrar Sesión
                     </a>
-                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cerrar</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm px-3" data-dismiss="modal">Cerrar</button>
                 </div>
             </div>
         </div>

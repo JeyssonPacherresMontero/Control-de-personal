@@ -30,12 +30,14 @@ class TurnosController {
         $nombre = trim($_POST['nombre'] ?? '');
         $horaEntrada = $_POST['hora_entrada'] ?? '08:00:00';
         $horaSalida = $_POST['hora_salida'] ?? '17:00:00';
+        $horaEntradaSab = !empty($_POST['hora_entrada_sabado']) ? $_POST['hora_entrada_sabado'] : '08:00:00';
+        $horaSalidaSab = !empty($_POST['hora_salida_sabado']) ? $_POST['hora_salida_sabado'] : '13:00:00';
         $tolerancia = (int)($_POST['tolerancia_minutos'] ?? 10);
         $toleranciaFalta = (int)($_POST['tolerancia_falta_minutos'] ?? 60);
         $horaInicioRef = !empty($_POST['hora_inicio_refrigerio']) ? $_POST['hora_inicio_refrigerio'] : null;
         $horaFinRef = !empty($_POST['hora_fin_refrigerio']) ? $_POST['hora_fin_refrigerio'] : null;
-        $minutosRef = (int)($_POST['minutos_refrigerio'] ?? 60);
-        $diasLab = isset($_POST['dias_laborables']) ? implode(',', $_POST['dias_laborables']) : '1,2,3,4,5';
+        $minutosRef = (int)($_POST['minutos_refrigerio'] ?? 45);
+        $diasLab = isset($_POST['dias_laborables']) ? implode(',', $_POST['dias_laborables']) : '1,2,3,4,5,6';
         $esNocturno = isset($_POST['es_nocturno']) ? 1 : 0;
         $activo = isset($_POST['activo']) ? 1 : 0;
 
@@ -54,6 +56,8 @@ class TurnosController {
             ':nom'      => $nombre,
             ':ent'      => $horaEntrada,
             ':sal'      => $horaSalida,
+            ':entsab'   => $horaEntradaSab,
+            ':salsab'   => $horaSalidaSab,
             ':tol'      => $tolerancia,
             ':tolfalta' => $toleranciaFalta,
             ':refini'   => $horaInicioRef,
@@ -69,6 +73,7 @@ class TurnosController {
             $result = Database::executeSafe("
                 UPDATE turnos 
                 SET nombre = :nom, hora_entrada = :ent, hora_salida = :sal,
+                    hora_entrada_sabado = :entsab, hora_salida_sabado = :salsab,
                     tolerancia_minutos = :tol, tolerancia_falta_minutos = :tolfalta,
                     hora_inicio_refrigerio = :refini, hora_fin_refrigerio = :reffin,
                     minutos_refrigerio = :refmin, dias_laborables = :dias,
@@ -78,9 +83,10 @@ class TurnosController {
         } else {
             $result = Database::executeSafe("
                 INSERT INTO turnos 
-                (nombre, hora_entrada, hora_salida, tolerancia_minutos, tolerancia_falta_minutos,
+                (nombre, hora_entrada, hora_salida, hora_entrada_sabado, hora_salida_sabado,
+                 tolerancia_minutos, tolerancia_falta_minutos,
                  hora_inicio_refrigerio, hora_fin_refrigerio, minutos_refrigerio, dias_laborables, es_nocturno, activo)
-                VALUES (:nom, :ent, :sal, :tol, :tolfalta, :refini, :reffin, :refmin, :dias, :noc, :act)
+                VALUES (:nom, :ent, :sal, :entsab, :salsab, :tol, :tolfalta, :refini, :reffin, :refmin, :dias, :noc, :act)
             ", $params);
         }
 

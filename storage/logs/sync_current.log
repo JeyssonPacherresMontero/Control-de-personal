@@ -1,11 +1,7 @@
-=== Iniciando sincronizaciÃ³n [HISTÃ“RICO COMPLETO - 2026-09-18 09:20:34] ===
-2026-09-18 09:20:34,407 [INFO] [SyncEngine] Iniciando ciclo de sincronización para 1 dispositivo(s)...
-2026-09-18 09:20:34,407 [INFO] [SyncEngine] ==> Iniciando sincronización (INCREMENTAL) con biométrico #1 [Reloj Principal - Entrada] en 192.168.1.201:4370 (TCP)
-2026-09-18 09:20:34,451 [INFO] [ZKService] Conexión exitosa con dispositivo 192.168.1.201:4370
-2026-09-18 09:20:34,468 [ERROR] [ZKService] Error al sincronizar hora en 192.168.1.201: 'No time zone found with key America/Lima'
-2026-09-18 09:20:34,468 [WARNING] [SyncEngine] No se pudo sincronizar la hora con 192.168.1.201: 'No time zone found with key America/Lima'
-2026-09-18 09:20:35,108 [INFO] [SyncEngine] Sincronizados/actualizados 75 empleados desde el biométrico.
-2026-09-18 09:21:21,856 [INFO] [ZKService] Se descargaron 66661 registros brutos de 192.168.1.201
-2026-09-18 09:21:22,167 [INFO] [SyncEngine] Sincronización (INCREMENTAL): 66661 en reloj, 81 evaluados, 0 nuevos insertados, 81 ya existentes.
-2026-09-18 09:21:22,197 [INFO] [ZKService] Desconectado de 192.168.1.201:4370
-2026-09-18 09:21:22,205 [INFO] [SyncEngine] Ciclo de sincronización finalizado exitosamente.
+=== Iniciando sincronizaciÃ³n [INCREMENTAL (PENDIENTES) - 2026-09-25 13:10:34] ===
+2026-09-25 13:10:34,560 [INFO] [SyncEngine] Iniciando ciclo de sincronización (INCREMENTAL (7 DÍAS)) para 2 dispositivo(s)...
+2026-09-25 13:10:34,560 [INFO] [SyncEngine] ==> Iniciando sincronización (INCREMENTAL (7 DÍAS)) con biométrico #1 [Reloj Principal - Entrada] en 192.168.1.201:4370 (TCP)
+2026-09-25 13:10:34,615 [INFO] [ZKService] Conexión exitosa con dispositivo 192.168.1.201:4370
+2026-09-25 13:10:34,645 [ERROR] [ZKService] Error al sincronizar hora en 192.168.1.201: 'No time zone found with key America/Lima'
+2026-09-25 13:10:34,646 [WARNING] [SyncEngine] No se pudo sincronizar la hora con 192.168.1.201: 'No time zone found with key America/Lima'
+2026-09-25 13:10:35,331 [INFO] [SyncEngine] Sincronizados/actualizados 75 empleados desde el biométrico.

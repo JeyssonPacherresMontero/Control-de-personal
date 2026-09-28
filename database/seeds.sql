@@ -34,11 +34,11 @@ INSERT INTO `cargos` (`id`, `departamento_id`, `nombre`, `descripcion`) VALUES
 ON DUPLICATE KEY UPDATE `nombre` = VALUES(`nombre`);
 
 -- 4. Insertar Turnos Típicos de Producción
-INSERT INTO `turnos` (`id`, `nombre`, `hora_entrada`, `hora_salida`, `tolerancia_minutos`, `tolerancia_falta_minutos`, `hora_inicio_refrigerio`, `hora_fin_refrigerio`, `minutos_refrigerio`, `dias_laborables`, `es_nocturno`) VALUES
-(1, 'Turno Administrativo (08:00 - 17:00)', '08:00:00', '17:00:00', 10, 60, '13:00:00', '14:00:00', 60, '1,2,3,4,5', 0),
-(2, 'Turno Mañana Operativo (07:00 - 15:30)', '07:00:00', '15:30:00', 5, 45, '12:00:00', '12:30:00', 30, '1,2,3,4,5,6', 0),
-(3, 'Turno Tarde Operativo (15:00 - 23:00)', '15:00:00', '23:00:00', 5, 45, '18:00:00', '18:30:00', 30, '1,2,3,4,5,6', 0),
-(4, 'Turno Noche Rotativo (23:00 - 07:00)', '23:00:00', '07:00:00', 10, 60, '03:00:00', '03:30:00', 30, '1,2,3,4,5,6', 1)
+INSERT INTO `turnos` (`id`, `nombre`, `hora_entrada`, `hora_salida`, `hora_entrada_sabado`, `hora_salida_sabado`, `tolerancia_minutos`, `tolerancia_falta_minutos`, `hora_inicio_refrigerio`, `hora_fin_refrigerio`, `minutos_refrigerio`, `dias_laborables`, `es_nocturno`) VALUES
+(1, 'Turno General (Lun-Vie 08:00-17:00 / Sáb 08:00-13:00)', '08:00:00', '17:00:00', '08:00:00', '13:00:00', 10, 60, '13:00:00', '13:45:00', 45, '1,2,3,4,5,6', 0),
+(2, 'Turno Mañana Operativo (07:00 - 15:30)', '07:00:00', '15:30:00', '07:00:00', '12:30:00', 5, 45, '12:00:00', '12:30:00', 30, '1,2,3,4,5,6', 0),
+(3, 'Turno Tarde Operativo (15:00 - 23:00)', '15:00:00', '23:00:00', '15:00:00', '20:00:00', 5, 45, '18:00:00', '18:30:00', 30, '1,2,3,4,5,6', 0),
+(4, 'Turno Noche Rotativo (23:00 - 07:00)', '23:00:00', '07:00:00', '23:00:00', '07:00:00', 10, 60, '03:00:00', '03:30:00', 30, '1,2,3,4,5,6', 1)
 ON DUPLICATE KEY UPDATE `nombre` = VALUES(`nombre`);
 
 -- 5. Insertar Empleados de Ejemplo (Vinculados con IDs de reloj ZKTeco 1, 2, 3, etc.)

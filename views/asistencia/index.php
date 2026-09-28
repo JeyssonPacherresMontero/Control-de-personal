@@ -88,10 +88,18 @@ if (!empty($deptoId)) {
                         <div style="font-size: 13pt; font-weight: 800; color: #1e3a8a; text-transform: uppercase;">JUNTA DE USUARIOS DEL SECTOR HIDRÁULICO MENOR SAN LORENZO (JUSHSAL)</div>
                         <div style="font-size: 9pt; color: #475569; font-weight: 600;">SISTEMA INTEGRADO DE CONTROL DE PERSONAL Y ASISTENCIA LABORAL</div>
                         <div style="font-size: 11pt; font-weight: 700; color: #0f172a; margin-top: 4px;">REPORTE OFICIAL DETALLADO DE ASISTENCIA LABORAL</div>
+                        <?php if (!empty($empleadoSeleccionado)): ?>
+                            <div style="font-size: 10pt; font-weight: 700; color: #1d4ed8; margin-top: 3px;">
+                                TRABAJADOR: <?= htmlspecialchars($empleadoSeleccionado['apellidos'] . ' ' . $empleadoSeleccionado['nombres']) ?> | DNI: <?= htmlspecialchars($empleadoSeleccionado['dni']) ?> | CÓDIGO: <?= htmlspecialchars($empleadoSeleccionado['codigo_reloj']) ?>
+                            </div>
+                        <?php endif; ?>
                     </td>
                     <td style="width: 200px; text-align: right; vertical-align: middle; font-size: 8pt; color: #64748b;">
                         <div><b>Período:</b> <?= date('d/m/Y', strtotime($fechaInicio)) ?> al <?= date('d/m/Y', strtotime($fechaFin)) ?></div>
                         <div><b>Área:</b> <?= htmlspecialchars($deptoNombreFiltro) ?></div>
+                        <?php if (!empty($empleadoSeleccionado)): ?>
+                            <div><b>Personal:</b> <?= htmlspecialchars($empleadoSeleccionado['apellidos']) ?></div>
+                        <?php endif; ?>
                         <div><b>Emisión:</b> <?= date('d/m/Y H:i:s') ?></div>
                         <div><b>Usuario:</b> <?= htmlspecialchars($currentUser['nombre'] ?? 'Administrador') ?></div>
                     </td>
@@ -110,7 +118,6 @@ if (!empty($deptoId)) {
                         <th>Faltas</th>
                         <th>Justificados</th>
                         <th>Total Trabajado</th>
-                        <th>Horas Extras</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -123,7 +130,6 @@ if (!empty($deptoId)) {
                         <td style="color: #991b1b;"><b><?= $kpiFaltas ?></b></td>
                         <td style="color: #075985;"><b><?= $kpiJustificados ?></b></td>
                         <td><b><?= $kpiHorasTrab ?></b></td>
-                        <td style="color: #0369a1;"><b><?= $kpiHorasExt ?></b></td>
                     </tr>
                 </tbody>
             </table>
@@ -136,10 +142,10 @@ if (!empty($deptoId)) {
                     <div class="kpi-card-header">
                         <div>
                             <div class="kpi-title">Total Registros</div>
-                            <div class="kpi-value text-dark"><?= $kpiTotal ?></div>
+                            <div class="kpi-value"><?= $kpiTotal ?></div>
                             <div class="kpi-subtitle">Puntualidad Global: <b><?= $kpiPuntualidad ?>%</b></div>
                         </div>
-                        <div class="kpi-icon-box kpi-icon-blue">
+                        <div class="kpi-icon-box">
                             <i class="fa-solid fa-users-viewfinder"></i>
                         </div>
                     </div>
@@ -150,10 +156,10 @@ if (!empty($deptoId)) {
                     <div class="kpi-card-header">
                         <div>
                             <div class="kpi-title">Asistencias Puntuales</div>
-                            <div class="kpi-value text-success"><?= $kpiPresentes ?></div>
+                            <div class="kpi-value"><?= $kpiPresentes ?></div>
                             <div class="kpi-subtitle">Ingresos dentro de tolerancia</div>
                         </div>
-                        <div class="kpi-icon-box kpi-icon-emerald">
+                        <div class="kpi-icon-box">
                             <i class="fa-solid fa-circle-check"></i>
                         </div>
                     </div>
@@ -164,10 +170,10 @@ if (!empty($deptoId)) {
                     <div class="kpi-card-header">
                         <div>
                             <div class="kpi-title">Tardanzas Acumuladas</div>
-                            <div class="kpi-value text-warning"><?= $kpiTardanzas ?> <span style="font-size: 0.95rem; color: #64748b; font-weight: 600;">(<?= $kpiHorasTard ?>)</span></div>
+                            <div class="kpi-value"><?= $kpiTardanzas ?> <span style="font-size: 0.95rem; color: #64748b; font-weight: 600;">(<?= $kpiHorasTard ?>)</span></div>
                             <div class="kpi-subtitle">Minutos fuera de tolerancia</div>
                         </div>
-                        <div class="kpi-icon-box kpi-icon-amber">
+                        <div class="kpi-icon-box">
                             <i class="fa-solid fa-clock"></i>
                         </div>
                     </div>
@@ -177,11 +183,11 @@ if (!empty($deptoId)) {
                 <div class="kpi-card h-100">
                     <div class="kpi-card-header">
                         <div>
-                            <div class="kpi-title">Faltas y Horas Extras</div>
-                            <div class="kpi-value text-danger"><?= $kpiFaltas ?> <span style="font-size: 0.95rem; color: #0284c7; font-weight: 600;">| +<?= $kpiHorasExt ?></span></div>
-                            <div class="kpi-subtitle">Inasistencias e incidencias</div>
+                            <div class="kpi-title">Inasistencias (Faltas)</div>
+                            <div class="kpi-value"><?= $kpiFaltas ?></div>
+                            <div class="kpi-subtitle">Días sin registro de asistencia</div>
                         </div>
-                        <div class="kpi-icon-box kpi-icon-rose">
+                        <div class="kpi-icon-box">
                             <i class="fa-solid fa-triangle-exclamation"></i>
                         </div>
                     </div>
@@ -190,21 +196,55 @@ if (!empty($deptoId)) {
         </div>
 
         <!-- FILTER AND ACTIONS CARD -->
-        <div class="card mb-3 no-print">
-            <div class="card-header d-flex align-items-center justify-content-between flex-wrap" style="padding: 0.75rem 1.25rem;">
-                <div class="d-flex align-items-center">
-                    <h3 class="card-title font-weight-bold text-dark mb-0 d-flex align-items-center" style="font-size: 0.92rem;">
-                        <i class="fa-solid fa-filter mr-2 text-primary"></i> Filtros de Asistencia
-                    </h3>
-                </div>
+        <div class="card mb-4 no-print">
+            <div class="card-header d-flex align-items-center justify-content-between flex-wrap" style="padding: 0.85rem 1.25rem;">
+                <h3 class="card-title font-weight-bold text-dark mb-0 d-flex align-items-center" style="font-size: 0.92rem;">
+                    <i class="fa-solid fa-filter mr-2" style="color: #1e40af;"></i> Filtros y Gestión de Asistencia
+                </h3>
                 <div class="d-flex align-items-center flex-wrap" style="gap: 8px; margin-left: auto;">
                     <?php if ($userRole === 'ADMIN'): ?>
                         <button type="button" class="btn btn-primary btn-sm" onclick="openAsignarHorasModal()" title="Asignar u oficializar horas de entrada y salida">
                             <i class="fa-solid fa-clock-medical mr-1"></i> Asignar Horas
                         </button>
-                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="openJustificarAdminModal()" title="Registrar justificación oficial">
-                            <i class="fa-solid fa-user-shield mr-1"></i> Justificar
+                    <?php endif; ?>
+                    <?php if ($userRole === 'ADMIN' || $userRole === 'RRHH'): ?>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="openJustificarAdminModal()" title="Registrar justificación oficial">
+                            <i class="fa-solid fa-user-shield mr-1 text-primary"></i> Registrar Justificación
                         </button>
+                    <?php endif; ?>
+
+                    <?php if ($userRole === 'ADMIN' || $userRole === 'RRHH'): ?>
+                        <div class="dropdown d-inline">
+                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="syncRelojDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" title="Sincronizar marcaciones directamente desde el reloj">
+                                <i class="fa-solid fa-fingerprint mr-1 text-primary"></i> Sincronizar Reloj
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-right shadow-sm border-0" aria-labelledby="syncRelojDropdown">
+                                <h6 class="dropdown-header font-weight-bold text-primary" style="font-size: 0.78rem;"><i class="fa-solid fa-clock mr-1"></i> Extracción Biométrico ZKTeco</h6>
+                                <form method="POST" action="?route=dispositivos&action=sincronizar" class="px-2 py-1 m-0">
+                                    <?= csrf_field() ?>
+                                    <input type="hidden" name="mode" value="incremental">
+                                    <button type="submit" class="dropdown-item py-2" style="font-size: 0.85rem;">
+                                        <i class="fa-solid fa-bolt mr-2 text-primary"></i> Sincronizar Hoy / Rápido
+                                    </button>
+                                </form>
+                                <form method="POST" action="?route=dispositivos&action=sincronizar" class="px-2 py-1 m-0">
+                                    <?= csrf_field() ?>
+                                    <input type="hidden" name="mode" value="days">
+                                    <input type="hidden" name="days" value="7">
+                                    <button type="submit" class="dropdown-item py-2" style="font-size: 0.85rem;">
+                                        <i class="fa-solid fa-calendar-week mr-2 text-primary"></i> Sincronizar Últimos 7 Días
+                                    </button>
+                                </form>
+                                <div class="dropdown-divider my-1"></div>
+                                <form method="POST" action="?route=dispositivos&action=sincronizar" class="px-2 py-1 m-0" onsubmit="return confirm('¿Deseas extraer el 100% de las marcaciones almacenadas en el reloj físico?')">
+                                    <?= csrf_field() ?>
+                                    <input type="hidden" name="mode" value="full">
+                                    <button type="submit" class="dropdown-item py-2 font-weight-bold" style="font-size: 0.85rem; color: #1e40af;">
+                                        <i class="fa-solid fa-cloud-arrow-down mr-2"></i> Histórico Completo del Reloj
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
                     <?php endif; ?>
 
                     <?php if ($userRole === 'ADMIN'): ?>
@@ -218,71 +258,129 @@ if (!empty($deptoId)) {
                         </form>
                     <?php endif; ?>
 
-                    <a href="?route=asistencia&fecha_inicio=<?= urlencode($fechaInicio) ?>&fecha_fin=<?= urlencode($fechaFin) ?>&departamento_id=<?= urlencode((string)($deptoId ?? '')) ?>&estado=<?= urlencode((string)($estado ?? '')) ?>&search=<?= urlencode($search ?? '') ?>&export=excel" class="btn btn-success btn-sm" title="Descargar reporte oficial en Excel">
-                        <i class="fa-solid fa-file-excel mr-1"></i> Excel
-                    </a>
-                    <a href="?route=asistencia&fecha_inicio=<?= urlencode($fechaInicio) ?>&fecha_fin=<?= urlencode($fechaFin) ?>&departamento_id=<?= urlencode((string)($deptoId ?? '')) ?>&estado=<?= urlencode((string)($estado ?? '')) ?>&search=<?= urlencode($search ?? '') ?>&export=csv" class="btn btn-outline-secondary btn-sm" title="Descargar archivo CSV">
-                        <i class="fa-solid fa-file-csv mr-1"></i> CSV
-                    </a>
-                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print()" title="Imprimir reporte oficial o Guardar como PDF">
-                        <i class="fa-solid fa-print mr-1"></i> PDF
+                    <!-- Botón Reporte Individual de Trabajador -->
+                    <button type="button" class="btn btn-outline-primary btn-sm font-weight-bold" onclick="openReporteIndividualModal()" title="Generar reporte individual oficial para un trabajador específico">
+                        <i class="fa-solid fa-file-invoice mr-1"></i> Reporte por Empleado
                     </button>
+
+                    <!-- Botones de Exportación Agrupados Elegantes -->
+                    <div class="btn-group btn-group-sm">
+                        <a href="?route=asistencia&fecha_inicio=<?= urlencode($fechaInicio) ?>&fecha_fin=<?= urlencode($fechaFin) ?>&departamento_id=<?= urlencode((string)($deptoId ?? '')) ?>&empleado_id=<?= urlencode((string)($empleadoId ?? '')) ?>&estado=<?= urlencode((string)($estado ?? '')) ?>&search=<?= urlencode($search ?? '') ?>&export=excel" class="btn btn-outline-secondary" title="Descargar reporte oficial en Excel">
+                            <i class="fa-solid fa-file-excel mr-1 text-success"></i> Excel
+                        </a>
+                        <button type="button" class="btn btn-outline-secondary" onclick="window.print()" title="Imprimir reporte oficial o Guardar como PDF">
+                            <i class="fa-solid fa-print mr-1 text-secondary"></i> PDF
+                        </button>
+                    </div>
                 </div>
             </div>
-            <div class="card-body py-3 px-3">
+            <div class="card-body p-4">
                 <form method="GET" action="" class="row align-items-end">
                     <input type="hidden" name="route" value="asistencia">
 
-                    <div class="col-md-2 col-sm-6 mb-2">
-                        <label class="form-label-custom"><i class="fa-regular fa-calendar mr-1"></i> Fecha Inicio</label>
-                        <input type="date" name="fecha_inicio" class="form-control form-control-sm" value="<?= htmlspecialchars($fechaInicio) ?>" required>
+                    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                        <label class="form-label-custom"><i class="fa-regular fa-calendar"></i> Fecha Inicio</label>
+                        <input type="date" name="fecha_inicio" class="form-control" value="<?= htmlspecialchars($fechaInicio) ?>" required>
                     </div>
 
-                    <div class="col-md-2 col-sm-6 mb-2">
-                        <label class="form-label-custom"><i class="fa-regular fa-calendar-check mr-1"></i> Fecha Fin</label>
-                        <input type="date" name="fecha_fin" class="form-control form-control-sm" value="<?= htmlspecialchars($fechaFin) ?>" required>
+                    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                        <label class="form-label-custom"><i class="fa-regular fa-calendar-check"></i> Fecha Fin</label>
+                        <input type="date" name="fecha_fin" class="form-control" value="<?= htmlspecialchars($fechaFin) ?>" required>
                     </div>
 
-                    <div class="col-md-3 col-sm-6 mb-2">
-                        <label class="form-label-custom"><i class="fa-solid fa-building mr-1"></i> Departamento</label>
-                        <select name="departamento_id" class="form-control form-control-sm">
-                            <option value="">-- Todos los Departamentos --</option>
+                    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                        <label class="form-label-custom"><i class="fa-solid fa-building"></i> Departamento</label>
+                        <select name="departamento_id" class="form-control">
+                            <option value="">-- Todos los Deptos --</option>
                             <?php foreach ($departamentos as $d): ?>
                                 <option value="<?= $d['id'] ?>" <?= $deptoId == $d['id'] ? 'selected' : '' ?>><?= htmlspecialchars($d['nombre']) ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
 
-                    <div class="col-md-2 col-sm-6 mb-2">
-                        <label class="form-label-custom"><i class="fa-solid fa-tag mr-1"></i> Estado</label>
-                        <select name="estado" class="form-control form-control-sm">
-                            <option value="">-- Todos los Estados --</option>
+                    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                        <label class="form-label-custom"><i class="fa-solid fa-tag"></i> Estado</label>
+                        <select name="estado" class="form-control">
+                            <option value="ASISTIERON" <?= ($estado ?? '') === 'ASISTIERON' ? 'selected' : '' ?>>Asistieron (Predeterminado)</option>
+                            <option value="TODOS" <?= ($estado ?? '') === 'TODOS' ? 'selected' : '' ?>>-- Todo el Padrón (Con Faltas) --</option>
                             <option value="PRESENTE" <?= ($estado ?? '') === 'PRESENTE' ? 'selected' : '' ?>>Puntuales (Presente)</option>
+                            <option value="COMISION_SERVICIO" <?= ($estado ?? '') === 'COMISION_SERVICIO' ? 'selected' : '' ?>>Comisión de Servicio (JUSHSAL)</option>
+                            <option value="VACACIONES" <?= ($estado ?? '') === 'VACACIONES' ? 'selected' : '' ?>>Vacaciones</option>
                             <option value="TARDANZA" <?= ($estado ?? '') === 'TARDANZA' ? 'selected' : '' ?>>Tardanzas</option>
                             <option value="FALTA" <?= ($estado ?? '') === 'FALTA' ? 'selected' : '' ?>>Faltas e Inasistencias</option>
                             <option value="PENDIENTE" <?= ($estado ?? '') === 'PENDIENTE' ? 'selected' : '' ?>>En Espera / Sin Marcar</option>
-                            <option value="JUSTIFICADO" <?= ($estado ?? '') === 'JUSTIFICADO' ? 'selected' : '' ?>>Justificados</option>
+                            <option value="JUSTIFICADO" <?= ($estado ?? '') === 'JUSTIFICADO' ? 'selected' : '' ?>>Justificados y Permisos</option>
                             <option value="SALIDA_SIN_MARCAR" <?= ($estado ?? '') === 'SALIDA_SIN_MARCAR' ? 'selected' : '' ?>>Salidas sin Marcar</option>
+                            <option value="ENTRADA_SIN_MARCAR" <?= ($estado ?? '') === 'ENTRADA_SIN_MARCAR' ? 'selected' : '' ?>>Entradas sin Marcar</option>
                             <option value="INCIDENCIAS" <?= ($estado ?? '') === 'INCIDENCIAS' ? 'selected' : '' ?>>Todas las Incidencias</option>
                         </select>
                     </div>
 
-                    <div class="col-md-2 col-sm-8 mb-2">
-                        <label class="form-label-custom"><i class="fa-solid fa-magnifying-glass mr-1"></i> Buscar Empleado</label>
-                        <input type="text" name="search" class="form-control form-control-sm" placeholder="Nombre, DNI..." value="<?= htmlspecialchars($search ?? '') ?>">
+                    <div class="col-lg-3 col-md-5 col-sm-8 mb-3">
+                        <label class="form-label-custom"><i class="fa-solid fa-user-tie"></i> Empleado (Filtro Individual)</label>
+                        <select name="empleado_id" class="form-control">
+                            <option value="">-- Todos los Trabajadores --</option>
+                            <?php foreach ($empleados as $emp): ?>
+                                <option value="<?= $emp['id'] ?>" <?= ((int)($empleadoId ?? 0) === (int)$emp['id']) ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($emp['apellidos'] . ' ' . $emp['nombres']) ?> (DNI: <?= htmlspecialchars($emp['dni']) ?>)
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
 
-                    <div class="col-md-1 col-sm-4 mb-2 d-flex" style="gap: 4px;">
-                        <button type="submit" class="btn btn-primary btn-sm flex-fill" title="Filtrar resultados" style="height: 34px;">
+                    <div class="col-lg-1 col-md-3 col-sm-4 mb-3 d-flex" style="gap: 6px;">
+                        <button type="submit" class="btn btn-primary flex-fill" title="Filtrar resultados" style="height: 38px;">
                             <i class="fa-solid fa-filter"></i>
                         </button>
-                        <a href="?route=asistencia" class="btn btn-outline-secondary btn-sm" title="Limpiar filtros" style="height: 34px; display: inline-flex; align-items: center; justify-content: center;">
+                        <a href="?route=asistencia" class="btn btn-outline-secondary" title="Limpiar filtros" style="height: 38px; width: 38px; display: inline-flex; align-items: center; justify-content: center; padding: 0;">
                             <i class="fa-solid fa-rotate-left"></i>
                         </a>
                     </div>
                 </form>
             </div>
         </div>
+
+        <?php if (!empty($empleadoSeleccionado)): ?>
+            <!-- TARJETA DESTACADA: REPORTE INDIVIDUAL POR EMPLEADO -->
+            <div class="card mb-4 border shadow-sm no-print" style="background: #ffffff; border-color: #cbd5e1 !important; border-left: 4px solid #1e40af !important;">
+                <div class="card-body p-3 d-flex align-items-center justify-content-between flex-wrap" style="gap: 12px;">
+                    <div class="d-flex align-items-center">
+                        <div class="mr-3 rounded-circle d-flex align-items-center justify-content-center" style="width: 44px; height: 44px; font-size: 1.2rem; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe;">
+                            <i class="fa-solid fa-user-check"></i>
+                        </div>
+                        <div>
+                            <div class="small text-uppercase font-weight-bold" style="letter-spacing: 0.04em; color: #1e40af; font-size: 0.72rem;">Reporte Individual de Asistencia Laboral</div>
+                            <h5 class="font-weight-bold mb-0" style="color: #0f172a; font-size: 1.1rem;">
+                                <?= htmlspecialchars($empleadoSeleccionado['apellidos'] . ' ' . $empleadoSeleccionado['nombres']) ?>
+                            </h5>
+                            <div class="small mt-1 text-muted">
+                                <span><strong>DNI:</strong> <?= htmlspecialchars($empleadoSeleccionado['dni']) ?></span>
+                                <span class="mx-2 text-slate-300">&bull;</span>
+                                <span><strong>Cód. Reloj:</strong> <?= htmlspecialchars($empleadoSeleccionado['codigo_reloj']) ?></span>
+                                <?php $cargoTexto = $empleadoSeleccionado['cargo_nombre'] ?? ($empleadoSeleccionado['cargo'] ?? ''); ?>
+                                <?php if (!empty($cargoTexto)): ?>
+                                    <span class="mx-2 text-slate-300">&bull;</span>
+                                    <span><strong>Cargo:</strong> <?= htmlspecialchars($cargoTexto) ?></span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center flex-wrap" style="gap: 8px;">
+                        <div class="btn-group btn-group-sm">
+                            <a href="?route=asistencia&fecha_inicio=<?= urlencode($fechaInicio) ?>&fecha_fin=<?= urlencode($fechaFin) ?>&empleado_id=<?= urlencode((string)$empleadoId) ?>&export=excel" class="btn btn-outline-secondary">
+                                <i class="fa-solid fa-file-excel mr-1 text-success"></i> Excel Personal
+                            </a>
+                            <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
+                                <i class="fa-solid fa-print mr-1 text-secondary"></i> Imprimir
+                            </button>
+                        </div>
+                        <a href="?route=asistencia&fecha_inicio=<?= urlencode($fechaInicio) ?>&fecha_fin=<?= urlencode($fechaFin) ?>" class="btn btn-sm btn-outline-secondary" title="Quitar filtro y ver todos los empleados">
+                            <i class="fa-solid fa-xmark mr-1"></i> Ver Todos
+                        </a>
+                    </div>
+                </div>
+            </div>
+        <?php endif; ?>
 
         <!-- MAIN TABLE CARD -->
         <div class="card">
@@ -294,12 +392,12 @@ if (!empty($deptoId)) {
                             <th>Empleado</th>
                             <th class="text-center">Turno</th>
                             <th class="text-center">Entrada</th>
+                            <th class="text-center">Refrigerio</th>
                             <th class="text-center">Salida</th>
                             <th class="text-center">Tardanza</th>
                             <th class="text-center">Tiempo Trabajado</th>
-                            <th class="text-center">Horas Extras</th>
                             <th class="text-center">Estado</th>
-                            <?php if ($userRole === 'ADMIN'): ?>
+                            <?php if ($userRole === 'ADMIN' || $userRole === 'RRHH'): ?>
                                 <th class="text-center no-print">Acciones</th>
                             <?php endif; ?>
                         </tr>
@@ -307,7 +405,7 @@ if (!empty($deptoId)) {
                     <tbody>
                         <?php if (empty($asistencias)): ?>
                             <tr>
-                                <td colspan="<?= $userRole === 'ADMIN' ? '10' : '9' ?>" class="text-center py-5 text-muted">
+                                <td colspan="<?= ($userRole === 'ADMIN' || $userRole === 'RRHH') ? '10' : '9' ?>" class="text-center py-5 text-muted">
                                     <i class="fa-solid fa-folder-open fa-2x mb-2 d-block text-secondary"></i>
                                     <div>No se encontraron registros de asistencia para los filtros seleccionados.</div>
                                     <a href="?route=asistencia" class="btn btn-xs btn-outline-primary mt-2">
@@ -317,6 +415,10 @@ if (!empty($deptoId)) {
                             </tr>
                         <?php else: ?>
                         <?php foreach ($asistencias as $a): ?>
+                            <?php
+                                $dayOfWeek = (int)date('w', strtotime($a['fecha']));
+                                $isSaturday = ($dayOfWeek === 6);
+                            ?>
                             <tr>
                                 <td class="text-center font-weight-bold text-dark font-monospace small"><?= $a['fecha'] ?></td>
                                 <td>
@@ -335,6 +437,32 @@ if (!empty($deptoId)) {
                                     </div>
                                 </td>
                                 <td class="text-center">
+                                    <?php if ($isSaturday): ?>
+                                        <span class="badge badge-light text-muted" style="font-size: 0.72rem; border: 1px dashed #cbd5e1;">Sin refrigerio</span>
+                                    <?php else: ?>
+                                        <?php 
+                                            $salRef = !empty($a['hora_inicio_refrigerio_real']) ? substr($a['hora_inicio_refrigerio_real'], 11, 5) : null;
+                                            $retRef = !empty($a['hora_fin_refrigerio_real']) ? substr($a['hora_fin_refrigerio_real'], 11, 5) : null;
+                                        ?>
+                                        <?php if ($salRef || $retRef): ?>
+                                            <div class="font-monospace small font-weight-bold" style="font-size: 0.82rem; line-height: 1.2;">
+                                                <span style="color: #475569;">Sal:</span> <?= $salRef ?: '--:--' ?>
+                                                <span class="mx-1">&bull;</span>
+                                                <span style="color: #475569;">Ret:</span> <?= $retRef ?: '--:--' ?>
+                                            </div>
+                                            <div class="small text-muted font-monospace" style="font-size: 0.72rem;">
+                                                Prog: 13:00 - 13:45
+                                            </div>
+                                        <?php elseif (!empty($a['hora_entrada_real']) && !empty($a['hora_salida_real'])): ?>
+                                            <span class="badge badge-light text-secondary small" style="font-size: 0.72rem;" title="Refrigerio reglamentario de 45 min descontado del cómputo laboral">
+                                                Desc. 45m reg.
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="text-muted font-monospace small">--:--</span>
+                                        <?php endif; ?>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="text-center">
                                     <div class="font-monospace font-weight-bold <?= empty($a['hora_salida_real']) ? 'text-muted' : 'text-dark' ?>" style="font-size: 0.95rem; line-height: 1.15;">
                                         <?= $a['hora_salida_real'] ? substr($a['hora_salida_real'], 11, 5) : '--:--' ?>
                                     </div>
@@ -344,7 +472,11 @@ if (!empty($deptoId)) {
                                 </td>
                                 <td class="text-center">
                                     <?php if ($a['minutos_tardanza'] > 0): ?>
-                                        <span class="badge-pill-custom badge-pill-tardanza">+<?= $a['minutos_tardanza'] ?> min</span>
+                                        <?php
+                                            $tMin = (int)$a['minutos_tardanza'];
+                                            $strTard = $tMin >= 60 ? sprintf('+%dh %02dm', floor($tMin / 60), $tMin % 60) : "+{$tMin} min";
+                                        ?>
+                                        <span class="badge-pill-custom badge-pill-tardanza" title="<?= $tMin ?> minutos"><?= $strTard ?></span>
                                     <?php else: ?>
                                         <span class="text-muted small">-</span>
                                     <?php endif; ?>
@@ -353,15 +485,10 @@ if (!empty($deptoId)) {
                                     <?php
                                         $hrs = floor($a['minutos_trabajados'] / 60);
                                         $min = $a['minutos_trabajados'] % 60;
-                                        echo "{$hrs}h {$min}m";
+                                        $decHrs = number_format($a['minutos_trabajados'] / 60, 2);
                                     ?>
-                                </td>
-                                <td class="text-center">
-                                    <?php if ($a['minutos_extra'] > 0): ?>
-                                        <span class="badge-pill-custom badge-pill-justificado">+<?= $a['minutos_extra'] ?> min</span>
-                                    <?php else: ?>
-                                        <span class="text-muted small">-</span>
-                                    <?php endif; ?>
+                                    <div class="font-weight-bold" style="color: #0f172a; font-size: 0.92rem;"><?= "{$hrs}h {$min}m" ?></div>
+                                    <div class="badge badge-light text-primary font-weight-bold" style="font-size: 0.73rem; border: 1px solid #bfdbfe; margin-top: 1px;" title="Total en horas decimales"><?= "{$decHrs} hrs" ?></div>
                                 </td>
                                 <td class="text-center">
                                     <?php
@@ -371,7 +498,7 @@ if (!empty($deptoId)) {
                                             echo '<span class="badge-pill-custom badge-pill-presente"><i class="fa-solid fa-user-clock mr-1"></i>En Jornada</span>';
                                         } elseif ($est === 'PRESENTE' && !empty($a['hora_entrada_real'])) {
                                             echo '<span class="badge-pill-custom badge-pill-presente"><i class="fa-solid fa-check mr-1"></i>Presente</span>';
-                                        } elseif ($est === 'PENDIENTE' || (empty($a['hora_entrada_real']) && !in_array($est, ['FALTA', 'FALTA_INJUSTIFICADA', 'JUSTIFICADO', 'PERMISO', 'VACACIONES', 'DESCANSO'], true))) {
+                                        } elseif ($est === 'PENDIENTE' || (empty($a['hora_entrada_real']) && !in_array($est, ['FALTA', 'FALTA_INJUSTIFICADA', 'JUSTIFICADO', 'PERMISO', 'VACACIONES', 'DESCANSO', 'COMISION_SERVICIO'], true))) {
                                             echo '<span class="badge-pill-custom badge-pill-neutral"><i class="fa-solid fa-hourglass-half mr-1"></i>En Espera</span>';
                                         } elseif ($est === 'TARDANZA') {
                                             echo '<span class="badge-pill-custom badge-pill-tardanza"><i class="fa-solid fa-clock mr-1"></i>Tardanza</span>';
@@ -381,30 +508,41 @@ if (!empty($deptoId)) {
                                             echo '<span class="badge-pill-custom badge-pill-justificado"><i class="fa-solid fa-shield mr-1"></i>Justificado</span>';
                                         } elseif ($est === 'PERMISO') {
                                             echo '<span class="badge-pill-custom badge-pill-justificado"><i class="fa-solid fa-id-badge mr-1"></i>Permiso</span>';
+                                        } elseif ($est === 'COMISION_SERVICIO') {
+                                            echo '<span class="badge-pill-custom" style="background-color: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd;"><i class="fa-solid fa-briefcase mr-1"></i>Comisión</span>';
                                         } elseif ($est === 'VACACIONES') {
-                                            echo '<span class="badge-pill-custom badge-pill-justificado"><i class="fa-solid fa-umbrella-beach mr-1"></i>Vacaciones</span>';
+                                            echo '<span class="badge-pill-custom" style="background-color: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;"><i class="fa-solid fa-umbrella-beach mr-1"></i>Vacaciones</span>';
                                         } elseif ($est === 'DESCANSO') {
                                             echo '<span class="badge-pill-custom badge-pill-neutral"><i class="fa-solid fa-bed mr-1"></i>Descanso</span>';
                                         } elseif ($est === 'SALIDA_SIN_MARCAR') {
-                                            echo '<span class="badge-pill-custom badge-pill-sin-salida"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Sin Salida</span>';
+                                            echo '<span class="badge-pill-custom badge-pill-sin-salida"><i class="fa-solid fa-right-from-bracket mr-1"></i>Sin Salida</span>';
+                                        } elseif ($est === 'ENTRADA_SIN_MARCAR') {
+                                            echo '<span class="badge-pill-custom" style="background-color: #fef3c7; color: #b45309; border: 1px solid #fde68a;"><i class="fa-solid fa-right-to-bracket mr-1"></i>Sin Entrada</span>';
                                         } else {
                                             echo '<span class="badge-pill-custom badge-pill-neutral">' . htmlspecialchars($est) . '</span>';
                                         }
                                     ?>
+                                    <?php if (!empty($a['comision_destino'])): ?>
+                                        <div class="small font-weight-bold text-primary mt-1" title="Comisión de Usuarios: <?= htmlspecialchars($a['comision_destino']) ?>">
+                                            <i class="fa-solid fa-map-location-dot mr-1"></i><?= htmlspecialchars(mb_strimwidth($a['comision_destino'], 0, 24, '...')) ?>
+                                        </div>
+                                    <?php endif; ?>
                                     <?php if (!empty($a['observaciones'])): ?>
                                         <div class="small text-muted mt-1" title="<?= htmlspecialchars($a['observaciones']) ?>">
                                             <i class="far fa-comment-dots mr-1"></i><?= htmlspecialchars(mb_strimwidth($a['observaciones'], 0, 24, '...')) ?>
                                         </div>
                                     <?php endif; ?>
                                 </td>
-                                <?php if ($userRole === 'ADMIN'): ?>
+                                <?php if ($userRole === 'ADMIN' || $userRole === 'RRHH'): ?>
                                     <td class="text-center no-print">
                                         <button class="btn btn-xs btn-outline-info mr-1" onclick="openTimelineModal(<?= $a['id_empleado'] ?>, '<?= $a['fecha'] ?>', '<?= htmlspecialchars(addslashes($a['apellidos'] . ' ' . $a['nombres'])) ?>')" title="Ver Trazabilidad y Auditoría de Eventos">
                                             <i class="fa-solid fa-timeline"></i> Eventos
                                         </button>
+                                        <?php if ($userRole === 'ADMIN'): ?>
                                         <button class="btn btn-xs btn-primary mr-1" onclick="openAdminEditModal(<?= htmlspecialchars(json_encode($a)) ?>)" title="Modificar horas de entrada/salida y corregir asistencia oficialmente (Solo Administrador)">
                                             <i class="fa-solid fa-clock-rotate-left"></i> Corregir
                                         </button>
+                                        <?php endif; ?>
                                         <button class="btn btn-xs btn-outline-warning" onclick="openQuickJustifyModal(<?= htmlspecialchars(json_encode($a)) ?>)" title="Registrar Justificación para este trabajador">
                                             <i class="fa-solid fa-file-shield"></i> Justificar
                                         </button>
@@ -416,10 +554,12 @@ if (!empty($deptoId)) {
                     </tbody>
                     <tfoot class="thead-light">
                         <tr class="font-weight-bold">
-                            <th colspan="5" class="text-right">TOTALES GENERALES:</th>
-                            <th class="text-center text-warning"><?= $kpiMinTardanza > 0 ? "+{$kpiMinTardanza} min" : "0 min" ?></th>
-                            <th class="text-center text-dark"><?= $kpiHorasTrab ?></th>
-                            <th class="text-center text-info"><?= $kpiMinExtra > 0 ? "+{$kpiMinExtra} min" : "0 min" ?></th>
+                            <th colspan="6" class="text-right">TOTALES GENERALES:</th>
+                            <th class="text-center text-warning" title="<?= $kpiMinTardanza ?> minutos"><?= $kpiHorasTard ?></th>
+                            <th class="text-center text-dark">
+                                <div><?= $kpiHorasTrab ?></div>
+                                <span class="badge badge-light text-primary" style="font-size: 0.72rem; border: 1px solid #bfdbfe;"><?= number_format($kpiMinTrabajados / 60, 2) ?> hrs</span>
+                            </th>
                             <th colspan="<?= $userRole === 'ADMIN' ? '2' : '1' ?>"><?= $kpiTotal ?> registros</th>
                         </tr>
                     </tfoot>
@@ -497,18 +637,18 @@ if (!empty($deptoId)) {
 <div class="modal fade" id="modalTimelineEventos" tabindex="-1" role="dialog" aria-labelledby="timelineTitle" aria-modal="true" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
-            <div class="modal-header bg-dark text-white">
+            <div class="modal-header">
                 <h5 class="modal-title font-weight-bold" id="timelineTitle">
-                    <i class="fa-solid fa-timeline text-info mr-2"></i> Trazabilidad y Event Sourcing
+                    <i class="fa-solid fa-timeline mr-2"></i> Trazabilidad y Auditoría de Marcaciones
                 </h5>
-                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Cerrar">&times;</button>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">&times;</button>
             </div>
-            <div class="modal-body p-4 bg-light">
+            <div class="modal-body p-4">
                 <!-- CABECERA DE METADATOS -->
-                <div class="d-flex justify-content-between align-items-center bg-white p-3 rounded shadow-sm mb-4 border">
+                <div class="d-flex justify-content-between align-items-center p-3 rounded mb-4" style="background-color: #f8fafc; border: 1px solid #e2e8f0;">
                     <div>
-                        <h6 class="font-weight-bold mb-1 text-primary" id="timelineEmpleadoNombre">Cargando empleado...</h6>
-                        <small class="text-muted"><i class="fa-solid fa-id-card mr-1"></i> DNI: <span id="timelineEmpleadoDni">--</span> | ID Reloj: <span id="timelineEmpleadoReloj">--</span></small>
+                        <h6 class="font-weight-bold mb-1 text-dark" id="timelineEmpleadoNombre">Cargando empleado...</h6>
+                        <small class="text-muted"><i class="fa-solid fa-id-card mr-1 text-secondary"></i> DNI: <span id="timelineEmpleadoDni">--</span> | ID Reloj: <span id="timelineEmpleadoReloj">--</span></small>
                     </div>
                     <div class="text-right">
                         <span class="badge badge-light border px-2 py-1 font-weight-bold text-secondary" id="timelineFecha">--</span>
@@ -518,7 +658,7 @@ if (!empty($deptoId)) {
 
                 <!-- CONTENEDOR DE LA LÍNEA DE TIEMPO -->
                 <div id="timelineLoading" class="text-center py-5">
-                    <div class="spinner-border text-primary" role="status"></div>
+                    <div class="spinner-border text-secondary" role="status"></div>
                     <div class="small text-muted mt-2 font-weight-bold">Recuperando flujo de eventos inmutables desde el Event Store...</div>
                 </div>
 
@@ -531,9 +671,9 @@ if (!empty($deptoId)) {
                     <div>No se encontraron eventos registrados para este día.</div>
                 </div>
             </div>
-            <div class="modal-footer justify-content-between bg-white">
-                <span class="small text-muted"><i class="fa-solid fa-shield-halved mr-1"></i> Log inmutable respaldado por arquitectura Event Sourcing</span>
-                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cerrar</button>
+            <div class="modal-footer justify-content-between">
+                <span class="small text-muted"><i class="fa-solid fa-shield-halved mr-1 text-secondary"></i> Log inmutable respaldado por arquitectura Event Sourcing</span>
+                <button type="button" class="btn btn-outline-secondary btn-sm px-3" data-dismiss="modal">Cerrar</button>
             </div>
         </div>
     </div>
@@ -553,143 +693,166 @@ if (!empty($deptoId)) {
             <input type="hidden" id="edit_prog_salida" value="17:00">
             <input type="hidden" id="edit_tolerancia" value="10">
             
-            <div class="modal-header py-3" style="background-color: #0f172a; border-bottom: 1px solid #334155; color: #ffffff;">
-                <h5 class="modal-title font-weight-bold d-flex align-items-center text-white" id="modalEditarTitle">
-                    <i class="fa-solid fa-pen-to-square mr-2" style="color: #60a5fa;"></i> Modificar Horario de Asistencia
+            <div class="modal-header">
+                <h5 class="modal-title font-weight-bold" id="modalEditarTitle">
+                    <i class="fa-solid fa-pen-to-square mr-2"></i> Modificar Horario de Asistencia
                 </h5>
-                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Cerrar">&times;</button>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">&times;</button>
             </div>
             
-            <div class="modal-body p-4 bg-light">
-                <!-- TARJETA INFORMATIVA DEL REGISTRO SELECCIONADO DESDE TABLA -->
-                <div class="card mb-3 border bg-white shadow-none" id="edit_empleado_card" style="border-radius: 8px; border-color: #e2e8f0 !important;">
-                    <div class="card-body p-3">
-                        <div class="row align-items-center">
-                            <div class="col-md-7">
-                                <span class="badge px-2 py-1 mb-1 font-weight-bold" id="edit_badge_fecha" style="background-color: #334155; color: #f8fafc;">Fecha: --/--/----</span>
-                                <h6 class="font-weight-bold text-dark mb-1" id="edit_empleado_nombre">Empleado...</h6>
-                                <small class="text-muted"><i class="fa-solid fa-id-card mr-1"></i> DNI: <span id="edit_empleado_dni">--</span> | Cód. Reloj: <span id="edit_empleado_reloj">--</span></small>
-                            </div>
-                            <div class="col-md-5 text-md-right border-left pt-2 pt-md-0">
-                                <div class="small text-muted">Horario Oficial del Turno:</div>
-                                <strong class="font-monospace" id="edit_turno_info" style="color: #0f172a;">08:00 - 17:00 (Tol: 10m)</strong>
-                            </div>
+            <div class="modal-body p-4">
+                <!-- CABECERA DEL TRABAJADOR SELECCIONADO DESDE LA TABLA -->
+                <div id="edit_empleado_card" class="p-3 mb-3 rounded" style="background-color: #f8fafc; border: 1px solid #e2e8f0;">
+                    <div class="row align-items-center">
+                        <div class="col-md-7">
+                            <span class="badge badge-light border text-secondary px-2 py-1 mb-1 font-weight-bold" id="edit_badge_fecha">Fecha: --/--/----</span>
+                            <h6 class="font-weight-bold text-dark mb-1" id="edit_empleado_nombre" style="font-size: 1.05rem;">Empleado...</h6>
+                            <div class="small text-muted"><i class="fa-solid fa-id-card mr-1 text-secondary"></i> DNI: <strong class="text-dark" id="edit_empleado_dni">--</strong> <span class="mx-1">&bull;</span> Cód. Reloj: <strong class="text-dark" id="edit_empleado_reloj">--</strong></div>
+                        </div>
+                        <div class="col-md-5 text-md-right border-left pt-2 pt-md-0">
+                            <div class="small text-muted">Horario Oficial Asignado:</div>
+                            <strong class="font-monospace" id="edit_turno_info" style="color: #0f172a; font-size: 0.95rem;">08:00 - 17:00 (Tol: 10m)</strong>
                         </div>
                     </div>
                 </div>
 
                 <!-- SELECTOR DE EMPLEADO Y FECHA CUANDO SE ABRE DESDE BOTÓN SUPERIOR -->
-                <div class="card mb-3 border bg-white shadow-none" id="edit_empleado_selector_card" style="border-radius: 8px; display: none;">
-                    <div class="card-header py-2 bg-white border-bottom">
-                        <span class="font-weight-bold text-dark small text-uppercase">Seleccionar Empleado y Fecha</span>
+                <div id="edit_empleado_selector_card" class="p-3 mb-3 rounded" style="background-color: #f8fafc; border: 1px solid #e2e8f0; display: none;">
+                    <div class="modal-section-title mt-0 mb-3">
+                        <i class="fa-solid fa-user-check"></i> Seleccionar Empleado y Fecha
                     </div>
-                    <div class="card-body p-3">
-                        <div class="row align-items-center">
-                            <div class="col-md-8 mb-2">
-                                <label class="small font-weight-bold text-secondary mb-1">Buscar y Seleccionar Trabajador <span class="text-danger">*</span></label>
-                                
-                                <div class="worker-search-wrapper" id="edit_search_container">
-                                    <input type="text" 
-                                           id="edit_worker_search_input" 
-                                           class="form-control" 
-                                           style="height: 38px; font-size: 0.88rem;"
-                                           placeholder="Escribe nombre, apellido o DNI del trabajador..." 
-                                           autocomplete="off"
-                                           oninput="filtrarTrabajadoresEnVivo(this.value, 'edit')"
-                                           onkeydown="navegarResultadosTrabajador(event, 'edit')"
-                                           onfocus="filtrarTrabajadoresEnVivo(this.value, 'edit')">
+                    <div class="row align-items-center">
+                        <div class="col-md-8 mb-2">
+                            <label class="small font-weight-bold text-secondary mb-1">Buscar Trabajador <span class="text-danger">*</span></label>
+                            
+                            <div class="worker-search-wrapper" id="edit_search_container">
+                                <input type="text" 
+                                       id="edit_worker_search_input" 
+                                       class="form-control" 
+                                       placeholder="Escribe nombre, apellido o DNI del trabajador..." 
+                                       autocomplete="off"
+                                       oninput="filtrarTrabajadoresEnVivo(this.value, 'edit')"
+                                       onkeydown="navegarResultadosTrabajador(event, 'edit')"
+                                       onfocus="filtrarTrabajadoresEnVivo(this.value, 'edit')">
 
-                                    <!-- Dropdown flotante con resultados filtrados -->
-                                    <div id="edit_worker_results" class="worker-search-dropdown" style="display: none;"></div>
-                                </div>
+                                <!-- Dropdown flotante con resultados filtrados -->
+                                <div id="edit_worker_results" class="worker-search-dropdown" style="display: none;"></div>
+                            </div>
 
-                                <!-- Tarjeta de confirmación del trabajador seleccionado -->
-                                <div id="edit_worker_selected_badge" class="mt-2" style="display: none;">
-                                    <div class="d-flex align-items-center justify-content-between p-2 rounded border" style="background-color: #f8fafc; border-color: #cbd5e1 !important;">
-                                        <div>
-                                            <div class="font-weight-bold text-dark" id="edit_badge_nombre" style="font-size: 0.88rem;">--</div>
-                                            <div class="text-muted small" style="font-size: 0.76rem;">
-                                                DNI: <strong class="text-dark" id="edit_badge_dni">--</strong>
-                                                <span class="mx-1">&bull;</span>
-                                                Reloj ID: <strong class="text-dark" id="edit_badge_reloj">--</strong>
-                                                <span class="mx-1">&bull;</span>
-                                                Turno: <strong class="text-primary" id="edit_badge_turno">--</strong>
-                                            </div>
+                            <!-- Tarjeta de confirmación del trabajador seleccionado -->
+                            <div id="edit_worker_selected_badge" class="mt-2" style="display: none;">
+                                <div class="d-flex align-items-center justify-content-between p-2 rounded" style="background-color: #ffffff; border: 1px solid #cbd5e1;">
+                                    <div>
+                                        <div class="font-weight-bold text-dark" id="edit_badge_nombre" style="font-size: 0.88rem;">--</div>
+                                        <div class="text-muted small" style="font-size: 0.76rem;">
+                                            DNI: <strong class="text-dark" id="edit_badge_dni">--</strong>
+                                            <span class="mx-1">&bull;</span>
+                                            Reloj ID: <strong class="text-dark" id="edit_badge_reloj">--</strong>
+                                            <span class="mx-1">&bull;</span>
+                                            Turno: <strong class="text-dark" id="edit_badge_turno">--</strong>
                                         </div>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary font-weight-bold" onclick="deseleccionarTrabajador('edit')">
-                                            Cambiar
-                                        </button>
                                     </div>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary font-weight-bold" onclick="deseleccionarTrabajador('edit')">
+                                        Cambiar
+                                    </button>
                                 </div>
                             </div>
-                            <div class="col-md-4 mb-2">
-                                <label class="small font-weight-bold text-secondary mb-1">Fecha de Asistencia <span class="text-danger">*</span></label>
-                                <input type="date" id="edit_fecha_picker" class="form-control" style="height: 38px;" value="<?= date('Y-m-d') ?>" onchange="onDatePickerChanged(this.value)">
-                            </div>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="small font-weight-bold text-secondary mb-1">Fecha de Asistencia <span class="text-danger">*</span></label>
+                            <input type="date" id="edit_fecha_picker" class="form-control" value="<?= date('Y-m-d') ?>" onchange="onDatePickerChanged(this.value)">
                         </div>
                     </div>
                 </div>
 
-                <!-- FORMULARIO DE EDICIÓN DIRECTA DE HORAS -->
-                <div class="card border bg-white shadow-none mb-3" style="border-radius: 8px;">
-                    <div class="card-header py-2 bg-white border-bottom d-flex align-items-center justify-content-between">
-                        <span class="font-weight-bold text-dark small text-uppercase" style="letter-spacing: 0.03em;"><i class="fa-solid fa-clock-rotate-left text-primary mr-1"></i> Horas Oficiales (Entrada y Salida)</span>
-                        <span class="badge px-2 py-1" style="background-color: #f1f5f9; color: #334155; border: 1px solid #cbd5e1;"><i class="fa-solid fa-shield-halved mr-1 text-secondary"></i> Gestión Interna</span>
-                    </div>
-                    <div class="card-body p-3">
-                        <div class="row">
-                            <div class="col-md-6 mb-2">
-                                <label class="small font-weight-bold text-dark d-flex justify-content-between align-items-center">
-                                    <span><i class="fa-solid fa-arrow-right-to-bracket mr-1 text-primary"></i> Hora de Entrada Real</span>
-                                    <div class="btn-group btn-group-xs">
-                                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="setProgrammedTime('entrada')" title="Copiar hora programada del turno">Turno</button>
-                                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="clearTime('entrada')" title="Borrar hora"><i class="fa-solid fa-eraser"></i></button>
-                                    </div>
-                                </label>
-                                <input type="time" name="hora_entrada_real" id="edit_hora_entrada" step="1" class="form-control form-control-lg font-monospace text-center font-weight-bold" style="font-size: 1.35rem; color: #0f172a; background: #ffffff; border: 1.5px solid #cbd5e1;" oninput="calculateRealtimeAdminAttendance()">
-                                <small class="text-muted d-block mt-1"><i class="fa-solid fa-circle-info mr-1"></i> Hora efectiva de ingreso.</small>
-                            </div>
-                            <div class="col-md-6 mb-2">
-                                <label class="small font-weight-bold text-dark d-flex justify-content-between align-items-center">
-                                    <span><i class="fa-solid fa-arrow-right-from-bracket mr-1 text-primary"></i> Hora de Salida Real</span>
-                                    <div class="btn-group btn-group-xs">
-                                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="setProgrammedTime('salida')" title="Copiar hora programada del turno">Turno</button>
-                                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2" onclick="clearTime('salida')" title="Borrar hora"><i class="fa-solid fa-eraser"></i></button>
-                                    </div>
-                                </label>
-                                <input type="time" name="hora_salida_real" id="edit_hora_salida" step="1" class="form-control form-control-lg font-monospace text-center font-weight-bold" style="font-size: 1.35rem; color: #0f172a; background: #ffffff; border: 1.5px solid #cbd5e1;" oninput="calculateRealtimeAdminAttendance()">
-                                <small class="text-muted d-block mt-1"><i class="fa-solid fa-circle-info mr-1"></i> Hora efectiva de retiro.</small>
-                            </div>
-                        </div>
+                <!-- MARCACIONES OFICIALES Y EDICIÓN DIRECTA -->
+                <div class="modal-section-title">
+                    <i class="fa-solid fa-clock-rotate-left"></i> Marcaciones Oficiales de Huella / Reloj
+                </div>
 
-                        <!-- PREVIEW CALCULADO EN TIEMPO REAL CON ALTO CONTRASTE Y COLORES CORPORATIVOS -->
-                        <div class="p-3 mb-0 rounded border mt-3" style="background-color: #ffffff; border: 1px solid #cbd5e1 !important; box-shadow: 0 1px 3px rgba(0,0,0,0.03);" id="adminCalcAlert">
-                            <div class="d-flex align-items-center justify-content-between flex-wrap" style="gap: 8px;">
-                                <div class="text-dark" style="font-size: 0.86rem;">
-                                    <strong class="text-muted text-uppercase mr-2" style="font-size: 0.74rem; letter-spacing: 0.04em;">
-                                        <i class="fa-solid fa-calculator mr-1 text-primary"></i>Recálculo Automático:
-                                    </strong> 
-                                    <span id="adminCalcSummary" style="color: #0f172a; font-weight: 600;">Ingresa las horas de entrada y salida</span>
-                                </div>
-                                <div class="d-flex align-items-center" style="gap: 6px;">
-                                    <span class="text-muted small" style="font-size: 0.76rem;">Estado sugerido:</span>
-                                    <strong class="badge px-2 py-1 font-weight-bold" id="adminCalcStateBadge" style="font-size: 0.78rem;">--</strong>
-                                </div>
+                <div class="row">
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <label class="small font-weight-bold text-dark d-flex justify-content-between align-items-center mb-1">
+                            <span><i class="fa-solid fa-arrow-right-to-bracket mr-1 text-secondary"></i> 1. Entrada</span>
+                            <div class="btn-group btn-group-xs">
+                                <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1" onclick="setProgrammedTime('entrada')" title="Copiar hora programada del turno">Prog</button>
+                                <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1" onclick="clearTime('entrada')" title="Borrar hora"><i class="fa-solid fa-eraser"></i></button>
                             </div>
+                        </label>
+                        <input type="time" name="hora_entrada_real" id="edit_hora_entrada" step="1" class="form-control font-monospace text-center font-weight-bold" style="font-size: 1.1rem; color: #0f172a;" oninput="calculateRealtimeAdminAttendance()">
+                        <small class="text-muted d-block mt-1">Ingreso laboral</small>
+                    </div>
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <label class="small font-weight-bold text-dark d-flex justify-content-between align-items-center mb-1">
+                            <span><i class="fa-solid fa-utensils mr-1 text-secondary"></i> 2. Salida Ref.</span>
+                            <div class="btn-group btn-group-xs">
+                                <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1" onclick="setProgrammedTime('salida_ref')" title="Copiar 13:00">13:00</button>
+                                <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1" onclick="clearTime('salida_ref')" title="Borrar hora"><i class="fa-solid fa-eraser"></i></button>
+                            </div>
+                        </label>
+                        <input type="time" name="hora_inicio_refrigerio_real" id="edit_hora_inicio_refrigerio" step="1" class="form-control font-monospace text-center font-weight-bold" style="font-size: 1.1rem; color: #0f172a;" oninput="calculateRealtimeAdminAttendance()">
+                        <small class="text-muted d-block mt-1">Salida a refrigerio</small>
+                    </div>
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <label class="small font-weight-bold text-dark d-flex justify-content-between align-items-center mb-1">
+                            <span><i class="fa-solid fa-clock-rotate-left mr-1 text-secondary"></i> 3. Retorno Ref.</span>
+                            <div class="btn-group btn-group-xs">
+                                <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1" onclick="setProgrammedTime('retorno_ref')" title="Copiar 13:45">13:45</button>
+                                <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1" onclick="clearTime('retorno_ref')" title="Borrar hora"><i class="fa-solid fa-eraser"></i></button>
+                            </div>
+                        </label>
+                        <input type="time" name="hora_fin_refrigerio_real" id="edit_hora_fin_refrigerio" step="1" class="form-control font-monospace text-center font-weight-bold" style="font-size: 1.1rem; color: #0f172a;" oninput="calculateRealtimeAdminAttendance()">
+                        <small class="text-muted d-block mt-1">Retorno de refrigerio</small>
+                    </div>
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <label class="small font-weight-bold text-dark d-flex justify-content-between align-items-center mb-1">
+                            <span><i class="fa-solid fa-arrow-right-from-bracket mr-1 text-secondary"></i> 4. Salida Final</span>
+                            <div class="btn-group btn-group-xs">
+                                <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1" onclick="setProgrammedTime('salida')" title="Copiar hora programada del turno">Prog</button>
+                                <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1" onclick="clearTime('salida')" title="Borrar hora"><i class="fa-solid fa-eraser"></i></button>
+                            </div>
+                        </label>
+                        <input type="time" name="hora_salida_real" id="edit_hora_salida" step="1" class="form-control font-monospace text-center font-weight-bold" style="font-size: 1.1rem; color: #0f172a;" oninput="calculateRealtimeAdminAttendance()">
+                        <small class="text-muted d-block mt-1">Retiro de la jornada</small>
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-center justify-content-between text-muted small mb-3 px-1">
+                    <span><i class="fa-solid fa-circle-info text-secondary mr-1"></i> Lun-Vie: 08:00 a 17:00 (Refrigerio 13:00 - 13:45, 45 min). Sáb: 08:00 a 13:00 (Sin refrigerio).</span>
+                    <span class="badge badge-light border text-secondary font-weight-bold" id="edit_tipo_dia_badge">Día Regular</span>
+                </div>
+
+                <!-- PREVIEW CALCULADO EN TIEMPO REAL CON COLORES CORPORATIVOS -->
+                <div class="p-3 mb-3 rounded" style="background-color: #f8fafc; border: 1px solid #e2e8f0;" id="adminCalcAlert">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap" style="gap: 8px;">
+                        <div class="text-dark" style="font-size: 0.86rem;">
+                            <span class="text-muted text-uppercase mr-2 font-weight-bold" style="font-size: 0.72rem; letter-spacing: 0.05em;">
+                                <i class="fa-solid fa-calculator mr-1 text-secondary"></i>Recálculo:
+                            </span> 
+                            <span id="adminCalcSummary" style="color: #0f172a; font-weight: 600;">Ingresa las horas de entrada y salida</span>
+                        </div>
+                        <div class="d-flex align-items-center" style="gap: 6px;">
+                            <span class="text-muted small" style="font-size: 0.76rem;">Estado sugerido:</span>
+                            <strong class="badge px-2 py-1 font-weight-bold" id="adminCalcStateBadge" style="font-size: 0.78rem;">--</strong>
                         </div>
                     </div>
                 </div>
 
                 <!-- ESTADO Y OBSERVACIONES -->
+                <div class="modal-section-title">
+                    <i class="fa-solid fa-clipboard-check"></i> Resolución y Observaciones
+                </div>
+
                 <div class="row">
-                    <div class="col-md-4">
-                        <div class="form-group mb-2">
-                            <label class="small font-weight-bold text-secondary">Estado Oficial de Asistencia</label>
-                            <select name="estado" id="edit_estado" class="form-control form-control-sm font-weight-bold" required>
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label class="small font-weight-bold text-secondary">Estado Oficial de Asistencia <span class="text-danger">*</span></label>
+                            <select name="estado" id="edit_estado" class="form-control font-weight-bold" required>
                                 <option value="PRESENTE">PRESENTE</option>
                                 <option value="TARDANZA">TARDANZA</option>
                                 <option value="JUSTIFICADO">JUSTIFICADO</option>
                                 <option value="PERMISO">PERMISO</option>
+                                <option value="COMISION_SERVICIO">COMISIÓN DE SERVICIO</option>
                                 <option value="VACACIONES">VACACIONES</option>
                                 <option value="FALTA">FALTA</option>
                                 <option value="DESCANSO">DESCANSO O FERIADO</option>
@@ -697,28 +860,23 @@ if (!empty($deptoId)) {
                             </select>
                         </div>
                     </div>
-                    <div class="col-md-4">
-                        <div class="form-group mb-2">
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
                             <label class="small font-weight-bold text-secondary">Minutos de Tardanza</label>
-                            <input type="number" name="minutos_tardanza" id="edit_tardanza" class="form-control form-control-sm" min="0">
+                            <input type="number" name="minutos_tardanza" id="edit_tardanza" class="form-control" min="0">
                         </div>
                     </div>
-                    <div class="col-md-4">
-                        <div class="form-group mb-2">
-                            <label class="small font-weight-bold text-secondary">Minutos Horas Extras</label>
-                            <input type="number" name="minutos_extra" id="edit_extra" class="form-control form-control-sm" min="0">
-                        </div>
-                    </div>
+                    <input type="hidden" name="minutos_extra" id="edit_extra" value="0">
                 </div>
 
                 <div class="form-group mb-0">
                     <label class="small font-weight-bold text-secondary">Observaciones <span class="text-muted font-weight-normal">(Opcional - dejar en blanco para reporte limpio sin anotaciones)</span></label>
-                    <textarea name="observaciones" id="edit_obs" class="form-control form-control-sm" rows="2" placeholder="Dejar en blanco para que el registro oficial permanezca limpio sin observaciones..."></textarea>
+                    <textarea name="observaciones" id="edit_obs" class="form-control" rows="2" placeholder="Dejar en blanco para que el registro oficial permanezca limpio sin observaciones..."></textarea>
                 </div>
             </div>
             
-            <div class="modal-footer justify-content-between bg-white py-2 px-4 border-top">
-                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancelar</button>
+            <div class="modal-footer justify-content-between">
+                <button type="button" class="btn btn-outline-secondary btn-sm px-3" data-dismiss="modal">Cancelar</button>
                 <button type="submit" id="btnSaveAdminEdit" class="btn btn-primary btn-sm px-4 font-weight-bold">
                     <i class="fa-solid fa-floppy-disk mr-1"></i> Guardar Cambios
                 </button>
@@ -726,115 +884,150 @@ if (!empty($deptoId)) {
         </form>
     </div>
 </div>
+<?php endif; ?>
 
-<!-- MODAL REGISTRAR ASISTENCIA JUSTIFICADA CON BUSCADOR (EXCLUSIVO ADMINISTRADOR) -->
+<?php if ($userRole === 'ADMIN' || $userRole === 'RRHH'): ?>
+<!-- MODAL REGISTRAR ASISTENCIA JUSTIFICADA / COMISIÓN DE SERVICIO -->
 <div class="modal fade" id="modalJustificarAdmin" tabindex="-1" role="dialog" aria-labelledby="modalJustificarTitle" aria-modal="true" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
         <form method="POST" action="?route=asistencia&action=justificar_admin" class="modal-content shadow-lg border-0" id="formJustificarAdmin" onsubmit="submitJustificarAdmin(event)">
             <?= csrf_field() ?>
-            <div class="modal-header bg-primary text-white py-3">
-                <h5 class="modal-title font-weight-bold d-flex align-items-center" id="modalJustificarTitle">
-                    <i class="fa-solid fa-user-shield mr-2"></i> Registrar Asistencia Justificada
-                </h5>
-                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Cerrar">&times;</button>
+            <div class="modal-header">
+                <div class="d-flex align-items-center">
+                    <h5 class="modal-title font-weight-bold mb-0" id="modalJustificarTitle">
+                        <i class="fa-solid fa-file-shield mr-2"></i> Registrar Justificación
+                    </h5>
+                    <span class="badge ml-2 font-weight-normal px-2 py-0.5" style="background: rgba(255,255,255,0.12); color: #e2e8f0; border: 1px solid rgba(255,255,255,0.2); font-size: 0.72rem;">Auditoría RRHH / Admin</span>
+                </div>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">&times;</button>
             </div>
             
-            <div class="modal-body p-4 bg-light">
+            <div class="modal-body p-4">
                 <!-- BUSCADOR INTERACTIVO EN VIVO DE TRABAJADOR POR NOMBRE, DNI O RELOJ -->
-                <div class="card border bg-white shadow-none mb-3" style="border-radius: 8px;">
-                    <div class="card-header py-2 bg-white border-bottom">
-                        <span class="font-weight-bold text-dark small text-uppercase">
-                            Seleccionar Trabajador <span class="text-danger">*</span>
-                        </span>
-                    </div>
-                    <div class="card-body p-3">
-                        <input type="hidden" name="id_empleado" id="just_empleado_select" value="" required>
+                <div class="modal-section-title mt-0 mb-3">
+                    <i class="fa-solid fa-user-check"></i> 1. Seleccionar Trabajador
+                </div>
+                
+                <input type="hidden" name="id_empleado" id="just_empleado_select" value="" required>
 
-                        <!-- Input de búsqueda por nombre o DNI -->
-                        <div class="worker-search-wrapper" id="just_search_container">
-                            <input type="text" 
-                                   id="just_worker_search_input" 
-                                   class="form-control" 
-                                   style="height: 38px; font-size: 0.88rem;"
-                                   placeholder="Escribe nombre, apellido o DNI del trabajador..." 
-                                   autocomplete="off"
-                                   oninput="filtrarTrabajadoresEnVivo(this.value, 'just')"
-                                   onkeydown="navegarResultadosTrabajador(event, 'just')"
-                                   onfocus="filtrarTrabajadoresEnVivo(this.value, 'just')">
+                <!-- Input de búsqueda por nombre o DNI -->
+                <div class="worker-search-wrapper mb-2" id="just_search_container">
+                    <input type="text" 
+                           id="just_worker_search_input" 
+                           class="form-control" 
+                           placeholder="Escribe nombre, apellido o DNI del trabajador..." 
+                           autocomplete="off"
+                           oninput="filtrarTrabajadoresEnVivo(this.value, 'just')"
+                           onkeydown="navegarResultadosTrabajador(event, 'just')"
+                           onfocus="filtrarTrabajadoresEnVivo(this.value, 'just')">
 
-                            <!-- Dropdown flotante con resultados filtrados -->
-                            <div id="just_worker_results" class="worker-search-dropdown" style="display: none;"></div>
-                        </div>
+                    <!-- Dropdown flotante con resultados filtrados -->
+                    <div id="just_worker_results" class="worker-search-dropdown" style="display: none;"></div>
+                </div>
 
-                        <!-- Tarjeta del Trabajador Seleccionado -->
-                        <div id="just_worker_selected_badge" class="mt-2" style="display: none;">
-                            <div class="d-flex align-items-center justify-content-between p-2 rounded border" style="background-color: #f8fafc; border-color: #cbd5e1 !important;">
-                                <div>
-                                    <div class="font-weight-bold text-dark" id="just_badge_nombre" style="font-size: 0.9rem;">--</div>
-                                    <div class="text-muted small" style="font-size: 0.78rem;">
-                                        DNI: <strong class="text-dark" id="just_badge_dni">--</strong>
-                                        <span class="mx-1">&bull;</span>
-                                        Reloj ID: <strong class="text-dark" id="just_badge_reloj">--</strong>
-                                        <span class="mx-1">&bull;</span>
-                                        Área: <span id="just_badge_depto">--</span>
-                                    </div>
-                                </div>
-                                <button type="button" class="btn btn-sm btn-outline-secondary font-weight-bold" onclick="deseleccionarTrabajador('just')" title="Cambiar de trabajador">
-                                    Cambiar
-                                </button>
+                <!-- Tarjeta del Trabajador Seleccionado -->
+                <div id="just_worker_selected_badge" class="mb-3" style="display: none;">
+                    <div class="d-flex align-items-center justify-content-between p-2.5 rounded" style="background-color: #f8fafc; border: 1px solid #cbd5e1;">
+                        <div>
+                            <div class="font-weight-bold text-dark" id="just_badge_nombre" style="font-size: 0.92rem;">--</div>
+                            <div class="text-muted small" style="font-size: 0.78rem;">
+                                DNI: <strong class="text-dark" id="just_badge_dni">--</strong>
+                                <span class="mx-1">&bull;</span>
+                                Reloj ID: <strong class="text-dark" id="just_badge_reloj">--</strong>
+                                <span class="mx-1">&bull;</span>
+                                Área: <span id="just_badge_depto" class="text-dark font-weight-bold">--</span>
                             </div>
                         </div>
-
-                        <small class="form-text text-muted mt-1" id="just_worker_hint">
-                            Escribe el nombre o DNI para buscar y seleccionar.
-                        </small>
+                        <button type="button" class="btn btn-sm btn-outline-secondary font-weight-bold" onclick="deseleccionarTrabajador('just')" title="Cambiar de trabajador">
+                            Cambiar
+                        </button>
                     </div>
                 </div>
 
-                <!-- PERÍODO Y TIPO DE JUSTIFICACIÓN -->
-                <div class="card border bg-white shadow-none mb-3" style="border-radius: 8px;">
-                    <div class="card-body p-3">
-                        <div class="row">
-                            <div class="col-md-4">
-                                <div class="form-group mb-2">
-                                    <label class="small font-weight-bold text-secondary">Tipo de Justificación <span class="text-danger">*</span></label>
-                                    <select name="tipo" id="just_tipo" class="form-control form-control-sm font-weight-bold" required>
-                                        <option value="TARDANZA">Tardanza Justificada</option>
-                                        <option value="FALTA">Falta Justificada</option>
-                                        <option value="PERMISO_MEDICO">Descanso Médico</option>
-                                        <option value="COMISION_SERVICIO">Comisión de Servicio</option>
-                                        <option value="VACACIONES">Vacaciones</option>
-                                        <option value="LICENCIA_MATERNIDAD_PATERNIDAD">Licencia por Paternidad o Maternidad</option>
-                                        <option value="OTRO">Otro Motivo</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-group mb-2">
-                                    <label class="small font-weight-bold text-secondary">Fecha Inicio <span class="text-danger">*</span></label>
-                                    <input type="date" name="fecha_inicio" id="just_fecha_inicio" class="form-control form-control-sm" value="<?= date('Y-m-d') ?>" required>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-group mb-2">
-                                    <label class="small font-weight-bold text-secondary">Fecha Fin <span class="text-danger">*</span></label>
-                                    <input type="date" name="fecha_fin" id="just_fecha_fin" class="form-control form-control-sm" value="<?= date('Y-m-d') ?>" required>
-                                </div>
-                            </div>
-                        </div>
+                <div class="modal-section-title">
+                    <i class="fa-solid fa-calendar-week"></i> 2. Parámetros de la Justificación
+                </div>
 
-                        <div class="form-group mb-0">
-                            <label class="small font-weight-bold text-secondary">Motivo o Sustento <span class="text-danger">*</span></label>
-                            <textarea name="motivo" id="just_motivo" class="form-control form-control-sm" rows="2" placeholder="Detallar el sustento de la justificación autorizada..." required></textarea>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label class="small font-weight-bold text-secondary">Tipo de Justificación <span class="text-danger">*</span></label>
+                            <select name="tipo" id="just_tipo" class="form-control font-weight-bold" onchange="onJustTipoChanged(this.value)" required>
+                                <option value="COMISION_SERVICIO">Comisión de Servicio (Otras Comisiones)</option>
+                                <option value="VACACIONES">Vacaciones</option>
+                                <option value="TARDANZA">Tardanza Justificada</option>
+                                <option value="FALTA">Falta Justificada</option>
+                                <option value="PERMISO_MEDICO">Descanso Médico</option>
+                                <option value="LICENCIA_MATERNIDAD_PATERNIDAD">Licencia por Paternidad o Maternidad</option>
+                                <option value="OTRO">Otro Motivo</option>
+                            </select>
                         </div>
                     </div>
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label class="small font-weight-bold text-secondary">Fecha Inicio <span class="text-danger">*</span></label>
+                            <input type="date" name="fecha_inicio" id="just_fecha_inicio" class="form-control" value="<?= date('Y-m-d') ?>" required>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label class="small font-weight-bold text-secondary">Fecha Fin <span class="text-danger">*</span></label>
+                            <input type="date" name="fecha_fin" id="just_fecha_fin" class="form-control" value="<?= date('Y-m-d') ?>" required>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SELECTOR COMISIÓN DE DESTINO (JUSHSAL) -->
+                <div id="comision_destino_container" class="form-group mb-3 p-3 rounded" style="background-color: #f8fafc; border: 1px solid #e2e8f0;">
+                    <label class="small font-weight-bold text-dark mb-1">
+                        <i class="fa-solid fa-map-location-dot mr-1 text-secondary"></i> Comisión de Usuarios de Destino (JUSHSAL) <span class="text-danger">*</span>
+                    </label>
+                    <select name="comision_destino" id="just_comision_destino" class="form-control font-weight-bold">
+                        <option value="">-- Seleccionar Comisión de Usuarios --</option>
+                        <option value="Comisión de Usuarios Hualtaco I-II">Comisión de Usuarios Hualtaco I-II</option>
+                        <option value="Comisión de Usuarios Hualtaco III">Comisión de Usuarios Hualtaco III</option>
+                        <option value="Comisión de Usuarios Hualtaco IV">Comisión de Usuarios Hualtaco IV</option>
+                        <option value="Comisión de Usuarios TG-Malingas">Comisión de Usuarios TG-Malingas</option>
+                        <option value="Comisión de Usuarios M-Malingas">Comisión de Usuarios M-Malingas</option>
+                        <option value="Comisión de Usuarios Valle de los Incas">Comisión de Usuarios Valle de los Incas</option>
+                        <option value="Comisión de Usuarios Tejedores">Comisión de Usuarios Tejedores</option>
+                        <option value="Comisión de Usuarios San Isidro I y II">Comisión de Usuarios San Isidro I y II</option>
+                        <option value="Comisión de Usuarios Quiroz Paimas">Comisión de Usuarios Quiroz Paimas</option>
+                        <option value="Comisión de Usuarios Chipillico Margen Derecha">Comisión de Usuarios Chipillico Margen Derecha</option>
+                        <option value="Comisión de Usuarios Chipillico Margen Izquierda">Comisión de Usuarios Chipillico Margen Izquierda</option>
+                        <option value="Comisión de Usuarios Tambogrande">Comisión de Usuarios Tambogrande</option>
+                        <option value="Comisión de Usuarios Quebrada Totoral Pampelera Alta">Comisión de Usuarios Quebrada Totoral Pampelera Alta</option>
+                        <option value="Comisión de Usuarios Somate Alto">Comisión de Usuarios Somate Alto</option>
+                        <option value="Comisión de Usuarios Somate Bajo">Comisión de Usuarios Somate Bajo</option>
+                        <option value="Comisión de Usuarios Algarrobo - Yuscay">Comisión de Usuarios Algarrobo - Yuscay</option>
+                        <option value="Represa Los Quiroz / Bocatoma Zamba / Partidores">Represa Los Quiroz / Bocatoma Zamba / Partidores</option>
+                        <option value="Otra Sede o Entidad Externa">Otra Sede o Entidad Externa</option>
+                    </select>
+                    <small class="text-muted d-block mt-1">
+                        <i class="fa-solid fa-clock mr-1 text-secondary"></i> Se generará automáticamente el horario oficial de jornada: <strong>08:00 a 17:00</strong> (Refrigerio 13:00 - 13:45, 8h 15m laboradas).
+                    </small>
+                </div>
+
+                <!-- AVISO INFORMATIVO DE VACACIONES -->
+                <div id="vacaciones_auto_info" class="p-3 rounded small text-secondary mb-3" style="display: none; background-color: #f8fafc; border: 1px solid #e2e8f0;">
+                    <i class="fa-solid fa-umbrella-beach text-secondary mr-1"></i>
+                    <strong>Período Vacacional:</strong> Se registrarán automáticamente las marcaciones oficiales completas (08:00 a 17:00, refrigerio 13:00 - 13:45) por cada día hábil comprendido en las fechas con estado <strong>VACACIONES</strong>.
+                </div>
+
+                <div class="modal-section-title">
+                    <i class="fa-solid fa-file-lines"></i> 3. Motivo y Sustento
+                </div>
+
+                <div class="form-group mb-0">
+                    <label class="small font-weight-bold text-secondary">Detalle del Sustento <span class="text-danger">*</span></label>
+                    <textarea name="motivo" id="just_motivo" class="form-control" rows="3" placeholder="Detallar el sustento de la justificación autorizada..." required></textarea>
                 </div>
             </div>
             
-            <div class="modal-footer justify-content-between bg-white py-2 px-4 border-top">
-                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancelar</button>
-                <button type="submit" id="btnSaveJustifyAdmin" class="btn btn-primary btn-sm px-4">
-                    <i class="fa-solid fa-shield-check mr-1"></i> Aplicar Justificación
+            <div class="modal-footer justify-content-between">
+                <button type="button" class="btn btn-outline-secondary btn-sm px-3" data-dismiss="modal">Cancelar</button>
+                <button type="submit" id="btnSaveJustifyAdmin" class="btn btn-primary btn-sm px-4 font-weight-bold">
+                    <i class="fa-solid fa-shield-halved mr-1"></i> Aplicar Justificación
                 </button>
             </div>
         </form>
@@ -1145,27 +1338,48 @@ document.addEventListener('click', function(e) {
 function openAdminEditModal(rec, focusField = 'entrada') {
     document.getElementById('edit_id').value = rec.id || 0;
     document.getElementById('edit_id_empleado').value = rec.id_empleado || 0;
-    document.getElementById('edit_fecha_hidden').value = rec.fecha || '<?= date('Y-m-d') ?>';
+    const fecha = rec.fecha || '<?= date('Y-m-d') ?>';
+    document.getElementById('edit_fecha_hidden').value = fecha;
     
     document.getElementById('edit_empleado_card').style.display = 'block';
     document.getElementById('edit_empleado_selector_card').style.display = 'none';
 
-    document.getElementById('edit_badge_fecha').innerText = 'Fecha: ' + (rec.fecha || '<?= date('Y-m-d') ?>');
+    document.getElementById('edit_badge_fecha').innerText = 'Fecha: ' + fecha;
     document.getElementById('edit_empleado_nombre').innerText = `${rec.apellidos || ''} ${rec.nombres || ''}`;
     document.getElementById('edit_empleado_dni').innerText = rec.dni || '--';
     document.getElementById('edit_empleado_reloj').innerText = rec.codigo_reloj || '--';
     
-    const progEnt = rec.hora_entrada_programada ? rec.hora_entrada_programada.substr(0, 5) : '08:00';
-    const progSal = rec.hora_salida_programada ? rec.hora_salida_programada.substr(0, 5) : '17:00';
+    // Detectar si la fecha es sábado
+    let isSat = false;
+    if (fecha) {
+        const p = fecha.split('-');
+        if (p.length === 3) {
+            const dt = new Date(parseInt(p[0]), parseInt(p[1]) - 1, parseInt(p[2]));
+            isSat = (dt.getDay() === 6);
+        }
+    }
+
+    const progEnt = isSat ? '08:00' : (rec.hora_entrada_programada ? rec.hora_entrada_programada.substr(0, 5) : '08:00');
+    const progSal = isSat ? '13:00' : (rec.hora_salida_programada ? rec.hora_salida_programada.substr(0, 5) : '17:00');
     document.getElementById('edit_prog_entrada').value = progEnt;
     document.getElementById('edit_prog_salida').value = progSal;
     document.getElementById('edit_tolerancia').value = rec.tolerancia_minutos || 10;
-    document.getElementById('edit_turno_info').innerText = `${progEnt} - ${progSal} (Turno: ${rec.turno_nombre || 'General'})`;
+    document.getElementById('edit_turno_info').innerText = isSat 
+        ? `08:00 - 13:00 (Sábado sin refrigerio)` 
+        : `${progEnt} - ${progSal} (Refrig: 13:00-13:45 / Tol: ${rec.tolerancia_minutos || 10}m)`;
 
     // Extraer horas reales existentes
     let realEnt = '';
     if (rec.hora_entrada_real) {
         realEnt = rec.hora_entrada_real.substr(11, 5);
+    }
+    let realSalRef = '';
+    if (rec.hora_inicio_refrigerio_real) {
+        realSalRef = rec.hora_inicio_refrigerio_real.substr(11, 5);
+    }
+    let realRetRef = '';
+    if (rec.hora_fin_refrigerio_real) {
+        realRetRef = rec.hora_fin_refrigerio_real.substr(11, 5);
     }
     let realSal = '';
     if (rec.hora_salida_real) {
@@ -1173,6 +1387,8 @@ function openAdminEditModal(rec, focusField = 'entrada') {
     }
 
     document.getElementById('edit_hora_entrada').value = realEnt;
+    document.getElementById('edit_hora_inicio_refrigerio').value = realSalRef;
+    document.getElementById('edit_hora_fin_refrigerio').value = realRetRef;
     document.getElementById('edit_hora_salida').value = realSal;
     document.getElementById('edit_estado').value = rec.estado || 'PRESENTE';
     document.getElementById('edit_tardanza').value = rec.minutos_tardanza || 0;
@@ -1202,6 +1418,8 @@ function openAsignarHorasModal() {
     deseleccionarTrabajador('edit');
 
     document.getElementById('edit_hora_entrada').value = '';
+    document.getElementById('edit_hora_inicio_refrigerio').value = '';
+    document.getElementById('edit_hora_fin_refrigerio').value = '';
     document.getElementById('edit_hora_salida').value = '';
     document.getElementById('edit_estado').value = 'PRESENTE';
     document.getElementById('edit_tardanza').value = 0;
@@ -1226,14 +1444,29 @@ function onWorkerSelected(selectEl) {
 
 function onDatePickerChanged(val) {
     document.getElementById('edit_fecha_hidden').value = val;
+    calculateRealtimeAdminAttendance();
 }
 
 function setProgrammedTime(field) {
+    const fechaStr = document.getElementById('edit_fecha_hidden').value;
+    let isSaturday = false;
+    if (fechaStr) {
+        const parts = fechaStr.split('-');
+        if (parts.length === 3) {
+            const dt = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            isSaturday = (dt.getDay() === 6);
+        }
+    }
+
     if (field === 'entrada') {
         const prog = document.getElementById('edit_prog_entrada').value || '08:00';
         document.getElementById('edit_hora_entrada').value = prog;
+    } else if (field === 'salida_ref') {
+        document.getElementById('edit_hora_inicio_refrigerio').value = isSaturday ? '' : '13:00';
+    } else if (field === 'retorno_ref') {
+        document.getElementById('edit_hora_fin_refrigerio').value = isSaturday ? '' : '13:45';
     } else if (field === 'salida') {
-        const prog = document.getElementById('edit_prog_salida').value || '17:00';
+        const prog = isSaturday ? '13:00' : (document.getElementById('edit_prog_salida').value || '17:00');
         document.getElementById('edit_hora_salida').value = prog;
     }
     calculateRealtimeAdminAttendance();
@@ -1242,6 +1475,10 @@ function setProgrammedTime(field) {
 function clearTime(field) {
     if (field === 'entrada') {
         document.getElementById('edit_hora_entrada').value = '';
+    } else if (field === 'salida_ref') {
+        document.getElementById('edit_hora_inicio_refrigerio').value = '';
+    } else if (field === 'retorno_ref') {
+        document.getElementById('edit_hora_fin_refrigerio').value = '';
     } else if (field === 'salida') {
         document.getElementById('edit_hora_salida').value = '';
     }
@@ -1250,9 +1487,33 @@ function clearTime(field) {
 
 function calculateRealtimeAdminAttendance() {
     const entVal = document.getElementById('edit_hora_entrada').value;
+    const salRefVal = document.getElementById('edit_hora_inicio_refrigerio') ? document.getElementById('edit_hora_inicio_refrigerio').value : '';
+    const retRefVal = document.getElementById('edit_hora_fin_refrigerio') ? document.getElementById('edit_hora_fin_refrigerio').value : '';
     const salVal = document.getElementById('edit_hora_salida').value;
+    const fechaVal = document.getElementById('edit_fecha_hidden').value;
+
+    let isSaturday = false;
+    if (fechaVal) {
+        const parts = fechaVal.split('-');
+        if (parts.length === 3) {
+            const dt = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            isSaturday = (dt.getDay() === 6);
+        }
+    }
+
+    const tipoDiaBadge = document.getElementById('edit_tipo_dia_badge');
+    if (tipoDiaBadge) {
+        if (isSaturday) {
+            tipoDiaBadge.className = 'badge badge-warning text-dark font-weight-bold';
+            tipoDiaBadge.innerText = 'Sábado (08:00 a 13:00 - Sin Refrigerio)';
+        } else {
+            tipoDiaBadge.className = 'badge badge-info font-weight-bold';
+            tipoDiaBadge.innerText = 'Lun-Vie (08:00 a 17:00 - Ref. 13:00 a 13:45)';
+        }
+    }
+
     const progEnt = document.getElementById('edit_prog_entrada').value || '08:00';
-    const progSal = document.getElementById('edit_prog_salida').value || '17:00';
+    const progSal = isSaturday ? '13:00' : (document.getElementById('edit_prog_salida').value || '17:00');
     const tol = parseInt(document.getElementById('edit_tolerancia').value) || 10;
 
     const summaryEl = document.getElementById('adminCalcSummary');
@@ -1282,11 +1543,11 @@ function calculateRealtimeAdminAttendance() {
         if (minReal <= minGrace) {
             computedTardanza = 0;
             suggestedState = 'PRESENTE';
-            summaryParts.push(`<span class="font-weight-bold" style="color: #15803d !important;"><i class="fa-solid fa-circle-check mr-1"></i>Puntual (${entVal})</span>`);
+            summaryParts.push(`<span class="font-weight-bold text-dark"><i class="fa-solid fa-circle-check mr-1 text-success"></i>Puntual (${entVal})</span>`);
         } else {
             computedTardanza = Math.max(0, minReal - minProg);
             suggestedState = 'TARDANZA';
-            summaryParts.push(`<span class="font-weight-bold" style="color: #b91c1c !important;"><i class="fa-solid fa-clock mr-1"></i>Tardanza: +${computedTardanza} min</span>`);
+            summaryParts.push(`<span class="font-weight-bold text-dark"><i class="fa-solid fa-circle-exclamation mr-1 text-warning"></i>Tardanza (+${computedTardanza} min)</span>`);
         }
     }
 
@@ -1300,18 +1561,32 @@ function calculateRealtimeAdminAttendance() {
         const minProgExit = hProgSal * 60 + mProgSal;
 
         if (minEnd > minStart) {
-            const diffMin = minEnd - minStart;
-            const hrs = Math.floor(diffMin / 60);
-            const mins = diffMin % 60;
-            summaryParts.push(`<span class="font-weight-bold" style="color: #0f172a !important;"><i class="fa-solid fa-business-time mr-1 text-secondary"></i>Permanencia: ${hrs}h ${mins}m</span>`);
+            const rawDiffMin = minEnd - minStart;
+            let minutesDiscount = 0;
 
-            if (minEnd > minProgExit + 15) {
-                const diffExtra = minEnd - minProgExit;
-                summaryParts.push(`<span class="font-weight-bold" style="color: #1d4ed8 !important;">+${diffExtra}m Extra</span>`);
+            if (!isSaturday) {
+                if (salRefVal && retRefVal) {
+                    const [hSR, mSR] = salRefVal.split(':').map(Number);
+                    const [hRR, mRR] = retRefVal.split(':').map(Number);
+                    const minSalRef = hSR * 60 + mSR;
+                    const minRetRef = hRR * 60 + mRR;
+                    if (minRetRef > minSalRef) {
+                        minutesDiscount = minRetRef - minSalRef;
+                    }
+                } else if (rawDiffMin >= 300) {
+                    minutesDiscount = 45;
+                }
             }
+
+            const netMinutes = Math.max(0, rawDiffMin - minutesDiscount);
+            const netHrs = Math.floor(netMinutes / 60);
+            const netMins = netMinutes % 60;
+
+            let descText = minutesDiscount > 0 ? ` (Desc. ${minutesDiscount}m ref)` : '';
+            summaryParts.push(`<span class="font-weight-bold text-dark"><i class="fa-solid fa-business-time mr-1 text-muted"></i>${netHrs}h ${netMins}m laboradas${descText}</span>`);
         }
     } else if (entVal && !salVal) {
-        summaryParts.push(`<span class="font-weight-bold" style="color: #b45309 !important;"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Salida sin registrar</span>`);
+        summaryParts.push(`<span class="font-weight-bold text-dark"><i class="fa-solid fa-triangle-exclamation mr-1 text-warning"></i>Salida pendiente</span>`);
     }
 
     tardanzaInput.value = computedTardanza;
@@ -1369,11 +1644,39 @@ function submitAdminEditAttendance(e) {
     });
 }
 
+function onJustTipoChanged(tipo) {
+    const comisionBox = document.getElementById('comision_destino_container');
+    const comisionSelect = document.getElementById('just_comision_destino');
+    const vacInfo = document.getElementById('vacaciones_auto_info');
+
+    if (tipo === 'COMISION_SERVICIO') {
+        if (comisionBox) comisionBox.style.display = 'block';
+        if (comisionSelect) comisionSelect.setAttribute('required', 'required');
+        if (vacInfo) vacInfo.style.display = 'none';
+    } else if (tipo === 'VACACIONES') {
+        if (comisionBox) comisionBox.style.display = 'none';
+        if (comisionSelect) {
+            comisionSelect.removeAttribute('required');
+            comisionSelect.value = '';
+        }
+        if (vacInfo) vacInfo.style.display = 'block';
+    } else {
+        if (comisionBox) comisionBox.style.display = 'none';
+        if (comisionSelect) {
+            comisionSelect.removeAttribute('required');
+            comisionSelect.value = '';
+        }
+        if (vacInfo) vacInfo.style.display = 'none';
+    }
+}
+
 function openJustificarAdminModal() {
     $('#formJustificarAdmin')[0].reset();
     deseleccionarTrabajador('just');
     document.getElementById('just_fecha_inicio').value = '<?= date('Y-m-d') ?>';
     document.getElementById('just_fecha_fin').value = '<?= date('Y-m-d') ?>';
+    document.getElementById('just_tipo').value = 'COMISION_SERVICIO';
+    onJustTipoChanged('COMISION_SERVICIO');
     $('#modalJustificarAdmin').modal('show');
 }
 
@@ -1382,7 +1685,9 @@ function openQuickJustifyModal(rec) {
     seleccionarTrabajador(rec.id_empleado, 'just');
     document.getElementById('just_fecha_inicio').value = rec.fecha;
     document.getElementById('just_fecha_fin').value = rec.fecha;
-    document.getElementById('just_motivo').value = `Justificación oficial de asistencia del día ${rec.fecha}`;
+    document.getElementById('just_tipo').value = 'COMISION_SERVICIO';
+    onJustTipoChanged('COMISION_SERVICIO');
+    document.getElementById('just_motivo').value = `Comisión de servicio oficial del día ${rec.fecha}`;
     $('#modalJustificarAdmin').modal('show');
 }
 
@@ -1402,6 +1707,21 @@ function submitJustificarAdmin(e) {
             filtrarTrabajadoresEnVivo('', 'just');
         }
         return;
+    }
+
+    const tipo = document.getElementById('just_tipo')?.value;
+    if (tipo === 'COMISION_SERVICIO') {
+        const destino = document.getElementById('just_comision_destino')?.value;
+        if (!destino) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Comisión de Usuarios Requerida',
+                text: 'Por favor selecciona la Comisión de Usuarios de destino a la que fue asignado el trabajador.',
+                confirmButtonColor: '#1d4ed8'
+            });
+            document.getElementById('just_comision_destino')?.focus();
+            return;
+        }
     }
 
     const btn = $('#btnSaveJustifyAdmin');
@@ -1569,6 +1889,148 @@ function openTimelineModal(empId, fecha, nombreEmp) {
             document.getElementById('timelineEmpty').style.display = 'block';
         });
 }
+
+// ==========================================================
+// CONTROLADOR DEL MODAL DE REPORTE INDIVIDUAL POR EMPLEADO
+// ==========================================================
+function openReporteIndividualModal() {
+    $('#modalReporteIndividual').modal('show');
+}
+
+function setPeriodoReporte(tipo) {
+    const dInicio = document.getElementById('rep_ind_inicio');
+    const dFin = document.getElementById('rep_ind_fin');
+    const now = new Date();
+    
+    if (tipo === 'mes_actual') {
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        const d = String(now.getDate()).padStart(2, '0');
+        dInicio.value = `${y}-${m}-01`;
+        dFin.value = `${y}-${m}-${d}`;
+    } else if (tipo === 'mes_anterior') {
+        const prevMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+        const y = prevMonth.getFullYear();
+        const m = String(prevMonth.getMonth() + 1).padStart(2, '0');
+        const lastDay = String(prevMonth.getDate()).padStart(2, '0');
+        dInicio.value = `${y}-${m}-01`;
+        dFin.value = `${y}-${m}-${lastDay}`;
+    } else if (tipo === 'ultimos_30') {
+        const past = new Date();
+        past.setDate(past.getDate() - 30);
+        dInicio.value = past.toISOString().slice(0, 10);
+        dFin.value = now.toISOString().slice(0, 10);
+    } else if (tipo === 'hoy') {
+        const todayStr = now.toISOString().slice(0, 10);
+        dInicio.value = todayStr;
+        dFin.value = todayStr;
+    }
+}
+
+function ejecutarReporteIndividual(formato) {
+    const empId = document.getElementById('rep_ind_empleado').value;
+    if (!empId) {
+        alert('Por favor selecciona a un trabajador para generar su reporte individual.');
+        document.getElementById('rep_ind_empleado').focus();
+        return;
+    }
+    const fIni = document.getElementById('rep_ind_inicio').value;
+    const fFin = document.getElementById('rep_ind_fin').value;
+
+    let url = `?route=asistencia&empleado_id=${encodeURIComponent(empId)}&fecha_inicio=${encodeURIComponent(fIni)}&fecha_fin=${encodeURIComponent(fFin)}`;
+
+    if (formato === 'excel') {
+        window.location.href = url + '&export=excel';
+    } else if (formato === 'pdf') {
+        window.open(url + '&print_auto=1', '_blank');
+    } else {
+        window.location.href = url;
+    }
+}
+
+<?php if (!empty($_GET['print_auto'])): ?>
+window.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+        window.print();
+    }, 500);
+});
+<?php endif; ?>
 </script>
+
+<!-- MODAL GENERAR REPORTE INDIVIDUAL POR EMPLEADO -->
+<div class="modal fade" id="modalReporteIndividual" tabindex="-1" role="dialog" aria-labelledby="modalReporteIndTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 580px;">
+        <div class="modal-content shadow-lg border-0" style="border-radius: 12px; overflow: hidden;">
+            <div class="modal-header">
+                <h5 class="modal-title font-weight-bold d-flex align-items-center" id="modalReporteIndTitle">
+                    <i class="fa-solid fa-file-invoice mr-2 text-primary"></i> Generar Reporte por Empleado
+                </h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">&times;</button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="text-muted small mb-3">Selecciona al trabajador y el período deseado para generar su reporte individual oficial con membrete y firmas JUSHSAL.</p>
+
+                <div class="form-group mb-3">
+                    <label class="small font-weight-bold text-dark">Trabajador <span class="text-danger">*</span></label>
+                    <select id="rep_ind_empleado" class="form-control" style="height: 38px;">
+                        <option value="">-- Seleccionar Trabajador --</option>
+                        <?php foreach ($empleados as $emp): ?>
+                            <option value="<?= $emp['id'] ?>" <?= ((int)($empleadoId ?? 0) === (int)$emp['id']) ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($emp['apellidos'] . ' ' . $emp['nombres']) ?> (DNI: <?= htmlspecialchars($emp['dni']) ?>)
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label class="small font-weight-bold text-dark mb-1">Período del Reporte</label>
+                    <div class="d-flex flex-wrap mb-2" style="gap: 6px;">
+                        <button type="button" class="btn btn-xs btn-outline-secondary font-weight-bold" onclick="setPeriodoReporte('mes_actual')">
+                            Este Mes
+                        </button>
+                        <button type="button" class="btn btn-xs btn-outline-secondary font-weight-bold" onclick="setPeriodoReporte('mes_anterior')">
+                            Mes Anterior
+                        </button>
+                        <button type="button" class="btn btn-xs btn-outline-secondary font-weight-bold" onclick="setPeriodoReporte('ultimos_30')">
+                            Últimos 30 días
+                        </button>
+                        <button type="button" class="btn btn-xs btn-outline-secondary font-weight-bold" onclick="setPeriodoReporte('hoy')">
+                            Hoy
+                        </button>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-6">
+                            <label class="small text-muted mb-0">Desde:</label>
+                            <input type="date" id="rep_ind_inicio" class="form-control" value="<?= date('Y-m-01') ?>" style="height: 38px;">
+                        </div>
+                        <div class="col-6">
+                            <label class="small text-muted mb-0">Hasta:</label>
+                            <input type="date" id="rep_ind_fin" class="form-control" value="<?= date('Y-m-d') ?>" style="height: 38px;">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border-top pt-3">
+                    <label class="small font-weight-bold text-dark mb-2 d-block">Selecciona el Formato de Salida:</label>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                        <button type="button" class="btn btn-primary btn-sm py-2 font-weight-bold text-truncate" onclick="ejecutarReporteIndividual('pantalla')" title="Ver en Pantalla">
+                            <i class="fa-solid fa-desktop mr-1"></i> Ver en Pantalla
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm py-2 font-weight-bold text-truncate" onclick="ejecutarReporteIndividual('pdf')" title="Imprimir / PDF">
+                            <i class="fa-solid fa-print mr-1 text-primary"></i> Imprimir / PDF
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm py-2 font-weight-bold text-truncate" onclick="ejecutarReporteIndividual('excel')" title="Descargar Excel">
+                            <i class="fa-solid fa-file-excel mr-1 text-success"></i> Descargar Excel
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer justify-content-end py-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm px-3" data-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <?php require_once APP_ROOT . '/views/layout/footer.php'; ?>

@@ -181,6 +181,12 @@ class DispositivosController {
                 $cmd = "\"$pythonBin\" -E \"$pythonScript\"";
                 if ($mode === 'today') {
                     $cmd .= " --today-only";
+                } elseif ($mode === 'full') {
+                    $cmd .= " --full";
+                } elseif (!empty($_POST['days'])) {
+                    $cmd .= " --days " . (int)$_POST['days'];
+                } elseif (!empty($_POST['date'])) {
+                    $cmd .= " --date " . escapeshellarg($_POST['date']);
                 }
                 if ($id > 0) {
                     $cmd .= " --device $id";

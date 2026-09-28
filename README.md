@@ -28,7 +28,7 @@ Sistema profesional de control de personal y asistencia laboral diseñado para *
 4. **Panel Web Moderno y Responsivo**:
    - Dashboard en tiempo real con KPIs y feed de marcaciones en vivo.
    - Filtros avanzados por fecha, empleado, área y estado de asistencia.
-   - Exportación de reportes a **Excel / CSV**.
+   - Exportación de reportes a **Excel / PDF**.
    - Ajustes y justificaciones manuales con trazabilidad para RRHH.
 
 ---

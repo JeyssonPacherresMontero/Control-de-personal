@@ -247,18 +247,19 @@ $roleLabel = match($userRole) {
         }
 
         /* TARJETAS Y CONTENEDORES ULTRA LIMPIOS */
+        /* TARJETAS Y CONTENEDORES ULTRA LIMPIOS */
         .card {
-            border: 1px solid #eef2f6 !important;
-            border-radius: 12px !important;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 1px 2px rgba(0, 0, 0, 0.01) !important;
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 10px !important;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02) !important;
             background-color: #ffffff;
-            margin-bottom: 0.85rem;
+            margin-bottom: 1.25rem !important;
             transition: border-color 0.15s ease;
         }
         .card-header {
             background-color: #ffffff !important;
             border-bottom: 1px solid #f1f5f9 !important;
-            padding: 0.75rem 1.25rem !important;
+            padding: 0.85rem 1.25rem !important;
         }
         .card-header::after,
         .card-header::before,
@@ -268,9 +269,9 @@ $roleLabel = match($userRole) {
             content: none !important;
         }
         .card-header .card-title {
-            font-size: 0.88rem !important;
+            font-size: 0.92rem !important;
             font-weight: 700 !important;
-            color: #1e293b !important;
+            color: #0f172a !important;
             margin-bottom: 0;
             display: flex;
             align-items: center;
@@ -285,29 +286,29 @@ $roleLabel = match($userRole) {
             gap: 8px;
         }
         .card-body {
-            padding: 0.85rem 1rem !important;
+            padding: 1.25rem !important;
         }
 
-        /* KPI / STAT CARDS MINIMALISTAS Y LIGEROS */
+        /* KPI / STAT CARDS MINIMALISTAS Y COHERENTES (SIN POLICROMÍA ESTRIDENTE) */
         .kpi-card {
             background: #ffffff;
-            border: 1px solid #eef2f6;
-            border-radius: 12px;
-            padding: 0.75rem 0.95rem;
-            margin-bottom: 0.85rem;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.25rem;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
             display: flex;
             flex-direction: column;
             justify-content: space-between;
             min-height: auto;
             position: relative;
             overflow: hidden;
-            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
         }
         .kpi-card:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
-            border-color: #e2e8f0;
+            border-color: #cbd5e1;
         }
         .kpi-card-header {
             display: flex;
@@ -315,53 +316,69 @@ $roleLabel = match($userRole) {
             justify-content: space-between;
         }
         .kpi-title {
-            font-size: 0.72rem;
+            font-size: 0.74rem;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.03em;
+            letter-spacing: 0.04em;
             color: #64748b;
-            margin-bottom: 0.15rem;
+            margin-bottom: 0.25rem;
         }
         .kpi-value {
-            font-size: 1.45rem;
-            font-weight: 800;
-            color: #0f172a;
+            font-size: 1.65rem !important;
+            font-weight: 800 !important;
+            color: #0f172a !important;
             line-height: 1.15;
-            margin-bottom: 0.1rem;
+            margin-bottom: 0.15rem;
         }
         .kpi-subtitle {
-            font-size: 0.72rem;
-            color: #94a3b8;
+            font-size: 0.78rem;
+            color: #64748b;
             font-weight: 500;
-            line-height: 1.2;
+            line-height: 1.3;
         }
         .kpi-icon-box {
-            width: 38px;
-            height: 38px;
-            border-radius: 10px;
+            width: 42px;
+            height: 42px;
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.1rem;
+            font-size: 1.15rem;
             flex-shrink: 0;
-            margin-left: 0.5rem;
+            margin-left: 0.75rem;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            color: #1e40af;
         }
-        .kpi-icon-blue { background: #eff6ff; color: #2563eb; }
-        .kpi-icon-emerald { background: #ecfdf5; color: #059669; }
-        .kpi-icon-amber { background: #fffbeb; color: #d97706; }
-        .kpi-icon-rose { background: #fef2f2; color: #dc2626; }
-        .kpi-icon-slate { background: #f8fafc; color: #475569; }
-        .kpi-icon-teal { background: #f0fdfa; color: #0d9488; }
-        .kpi-icon-indigo { background: #eef2ff; color: #4f46e5; }
+        .kpi-icon-blue, .kpi-icon-indigo, .kpi-icon-teal, .kpi-icon-slate { 
+            background: #f8fafc; 
+            border: 1px solid #e2e8f0; 
+            color: #1e40af; 
+        }
+        .kpi-icon-emerald { 
+            background: #f8fafc; 
+            border: 1px solid #e2e8f0; 
+            color: #0f766e; 
+        }
+        .kpi-icon-amber { 
+            background: #f8fafc; 
+            border: 1px solid #e2e8f0; 
+            color: #b45309; 
+        }
+        .kpi-icon-rose { 
+            background: #f8fafc; 
+            border: 1px solid #e2e8f0; 
+            color: #b91c1c; 
+        }
 
         .kpi-footer-link {
             display: inline-flex;
             align-items: center;
-            font-size: 0.72rem;
+            font-size: 0.74rem;
             font-weight: 600;
-            color: #2563eb;
-            margin-top: 0.35rem;
-            padding-top: 0.35rem;
+            color: #1e40af;
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
             border-top: 1px dashed #f1f5f9;
             text-decoration: none;
         }
@@ -370,31 +387,32 @@ $roleLabel = match($userRole) {
             text-decoration: underline;
         }
 
-        /* BADGES MINIMALISTAS Y ELEGANTES (SIN BORDES PESADOS) */
+        /* BADGES MINIMALISTAS Y ELEGANTES (CON CONTRASTE Y SIN BORDES PESADOS) */
         .badge-pill-custom {
             display: inline-flex;
             align-items: center;
-            gap: 4px;
-            padding: 3px 8px;
-            font-size: 0.72rem;
+            gap: 5px;
+            padding: 3px 9px;
+            font-size: 0.74rem;
             font-weight: 600;
             border-radius: 6px;
-            line-height: 1.3;
+            line-height: 1.35;
+            border: 1px solid transparent;
         }
-        .badge-pill-presente { background-color: #ecfdf5; color: #065f46; }
-        .badge-pill-tardanza { background-color: #fffbeb; color: #92400e; }
-        .badge-pill-falta { background-color: #fef2f2; color: #991b1b; }
-        .badge-pill-justificado { background-color: #eff6ff; color: #1e40af; }
-        .badge-pill-sin-salida { background-color: #f5f3ff; color: #5b21b6; }
-        .badge-pill-online { background-color: #ecfdf5; color: #065f46; }
-        .badge-pill-offline { background-color: #fef2f2; color: #991b1b; }
-        .badge-pill-neutral { background-color: #f1f5f9; color: #475569; }
+        .badge-pill-presente { background-color: #f0fdf4; color: #166534; border-color: #bbf7d0; }
+        .badge-pill-tardanza { background-color: #fffbeb; color: #92400e; border-color: #fde68a; }
+        .badge-pill-falta { background-color: #fef2f2; color: #991b1b; border-color: #fecaca; }
+        .badge-pill-justificado { background-color: #eff6ff; color: #1e40af; border-color: #bfdbfe; }
+        .badge-pill-sin-salida { background-color: #faf5ff; color: #6b21a8; border-color: #e9d5ff; }
+        .badge-pill-online { background-color: #f0fdf4; color: #166534; border-color: #bbf7d0; }
+        .badge-pill-offline { background-color: #f8fafc; color: #64748b; border-color: #cbd5e1; }
+        .badge-pill-neutral { background-color: #f8fafc; color: #475569; border-color: #e2e8f0; }
 
         /* ROLES */
-        .badge-role-admin { background-color: #fef2f2; color: #991b1b; }
-        .badge-role-rrhh { background-color: #eff6ff; color: #1e40af; }
-        .badge-role-supervisor { background-color: #f0fdfa; color: #0f766e; }
-        .badge-role-consulta { background-color: #f1f5f9; color: #475569; }
+        .badge-role-admin { background-color: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+        .badge-role-rrhh { background-color: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+        .badge-role-supervisor { background-color: #f0fdfa; color: #0f766e; border: 1px solid #99f6e4; }
+        .badge-role-consulta { background-color: #f8fafc; color: #475569; border: 1px solid #e2e8f0; }
 
         /* TABLAS MODERNAS Y LIGERAS */
         .table {
@@ -404,19 +422,19 @@ $roleLabel = match($userRole) {
         .table thead th {
             background-color: #f8fafc !important;
             color: #475569 !important;
-            font-size: 0.76rem !important;
+            font-size: 0.75rem !important;
             font-weight: 700 !important;
             text-transform: uppercase !important;
-            letter-spacing: 0.03em !important;
+            letter-spacing: 0.04em !important;
             border-top: none !important;
             border-bottom: 1px solid #e2e8f0 !important;
-            padding: 0.6rem 0.85rem !important;
+            padding: 0.75rem 1rem !important;
             vertical-align: middle !important;
         }
         .table td {
-            padding: 0.55rem 0.85rem !important;
+            padding: 0.75rem 1rem !important;
             vertical-align: middle !important;
-            font-size: 0.85rem !important;
+            font-size: 0.86rem !important;
             border-top: 1px solid #f1f5f9 !important;
         }
         .table-hover tbody tr:hover {
@@ -474,23 +492,30 @@ $roleLabel = match($userRole) {
             border-radius: 6px !important;
             font-size: 0.865rem !important;
             color: #1e293b !important;
-            height: 38px;
+            height: 38px !important;
         }
         .form-control:focus, .custom-select:focus {
-            border-color: #3b82f6 !important;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12) !important;
+            border-color: #1e40af !important;
+            box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.12) !important;
         }
         .form-control-sm, .custom-select-sm {
-            height: 34px !important;
-            font-size: 0.825rem !important;
+            height: 38px !important;
+            font-size: 0.85rem !important;
+            padding: 0.375rem 0.75rem !important;
         }
         label.form-label-custom {
-            font-size: 0.78rem;
+            font-size: 0.74rem;
             font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
             color: #475569;
-            margin-bottom: 4px;
+            margin-bottom: 6px;
             display: flex;
             align-items: center;
+        }
+        label.form-label-custom i {
+            color: #1e40af;
+            margin-right: 5px;
         }
 
         /* SELECT2 BOOTSTRAP 4 CUSTOM THEME & REFINEMENT */
@@ -498,9 +523,9 @@ $roleLabel = match($userRole) {
             width: 100% !important;
         }
         .select2-container--bootstrap4 .select2-selection--single {
-            height: 34px !important;
-            padding: 0.35rem 0.65rem !important;
-            font-size: 0.835rem !important;
+            height: 38px !important;
+            padding: 0.45rem 0.75rem !important;
+            font-size: 0.85rem !important;
             line-height: 1.5 !important;
             border-radius: 6px !important;
             border: 1px solid #cbd5e1 !important;
@@ -513,8 +538,8 @@ $roleLabel = match($userRole) {
         }
         .select2-container--bootstrap4.select2-container--focus .select2-selection--single,
         .select2-container--bootstrap4.select2-container--open .select2-selection--single {
-            border-color: #3b82f6 !important;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12) !important;
+            border-color: #1e40af !important;
+            box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.12) !important;
         }
         .select2-container--bootstrap4 .select2-selection--single .select2-selection__arrow {
             top: 50% !important;
@@ -544,8 +569,8 @@ $roleLabel = match($userRole) {
             outline: none;
         }
         .select2-container--bootstrap4 .select2-search--dropdown .select2-search__field:focus {
-            border-color: #3b82f6 !important;
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15) !important;
+            border-color: #1e40af !important;
+            box-shadow: 0 0 0 2px rgba(30, 64, 175, 0.15) !important;
         }
         .select2-container--bootstrap4 .select2-results__option {
             padding: 7px 12px !important;
@@ -554,12 +579,12 @@ $roleLabel = match($userRole) {
             transition: background-color 0.12s ease;
         }
         .select2-container--bootstrap4 .select2-results__option--highlighted[aria-selected] {
-            background-color: #1d4ed8 !important;
+            background-color: #1e40af !important;
             color: #ffffff !important;
         }
         .select2-container--bootstrap4 .select2-results__option[aria-selected=true] {
             background-color: #eff6ff !important;
-            color: #1d4ed8 !important;
+            color: #1e40af !important;
             font-weight: 700 !important;
         }
 
@@ -575,27 +600,27 @@ $roleLabel = match($userRole) {
 
         /* BOTONES Y TOOLBARS UI/UX MEJORADOS */
         .btn {
-            border-radius: 7px !important;
+            border-radius: 6px !important;
             font-weight: 600 !important;
             font-size: 0.835rem !important;
             display: inline-flex !important;
             align-items: center;
             justify-content: center;
             gap: 6px;
-            transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            transition: all 0.15s ease !important;
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
             white-space: nowrap;
         }
         .btn:hover {
             transform: translateY(-1px);
-            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
         }
         .btn:active {
             transform: translateY(0);
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
         }
         .btn-sm {
-            padding: 0.4rem 0.85rem !important;
+            padding: 0.42rem 0.85rem !important;
             font-size: 0.825rem !important;
         }
         .btn-xs {
@@ -604,24 +629,24 @@ $roleLabel = match($userRole) {
             border-radius: 5px !important;
         }
         .btn-primary {
-            background-color: #1d4ed8 !important;
-            border-color: #1d4ed8 !important;
-            color: #ffffff !important;
-        }
-        .btn-primary:hover {
             background-color: #1e40af !important;
             border-color: #1e40af !important;
             color: #ffffff !important;
         }
-        .btn-success {
-            background-color: #059669 !important;
-            border-color: #059669 !important;
+        .btn-primary:hover {
+            background-color: #1d4ed8 !important;
+            border-color: #1d4ed8 !important;
             color: #ffffff !important;
         }
+        .btn-success {
+            background-color: #ffffff !important;
+            border-color: #cbd5e1 !important;
+            color: #166534 !important;
+        }
         .btn-success:hover {
-            background-color: #047857 !important;
-            border-color: #047857 !important;
-            color: #ffffff !important;
+            background-color: #f0fdf4 !important;
+            border-color: #86efac !important;
+            color: #15803d !important;
         }
         .btn-outline-secondary {
             background-color: #ffffff !important;
@@ -629,29 +654,39 @@ $roleLabel = match($userRole) {
             color: #334155 !important;
         }
         .btn-outline-secondary:hover {
-            background-color: #f1f5f9 !important;
+            background-color: #f8fafc !important;
             border-color: #94a3b8 !important;
             color: #0f172a !important;
         }
         .btn-outline-primary {
             background-color: #ffffff !important;
-            border-color: #bfdbfe !important;
-            color: #1d4ed8 !important;
+            border-color: #cbd5e1 !important;
+            color: #1e40af !important;
         }
         .btn-outline-primary:hover {
             background-color: #eff6ff !important;
-            border-color: #1d4ed8 !important;
-            color: #1e40af !important;
+            border-color: #93c5fd !important;
+            color: #1d4ed8 !important;
+        }
+        .btn-outline-info {
+            background-color: #ffffff !important;
+            border-color: #cbd5e1 !important;
+            color: #0f766e !important;
+        }
+        .btn-outline-info:hover {
+            background-color: #f0fdfa !important;
+            border-color: #99f6e4 !important;
+            color: #0f766e !important;
         }
         .btn-soft-primary {
             background-color: #eff6ff !important;
             border: 1px solid #bfdbfe !important;
-            color: #1d4ed8 !important;
+            color: #1e40af !important;
         }
         .btn-soft-primary:hover {
             background-color: #dbeafe !important;
             border-color: #93c5fd !important;
-            color: #1e40af !important;
+            color: #1d4ed8 !important;
         }
         .btn-soft-info {
             background-color: #f0fdfa !important;
@@ -670,13 +705,13 @@ $roleLabel = match($userRole) {
             align-items: center;
             justify-content: space-between;
             flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 1rem;
-            padding: 0.75rem 1rem;
+            gap: 12px;
+            margin-bottom: 1.25rem;
+            padding: 0.85rem 1.25rem;
             background: #ffffff;
             border: 1px solid #e2e8f0;
             border-radius: 10px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
         }
         .actions-toolbar-group {
             display: flex;
@@ -685,7 +720,7 @@ $roleLabel = match($userRole) {
             gap: 8px;
         }
 
-        /* MODALES CENTRADOS PERFECTOS */
+        /* MODALES INSTITUCIONALES UNIFICADOS JUSHSAL */
         .modal {
             text-align: center;
             padding: 0 !important;
@@ -711,32 +746,186 @@ $roleLabel = match($userRole) {
             .modal-dialog.modal-sm {
                 max-width: 380px;
             }
+            .modal-dialog.modal-md {
+                max-width: 600px;
+            }
             .modal-dialog.modal-lg {
-                max-width: 780px;
+                max-width: 820px;
             }
             .modal-dialog.modal-xl {
                 max-width: 1050px;
             }
         }
         .modal-content {
-            border-radius: 14px !important;
-            border: 1px solid #e2e8f0 !important;
-            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.2) !important;
+            border-radius: 12px !important;
+            border: 1px solid #cbd5e1 !important;
+            box-shadow: 0 20px 30px -10px rgba(15, 23, 42, 0.22), 0 10px 15px -5px rgba(15, 23, 42, 0.1) !important;
             overflow: hidden;
+            background-color: #ffffff !important;
         }
-        .modal-header {
-            padding: 0.95rem 1.25rem !important;
-            border-bottom: 1px solid #e2e8f0 !important;
+        .modal-header,
+        .modal-header.bg-primary,
+        .modal-header.bg-success,
+        .modal-header.bg-warning,
+        .modal-header.bg-dark,
+        .modal-header.bg-white {
+            background-color: #0f172a !important; /* Azul marino institucional / Slate 900 */
+            background-image: none !important;
+            color: #ffffff !important;
+            padding: 0.95rem 1.35rem !important;
+            border-bottom: 1px solid #1e293b !important;
             display: flex !important;
             align-items: center !important;
             justify-content: space-between !important;
         }
+        .modal-header .modal-title {
+            font-size: 1.05rem !important;
+            font-weight: 600 !important;
+            color: #ffffff !important;
+            display: flex !important;
+            align-items: center !important;
+            letter-spacing: -0.01em !important;
+            margin-bottom: 0 !important;
+        }
+        .modal-header .modal-title i {
+            color: #93c5fd !important; /* Acento celeste corporativo sutil */
+            margin-right: 0.55rem !important;
+        }
+        .modal-header .close {
+            color: #94a3b8 !important;
+            opacity: 0.8 !important;
+            text-shadow: none !important;
+            font-size: 1.35rem !important;
+            font-weight: 300 !important;
+            padding: 0.85rem 1.25rem !important;
+            margin: -0.85rem -1.25rem -0.85rem auto !important;
+            line-height: 1 !important;
+            transition: all 0.2s ease-in-out !important;
+        }
+        .modal-header .close:hover,
+        .modal-header .close:focus {
+            color: #ffffff !important;
+            opacity: 1 !important;
+            outline: none !important;
+        }
+        .modal-body {
+            background-color: #ffffff !important;
+            color: #1e293b !important;
+            padding: 1.5rem 1.75rem !important;
+        }
         .modal-footer {
             background-color: #f8fafc !important;
             border-top: 1px solid #e2e8f0 !important;
-            padding: 0.85rem 1.25rem !important;
+            padding: 0.95rem 1.75rem !important;
             display: flex !important;
             align-items: center !important;
+        }
+
+        /* TÍTULOS DE SECCIÓN LIMPIOS PARA FORMULARIOS EN MODALES (SIN CAJAS ANIDADAS) */
+        .modal-section-title {
+            font-size: 0.76rem !important;
+            font-weight: 700 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.05em !important;
+            color: #475569 !important;
+            margin-top: 1.35rem !important;
+            margin-bottom: 0.85rem !important;
+            padding-bottom: 0.45rem !important;
+            border-bottom: 1px solid #e2e8f0 !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 0.5rem !important;
+        }
+        .modal-section-title:first-child {
+            margin-top: 0 !important;
+        }
+        .modal-section-title i {
+            color: #1e40af !important;
+            font-size: 0.85rem !important;
+        }
+
+        /* ESTILIZACIÓN NEUTRA Y SERIA PARA FORMULARIOS DENTRO DE MODALES */
+        .modal .form-group {
+            margin-bottom: 1.15rem !important;
+        }
+        .modal label,
+        .modal .form-group label {
+            color: #334155 !important; /* Slate 700 institucional */
+            font-weight: 600 !important;
+            font-size: 0.82rem !important;
+            letter-spacing: 0.01em !important;
+            margin-bottom: 0.35rem !important;
+        }
+        .modal label i,
+        .modal .form-group label i {
+            color: #64748b !important; /* Iconos sobrios en gris pizarra */
+        }
+        .modal .form-control {
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 6px !important;
+            color: #0f172a !important;
+            font-size: 0.875rem !important;
+            background-color: #ffffff !important;
+            height: 38px;
+            padding: 0.45rem 0.75rem;
+            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+        }
+        .modal select.form-control {
+            height: 38px !important;
+        }
+        .modal textarea.form-control {
+            height: auto !important;
+        }
+        .modal .form-control:focus {
+            border-color: #1e40af !important;
+            box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.12) !important;
+        }
+        .modal .form-control::placeholder {
+            color: #94a3b8 !important;
+            font-size: 0.84rem;
+        }
+        .modal .card {
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 8px !important;
+            background-color: #ffffff !important;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03) !important;
+        }
+        .modal .card-header {
+            background-color: #f8fafc !important;
+            border-bottom: 1px solid #e2e8f0 !important;
+            color: #0f172a !important;
+            font-weight: 600 !important;
+            padding: 0.65rem 1rem !important;
+        }
+        .modal .btn-primary {
+            background-color: #1e40af !important;
+            border-color: #1e40af !important;
+            font-weight: 600 !important;
+            border-radius: 6px !important;
+            box-shadow: 0 1px 2px rgba(30, 64, 175, 0.15) !important;
+            padding: 0.45rem 1.15rem !important;
+        }
+        .modal .btn-primary:hover,
+        .modal .btn-primary:focus {
+            background-color: #1d4ed8 !important;
+            border-color: #1d4ed8 !important;
+        }
+        .modal .btn-secondary,
+        .modal .btn-default,
+        .modal .btn-outline-secondary {
+            background-color: #ffffff !important;
+            border: 1px solid #cbd5e1 !important;
+            color: #475569 !important;
+            font-weight: 600 !important;
+            border-radius: 6px !important;
+            padding: 0.45rem 1.15rem !important;
+        }
+        .modal .btn-secondary:hover,
+        .modal .btn-default:hover,
+        .modal .btn-outline-secondary:hover {
+            background-color: #f1f5f9 !important;
+            color: #1e293b !important;
+            border-color: #94a3b8 !important;
         }
 
         /* ALINEACIÓN Y CENTRADO DE TABLAS */

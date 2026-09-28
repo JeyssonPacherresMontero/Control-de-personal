@@ -119,7 +119,7 @@ switch ($route) {
             $controller->editar();
         } elseif ($action === 'justificar_admin') {
             $requirePost('asistencia');
-            AuthController::requireRole('ADMIN', 'asistencia');
+            AuthController::requireRole(['ADMIN', 'RRHH'], 'asistencia');
             $controller->justificarAdmin();
         } elseif ($action === 'historial_eventos') {
             $controller->historialEventos();

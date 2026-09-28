@@ -176,10 +176,11 @@ class AttendanceSynchronizer:
         except Exception as e:
             logger.error(f"Error actualizando estado de dispositivo {device_id}: {str(e)}")
 
-    def sync_device(self, device, clear_after=False, sync_users=True, today_only=False, target_date=None, days=None):
+    def sync_device(self, device, clear_after=False, sync_users=True, today_only=False, target_date=None, days=None, full=False):
         """
         Ejecuta la sincronización para un dispositivo biométrico específico.
-        Soporta filtrado rápido por día (today_only), fecha específica (target_date) o ventana de días (days).
+        Soporta filtrado rápido por día (today_only), fecha específica (target_date),
+        ventana de días (days), o histórico completo (full).
         """
         device_id = device['id']
         ip = device['ip']
@@ -189,7 +190,7 @@ class AttendanceSynchronizer:
         force_udp = (protocol.upper() == 'UDP')
 
         start_time = time.time()
-        filter_mode = "SOLO HOY" if today_only else (f"FECHA {target_date}" if target_date else (f"ÚLTIMOS {days} DÍAS" if days else "INCREMENTAL"))
+        filter_mode = "HISTÓRICO COMPLETO" if full else ("SOLO HOY" if today_only else (f"FECHA {target_date}" if target_date else (f"ÚLTIMOS {days} DÍAS" if days else "INCREMENTAL (7 DÍAS)")))
         logger.info(f"==> Iniciando sincronización ({filter_mode}) con biométrico #{device_id} [{device['nombre']}] en {ip}:{port} ({protocol})")
 
         zk_service = ZKDeviceService(
@@ -223,7 +224,7 @@ class AttendanceSynchronizer:
                 self.log_sync_event(device_id, 'SYNC_AUTO', 0, 0, 0, 'EXITO', 'Sin nuevas marcaciones en el dispositivo.', duration)
                 logger.info(f"Dispositivo #{device_id} no tiene registros de asistencia pendientes.")
                 zk_service.disconnect()
-                return {"success": True, "downloaded": 0, "inserted": 0, "duplicates": 0}
+                return {"success": True, "downloaded": 0, "inserted": 0, "duplicates": 0, "affected_dates": []}
 
             # Mapeo de empleados
             emp_map = self.get_employee_mapping()
@@ -238,13 +239,15 @@ class AttendanceSynchronizer:
                 today_dt = datetime.date.today()
                 
                 if today_only:
-                    # Filtra estrictamente las marcaciones de la fecha de hoy
                     candidate_records = [r for r in records if r['timestamp'].date() == today_dt]
                 elif target_date:
                     candidate_records = [r for r in records if r['timestamp'].date() == target_date]
                 elif days and days > 0:
                     cutoff_days = datetime.datetime.now() - datetime.timedelta(days=days)
                     candidate_records = [r for r in records if r['timestamp'] >= cutoff_days]
+                elif full:
+                    # MODO HISTÓRICO COMPLETO: evalúa el 100% de las marcaciones almacenadas en el reloj
+                    candidate_records = records
                 else:
                     # Modo Incremental inteligente:
                     # Consultar la última marcación registrada de este dispositivo
@@ -252,9 +255,9 @@ class AttendanceSynchronizer:
                     max_row = cursor.fetchone()
                     max_fecha = max_row['max_fecha'] if max_row and max_row['max_fecha'] else None
 
-                    # Si ya tenemos histórico, filtramos solo los registros de los últimos 2 días o posteriores
+                    # Ventana de seguridad de 7 días (para proteger fines de semana largos y descansos)
                     if max_fecha and isinstance(max_fecha, datetime.datetime):
-                        cutoff = max_fecha - datetime.timedelta(days=2)
+                        cutoff = max_fecha - datetime.timedelta(days=7)
                         candidate_records = [r for r in records if r['timestamp'] >= cutoff]
                     else:
                         candidate_records = records
@@ -351,7 +354,12 @@ class AttendanceSynchronizer:
             logger.info(msg)
 
             self.update_device_status(device_id, 'ONLINE')
-            self.log_sync_event(device_id, 'SYNC_AUTO' if not today_only else 'SYNC_MANUAL', total_downloaded, inserted_count, duplicates_count, 'EXITO', msg, duration)
+            self.log_sync_event(device_id, 'SYNC_AUTO' if not (today_only or full) else 'SYNC_MANUAL', total_downloaded, inserted_count, duplicates_count, 'EXITO', msg, duration)
+
+            # Recolectar fechas únicas de las marcaciones candidatas
+            affected_dates = set()
+            for rec in candidate_records:
+                affected_dates.add(rec['timestamp'].date().strftime('%Y-%m-%d'))
 
             zk_service.disconnect()
             return {
@@ -360,7 +368,8 @@ class AttendanceSynchronizer:
                 "downloaded": total_downloaded,
                 "evaluated": len(candidate_records),
                 "inserted": inserted_count,
-                "duplicates": duplicates_count
+                "duplicates": duplicates_count,
+                "affected_dates": list(affected_dates)
             }
 
         except Exception as e:
@@ -381,7 +390,7 @@ class AttendanceSynchronizer:
                 "error": str(e)
             }
 
-    def run_attendance_calculation(self):
+    def run_attendance_calculation(self, dates=None):
         """Invoca el motor de cálculo de asistencia diaria en PHP tras sincronizar"""
         try:
             import shutil
@@ -389,7 +398,6 @@ class AttendanceSynchronizer:
             script_path = base_dir / 'app' / 'Console' / 'process_attendance.php'
             
             if script_path.exists():
-                logger.info("Ejecutando motor de cálculo de asistencia diaria...")
                 php_bin = shutil.which('php')
                 if not php_bin:
                     xampp_php = Path("C:/xampp/php/php.exe")
@@ -398,23 +406,34 @@ class AttendanceSynchronizer:
                     else:
                         php_bin = 'php'
                 
-                result = subprocess.run([php_bin, str(script_path)], capture_output=True, text=True, timeout=60)
-                if result.returncode == 0:
-                    logger.info(f"Cálculo completado: {result.stdout.strip()}")
+                if dates and len(dates) > 0:
+                    min_d = min(dates)
+                    max_d = max(dates)
+                    logger.info(f"Ejecutando motor de cálculo de asistencia diaria para rango {min_d} al {max_d}...")
+                    cmd_args = [php_bin, str(script_path), min_d, max_d]
                 else:
-                    logger.warning(f"Aviso en cálculo de asistencia: {result.stderr.strip()}")
+                    logger.info("Ejecutando motor de cálculo de asistencia diaria para hoy...")
+                    cmd_args = [php_bin, str(script_path)]
+
+                result = subprocess.run(cmd_args, capture_output=True, text=True, timeout=180)
+                if result.returncode == 0:
+                    logger.info(f"Cálculo completado exitosamente: {result.stdout.strip()[:300]}")
+                else:
+                    logger.warning(f"Aviso en cálculo de asistencia: {result.stderr.strip()[:300]}")
         except Exception as e:
             logger.error(f"Error al invocar cálculo de asistencia PHP: {str(e)}")
 
-    def sync_all_devices(self, device_id=None, clear_after=False, sync_users=True, today_only=False, target_date=None, days=None):
+    def sync_all_devices(self, device_id=None, clear_after=False, sync_users=True, today_only=False, target_date=None, days=None, full=False):
         """Itera y sincroniza todos los biométricos activos sin detenerse por fallos individuales"""
         devices = self.get_active_devices(device_id)
         if not devices:
             logger.info("No hay dispositivos biométricos activos para sincronizar.")
             return
 
-        logger.info(f"Iniciando ciclo de sincronización para {len(devices)} dispositivo(s)...")
+        mode_desc = "HISTÓRICO COMPLETO" if full else ("SOLO HOY" if today_only else (f"FECHA {target_date}" if target_date else (f"ÚLTIMOS {days} DÍAS" if days else "INCREMENTAL (7 DÍAS)")))
+        logger.info(f"Iniciando ciclo de sincronización ({mode_desc}) para {len(devices)} dispositivo(s)...")
         total_new_punches = 0
+        all_affected_dates = set()
 
         for dev in devices:
             res = self.sync_device(
@@ -423,14 +442,22 @@ class AttendanceSynchronizer:
                 sync_users=sync_users,
                 today_only=today_only,
                 target_date=target_date,
-                days=days
+                days=days,
+                full=full
             )
             if res.get('success', False):
-                total_new_punches += res.get('inserted', 0)
+                ins = res.get('inserted', 0)
+                total_new_punches += ins
+                if ins > 0 or full:
+                    for d in res.get('affected_dates', []):
+                        all_affected_dates.add(d)
 
-        # Si hubo nuevas marcaciones, procesar reglas de asistencia automáticamente
-        if total_new_punches > 0:
-            self.run_attendance_calculation()
+        # Si hubo nuevas marcaciones o se solicitó histórico completo, procesar asistencia para las fechas afectadas
+        if total_new_punches > 0 or (full and all_affected_dates):
+            logger.info(f"Se insertaron {total_new_punches} marcaciones. Recalculando {len(all_affected_dates)} fecha(s) afectadas...")
+            self.run_attendance_calculation(dates=all_affected_dates)
+        else:
+            logger.info("No hubo marcaciones nuevas insertadas en este ciclo.")
 
         logger.info("Ciclo de sincronización finalizado exitosamente.")
 
@@ -459,6 +486,7 @@ def main():
     parser.add_argument('--test', action='store_true', help='Prueba la conexión con los biométricos configurados')
     parser.add_argument('--clear', action='store_true', help='Limpia los registros del reloj tras guardarlos en MySQL')
     parser.add_argument('--today-only', action='store_true', help='Filtra y procesa únicamente las marcaciones de hoy (Ultra Rápido)')
+    parser.add_argument('--full', action='store_true', help='Sincronización histórica completa: evalúa y procesa todas las marcaciones del reloj sin recortar por fecha')
     parser.add_argument('--days', type=int, help='Filtra marcaciones de los últimos N días')
     parser.add_argument('--date', type=str, help='Fecha específica a sincronizar (formato YYYY-MM-DD)')
     parser.add_argument('--skip-users', action='store_true', help='Omite la sincronización de usuarios para mayor velocidad')
@@ -510,7 +538,8 @@ def main():
                 sync_users=not args.skip_users,
                 today_only=args.today_only,
                 target_date=target_date_parsed,
-                days=args.days
+                days=args.days,
+                full=args.full
             )
     finally:
         sync.close_db()

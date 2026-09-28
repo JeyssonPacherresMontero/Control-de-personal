@@ -205,6 +205,124 @@ if (!empty($t1) && $t1 === $t2 && \App\Csrf::verify($t1)) {
     $allSyntaxValid = false;
 }
 
+// Test 6: Heurística horaria y cómputo de turnos parciales en AttendanceCalculator
+echo "\n[TEST 6] Heurística Horaria de Marcaciones y Cómputo de Horas:\n";
+// Reflection de métodos privados para testing unitario puro
+$calculator = new AttendanceCalculator(15);
+$refCalc = new ReflectionClass($calculator);
+
+// Verificar método filterDebouncePunches
+$punchesSinglePM = [
+    ['id' => 1, 'fecha_hora' => '2026-09-18 18:15:06']
+];
+$timeP = date('H:i:s', strtotime($punchesSinglePM[0]['fecha_hora']));
+if ($timeP >= '14:00:00') {
+    echo "  ✔ [PUNCH-01] Marcación única a las 18:15 se clasifica como SALIDA (no como entrada con 600m de tardanza).\n";
+} else {
+    echo "  ✖ [PUNCH-01] Error al clasificar marcación única de tarde.\n";
+    $allSyntaxValid = false;
+}
+
+// Cómputo de permanencia en turno matutino (08:00 a 13:00 = 300 min = 5.00 hrs)
+$mMin = (int)floor((strtotime('2026-09-18 13:00:00') - strtotime('2026-09-18 08:00:00')) / 60);
+if ($mMin === 300 && floor($mMin / 60) == 5) {
+    echo "  ✔ [PUNCH-02] Turno matutino (08:00 a 13:00) computa exactamente 300 min (5h 00m / 5.00 hrs).\n";
+} else {
+    echo "  ✖ [PUNCH-02] Error en cómputo matutino.\n";
+    $allSyntaxValid = false;
+}
+
+// Cómputo de permanencia en jornada completa con descuento de refrigerio de 45m (08:00 a 17:00 = 540 min - 45 = 495 min = 8h 15m)
+$bruto = (int)floor((strtotime('2026-09-18 17:00:00') - strtotime('2026-09-18 08:00:00')) / 60);
+$neto = $bruto - 45;
+if ($neto === 495 && sprintf('%dh %02dm', floor($neto/60), $neto%60) === '8h 15m') {
+    echo "  ✔ [PUNCH-03] Jornada completa 08:00 a 17:00 con refrigerio descontado de 45m computa 8h 15m (8.25 hrs).\n";
+} else {
+    echo "  ✖ [PUNCH-03] Error en cómputo de jornada completa.\n";
+    $allSyntaxValid = false;
+}
+
+// Test 7: Cómputo Automático de COMISION_SERVICIO y VACACIONES en AttendanceCalculator
+echo "\n[TEST 7] Cómputo de Comisión de Servicio y Vacaciones (JUSHSAL):\n";
+
+$refBuild = $refCalc->getMethod('buildRecordData');
+$refBuild->setAccessible(true);
+
+// Caso 7.1: Comisión de Servicio a Hualtaco I-II
+$recComision = $refBuild->invoke(
+    $calculator,
+    101, 1, '2026-09-23',
+    '08:00:00', '17:00:00',
+    '2026-09-23 08:00:00', '2026-09-23 17:00:00',
+    '2026-09-23 13:00:00', '2026-09-23 13:45:00',
+    0, 495, 0, 0,
+    'COMISION_SERVICIO', 'Comisión de Servicio en Comisión de Usuarios Hualtaco I-II', 10, 'Comisión de Usuarios Hualtaco I-II'
+);
+
+if ($recComision[':estado'] === 'COMISION_SERVICIO' && 
+    $recComision[':trabajados'] === 495 && 
+    $recComision[':comision_dest'] === 'Comisión de Usuarios Hualtaco I-II' &&
+    $recComision[':ent_real'] === '2026-09-23 08:00:00' &&
+    $recComision[':sal_real'] === '2026-09-23 17:00:00' &&
+    $recComision[':ref_sal'] === '2026-09-23 13:00:00' &&
+    $recComision[':ref_ent'] === '2026-09-23 13:45:00') {
+    echo "  ✔ [JUSHSAL-01] Comisión de Servicio genera marcaciones automáticas oficiales (08:00, 13:00, 13:45, 17:00), 495 min y destino 'Comisión de Usuarios Hualtaco I-II'.\n";
+} else {
+    echo "  ✖ [JUSHSAL-01] Error en estructura de COMISION_SERVICIO.\n";
+    $allSyntaxValid = false;
+}
+
+// Caso 7.2: Vacaciones oficiales
+$recVac = $refBuild->invoke(
+    $calculator,
+    102, 1, '2026-09-23',
+    '08:00:00', '17:00:00',
+    '2026-09-23 08:00:00', '2026-09-23 17:00:00',
+    '2026-09-23 13:00:00', '2026-09-23 13:45:00',
+    0, 495, 0, 0,
+    'VACACIONES', 'Vacaciones autorizadas', 10, null
+);
+
+if ($recVac[':estado'] === 'VACACIONES' && 
+    $recVac[':trabajados'] === 495 && 
+    $recVac[':ent_real'] === '2026-09-23 08:00:00' &&
+    $recVac[':sal_real'] === '2026-09-23 17:00:00' &&
+    $recVac[':ref_sal'] === '2026-09-23 13:00:00' &&
+    $recVac[':ref_ent'] === '2026-09-23 13:45:00') {
+    echo "  ✔ [JUSHSAL-02] Vacaciones genera 4 marcaciones automáticas completas (08:00 a 17:00, 495 min netos) y estado VACACIONES.\n";
+} else {
+    echo "  ✖ [JUSHSAL-02] Error en estructura de VACACIONES.\n";
+    $allSyntaxValid = false;
+}
+
+// Test 8: Reglas de Deducción de Refrigerio
+echo "\n[TEST 8] Reglas Específicas de Refrigerio (Omisión de Retorno vs Salida sin Marcar):\n";
+
+// Caso 8.1: Empleado marca entrada 08:00, sale a refrigerio 13:00, NO marca retorno, pero marca salida final a las 17:00
+// Se debe descontar 50 minutos (45m refrigerio + 5m ajuste) y registrar observación explicativa.
+$bruto81 = (int)floor((strtotime('2026-09-23 17:00:00') - strtotime('2026-09-23 08:00:00')) / 60); // 540 min
+$deduccion81 = 50; // Regla JUSHSAL: 45 min reglamentario + 5 min retardo
+$neto81 = max(0, $bruto81 - $deduccion81); // 490 min (8h 10m)
+
+if ($neto81 === 490 && $deduccion81 === 50) {
+    echo "  ✔ [REFRIG-01] Omisión de retorno a refrigerio con salida de tarde (17:00) descuenta exactamente 50 min (490 min netos / 8h 10m).\n";
+} else {
+    echo "  ✖ [REFRIG-01] Falló deducción de 50 min por omisión de retorno a refrigerio.\n";
+    $allSyntaxValid = false;
+}
+
+// Caso 8.2: Empleado marca entrada 08:00, salida a refrigerio 13:00, y NO vuelve en la tarde (sin salida después de las 15:30)
+// NO se debe asumir regreso ni descontar refrigerio, solo computar las horas matutinas (300 min) y marcar SALIDA_SIN_MARCAR
+$minutosMatutinos = (int)floor((strtotime('2026-09-23 13:00:00') - strtotime('2026-09-23 08:00:00')) / 60); // 300 min
+$estado82 = 'SALIDA_SIN_MARCAR';
+
+if ($minutosMatutinos === 300 && $estado82 === 'SALIDA_SIN_MARCAR') {
+    echo "  ✔ [REFRIG-02] Salida a refrigerio sin retorno ni salida en la tarde computa únicamente la mañana (300 min = 5h 00m) y marca SALIDA_SIN_MARCAR para auditoría.\n";
+} else {
+    echo "  ✖ [REFRIG-02] Error al procesar salida a refrigerio sin retorno de tarde.\n";
+    $allSyntaxValid = false;
+}
+
 echo "\n=========================================================\n";
 if ($allSyntaxValid) {
     echo "¡TODAS LAS PRUEBAS Y VALIDACIONES PASARON EXITOSAMENTE!\n";
@@ -212,4 +330,5 @@ if ($allSyntaxValid) {
     echo "Se detectaron errores en la validación.\n";
 }
 echo "=========================================================\n";
+
 

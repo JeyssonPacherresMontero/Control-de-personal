@@ -119,6 +119,7 @@ class JustificacionesController {
         $tipo = $_POST['tipo'] ?? 'TARDANZA';
         $fechaInicio = $_POST['fecha_inicio'] ?? date('Y-m-d');
         $fechaFin = $_POST['fecha_fin'] ?? $fechaInicio;
+        $comisionDestino = trim($_POST['comision_destino'] ?? '');
         $motivo = trim($_POST['motivo'] ?? '');
 
         if ($idEmpleado <= 0 || empty($motivo)) {
@@ -207,9 +208,9 @@ class JustificacionesController {
         try {
             Database::execute("
                 INSERT INTO justificaciones 
-                (id_empleado, tipo, fecha_inicio, fecha_fin, motivo, archivo_adjunto, estado, aprobado_por, fecha_resolucion, creado_en)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
-            ", [$idEmpleado, $tipo, $fechaInicio, $fechaFin, $motivo, $archivoAdjunto, $estado, $aprobadoPor, $fechaResolucion]);
+                (id_empleado, tipo, fecha_inicio, fecha_fin, motivo, comision_destino, archivo_adjunto, estado, aprobado_por, fecha_resolucion, creado_en)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+            ", [$idEmpleado, $tipo, $fechaInicio, $fechaFin, $motivo, ($tipo === 'COMISION_SERVICIO' ? $comisionDestino : null), $archivoAdjunto, $estado, $aprobadoPor, $fechaResolucion]);
 
             // Recalcular asistencia únicamente si fue aprobada inmediatamente por RRHH/Admin
             if ($estado === 'APROBADO') {

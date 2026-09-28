@@ -53,10 +53,10 @@
                     <div class="kpi-card-header">
                         <div>
                             <div class="kpi-title">Total Solicitudes</div>
-                            <div class="kpi-value text-dark"><?= $kpiTotal ?></div>
+                            <div class="kpi-value"><?= $kpiTotal ?></div>
                             <div class="kpi-subtitle">Registros en el período</div>
                         </div>
-                        <div class="kpi-icon-box kpi-icon-blue">
+                        <div class="kpi-icon-box">
                             <i class="fa-solid fa-file-signature"></i>
                         </div>
                     </div>
@@ -67,10 +67,10 @@
                     <div class="kpi-card-header">
                         <div>
                             <div class="kpi-title">Pendientes de Revisión</div>
-                            <div class="kpi-value text-warning"><?= $kpiPendientes ?></div>
+                            <div class="kpi-value"><?= $kpiPendientes ?></div>
                             <div class="kpi-subtitle">Esperando resolución</div>
                         </div>
-                        <div class="kpi-icon-box kpi-icon-amber">
+                        <div class="kpi-icon-box">
                             <i class="fa-solid fa-hourglass-half"></i>
                         </div>
                     </div>
@@ -81,10 +81,10 @@
                     <div class="kpi-card-header">
                         <div>
                             <div class="kpi-title">Aprobadas</div>
-                            <div class="kpi-value text-success"><?= $kpiAprobadas ?></div>
+                            <div class="kpi-value"><?= $kpiAprobadas ?></div>
                             <div class="kpi-subtitle">Justificaciones validadas</div>
                         </div>
-                        <div class="kpi-icon-box kpi-icon-emerald">
+                        <div class="kpi-icon-box">
                             <i class="fa-solid fa-circle-check"></i>
                         </div>
                     </div>
@@ -95,10 +95,10 @@
                     <div class="kpi-card-header">
                         <div>
                             <div class="kpi-title">Rechazadas</div>
-                            <div class="kpi-value text-danger"><?= $kpiRechazadas ?></div>
+                            <div class="kpi-value"><?= $kpiRechazadas ?></div>
                             <div class="kpi-subtitle">Solicitudes denegadas</div>
                         </div>
-                        <div class="kpi-icon-box kpi-icon-rose">
+                        <div class="kpi-icon-box">
                             <i class="fa-solid fa-circle-xmark"></i>
                         </div>
                     </div>
@@ -107,10 +107,10 @@
         </div>
 
         <!-- FILTER AND ACTIONS CARD -->
-        <div class="card mb-3 no-print">
-            <div class="card-header d-flex align-items-center justify-content-between flex-wrap py-2 px-3">
+        <div class="card mb-4 no-print">
+            <div class="card-header d-flex align-items-center justify-content-between flex-wrap" style="padding: 0.85rem 1.25rem;">
                 <h3 class="card-title font-weight-bold text-dark mb-0 d-flex align-items-center" style="font-size: 0.92rem;">
-                    <i class="fa-solid fa-filter mr-2 text-primary"></i> Filtros de Justificaciones y Permisos
+                    <i class="fa-solid fa-filter mr-2" style="color: #1e40af;"></i> Filtros de Justificaciones y Permisos
                 </h3>
                 <div class="d-flex align-items-center flex-wrap" style="gap: 8px; margin-left: auto;">
                     <?php if (in_array($userRole, ['ADMIN', 'RRHH', 'SUPERVISOR'], true)): ?>
@@ -120,23 +120,23 @@
                     <?php endif; ?>
                 </div>
             </div>
-            <div class="card-body py-3 px-3">
+            <div class="card-body p-4">
                 <form method="GET" action="" class="row align-items-end">
                     <input type="hidden" name="route" value="justificaciones">
 
-                    <div class="col-md-2 col-sm-6 mb-2">
-                        <label class="form-label-custom"><i class="fa-regular fa-calendar mr-1"></i> Fecha Inicio</label>
-                        <input type="date" name="fecha_inicio" class="form-control form-control-sm" value="<?= htmlspecialchars($fechaInicio) ?>">
+                    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                        <label class="form-label-custom"><i class="fa-regular fa-calendar"></i> Fecha Inicio</label>
+                        <input type="date" name="fecha_inicio" class="form-control" value="<?= htmlspecialchars($fechaInicio) ?>">
                     </div>
 
-                    <div class="col-md-2 col-sm-6 mb-2">
-                        <label class="form-label-custom"><i class="fa-regular fa-calendar-check mr-1"></i> Fecha Fin</label>
-                        <input type="date" name="fecha_fin" class="form-control form-control-sm" value="<?= htmlspecialchars($fechaFin) ?>">
+                    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                        <label class="form-label-custom"><i class="fa-regular fa-calendar-check"></i> Fecha Fin</label>
+                        <input type="date" name="fecha_fin" class="form-control" value="<?= htmlspecialchars($fechaFin) ?>">
                     </div>
 
-                    <div class="col-md-2 col-sm-6 mb-2">
-                        <label class="form-label-custom"><i class="fa-solid fa-building mr-1"></i> Área / Dpto.</label>
-                        <select name="departamento_id" class="form-control form-control-sm">
+                    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                        <label class="form-label-custom"><i class="fa-solid fa-building"></i> Área / Dpto.</label>
+                        <select name="departamento_id" class="form-control">
                             <option value="">-- Todas las Áreas --</option>
                             <?php foreach ($departamentos as $d): ?>
                                 <option value="<?= $d['id'] ?>" <?= ($deptoId ?? '') == $d['id'] ? 'selected' : '' ?>><?= htmlspecialchars($d['nombre']) ?></option>
@@ -144,9 +144,9 @@
                         </select>
                     </div>
 
-                    <div class="col-md-2 col-sm-6 mb-2">
-                        <label class="form-label-custom"><i class="fa-solid fa-tag mr-1"></i> Estado</label>
-                        <select name="estado" class="form-control form-control-sm">
+                    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                        <label class="form-label-custom"><i class="fa-solid fa-tag"></i> Estado</label>
+                        <select name="estado" class="form-control">
                             <option value="TODOS" <?= ($estado ?? '') === 'TODOS' ? 'selected' : '' ?>>-- Todos los Estados --</option>
                             <option value="PENDIENTE" <?= ($estado ?? '') === 'PENDIENTE' ? 'selected' : '' ?>>Pendientes</option>
                             <option value="APROBADO" <?= ($estado ?? '') === 'APROBADO' ? 'selected' : '' ?>>Aprobados</option>
@@ -154,16 +154,16 @@
                         </select>
                     </div>
 
-                    <div class="col-md-3 col-sm-8 mb-2">
-                        <label class="form-label-custom"><i class="fa-solid fa-magnifying-glass mr-1"></i> Buscar Empleado / Motivo</label>
-                        <input type="text" name="search" class="form-control form-control-sm" placeholder="Nombre, DNI, sustento..." value="<?= htmlspecialchars($search ?? '') ?>">
+                    <div class="col-lg-3 col-md-5 col-sm-8 mb-3">
+                        <label class="form-label-custom"><i class="fa-solid fa-magnifying-glass"></i> Buscar Empleado / Motivo</label>
+                        <input type="text" name="search" class="form-control" placeholder="Nombre, DNI, sustento..." value="<?= htmlspecialchars($search ?? '') ?>">
                     </div>
 
-                    <div class="col-md-1 col-sm-4 mb-2 d-flex" style="gap: 4px;">
-                        <button type="submit" class="btn btn-primary btn-sm flex-fill" title="Filtrar resultados" style="height: 34px;">
+                    <div class="col-lg-1 col-md-3 col-sm-4 mb-3 d-flex" style="gap: 6px;">
+                        <button type="submit" class="btn btn-primary flex-fill" title="Filtrar resultados" style="height: 38px;">
                             <i class="fa-solid fa-filter"></i>
                         </button>
-                        <a href="?route=justificaciones" class="btn btn-outline-secondary btn-sm" title="Limpiar filtros" style="height: 34px; display: inline-flex; align-items: center; justify-content: center;">
+                        <a href="?route=justificaciones" class="btn btn-outline-secondary" title="Limpiar filtros" style="height: 38px; width: 38px; display: inline-flex; align-items: center; justify-content: center; padding: 0;">
                             <i class="fa-solid fa-rotate-left"></i>
                         </a>
                     </div>
@@ -211,6 +211,11 @@
                                          };
                                      ?>
                                      <span class="badge-pill-custom badge-pill-neutral font-weight-bold"><?= $tipoLabel ?></span>
+                                     <?php if (!empty($j['comision_destino'])): ?>
+                                         <div class="small font-weight-bold text-primary mt-1" title="Comisión de Usuarios: <?= htmlspecialchars($j['comision_destino']) ?>">
+                                             <i class="fa-solid fa-map-location-dot mr-1"></i><?= htmlspecialchars(mb_strimwidth($j['comision_destino'], 0, 26, '...')) ?>
+                                         </div>
+                                     <?php endif; ?>
                                  </td>
                                 <td class="text-center">
                                     <span class="font-weight-bold text-dark font-monospace small"><?= $j['fecha_inicio'] ?></span> 
@@ -277,18 +282,18 @@
 
 <?php if (in_array($userRole, ['ADMIN', 'RRHH', 'SUPERVISOR'], true)): ?>
 <!-- MODAL REGISTRAR JUSTIFICACIÓN -->
-<div class="modal fade" id="modalJustificacion" tabindex="-1">
-    <div class="modal-dialog">
-        <form method="POST" action="?route=justificaciones&action=guardar" enctype="multipart/form-data" class="modal-content" onsubmit="return validateJustificacionForm(event);">
+<div class="modal fade" id="modalJustificacion" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 620px;">
+        <form method="POST" action="?route=justificaciones&action=guardar" enctype="multipart/form-data" class="modal-content shadow-lg border-0" onsubmit="return validateJustificacionForm(event);">
             <?= csrf_field() ?>
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title font-weight-bold"><i class="fa-solid fa-file-signature mr-2"></i> Nueva Justificación / Permiso</h5>
-                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            <div class="modal-header">
+                <h5 class="modal-title font-weight-bold"><i class="fa-solid fa-file-signature mr-2"></i> Registrar Justificación</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">&times;</button>
             </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label class="small font-weight-bold text-secondary">Empleado</label>
-                    <select name="id_empleado" class="form-control form-control-sm select2-worker" style="width: 100%;" required>
+            <div class="modal-body p-4">
+                <div class="form-group mb-3">
+                    <label class="small font-weight-bold text-secondary">Empleado <span class="text-danger">*</span></label>
+                    <select name="id_empleado" class="form-control select2-worker" style="width: 100%;" required>
                         <option value="">-- Seleccionar Empleado --</option>
                         <?php foreach ($empleados as $e): ?>
                             <option value="<?= $e['id'] ?>"><?= htmlspecialchars($e['apellidos'] . ' ' . $e['nombres']) ?> (DNI: <?= htmlspecialchars($e['dni']) ?>)</option>
@@ -296,41 +301,70 @@
                     </select>
                 </div>
 
-                <div class="form-group">
-                    <label class="small font-weight-bold text-secondary">Tipo de Justificación</label>
-                    <select name="tipo" class="form-control form-control-sm" required>
+                <div class="form-group mb-3">
+                    <label class="small font-weight-bold text-secondary">Tipo de Justificación <span class="text-danger">*</span></label>
+                    <select name="tipo" id="justModal_tipo" class="form-control font-weight-bold" onchange="onJustModalTipoChanged(this.value)" required>
                         <option value="TARDANZA">Tardanza Justificada</option>
                         <option value="FALTA">Inasistencia Justificada</option>
                         <option value="PERMISO_MEDICO">Descanso Médico</option>
-                        <option value="COMISION_SERVICIO">Comisión de Servicio</option>
+                        <option value="COMISION_SERVICIO">Comisión de Servicio (Otras Comisiones)</option>
                         <option value="VACACIONES">Vacaciones</option>
                         <option value="LICENCIA_MATERNIDAD_PATERNIDAD">Licencia por Maternidad o Paternidad</option>
                         <option value="OTRO">Otro Motivo</option>
                     </select>
                 </div>
 
+                <!-- SELECTOR COMISIÓN DE DESTINO (JUSHSAL) -->
+                <div class="form-group mb-3 p-3 rounded" id="justModal_comision_container" style="display: none; background-color: #f8fafc; border: 1px solid #e2e8f0;">
+                    <label class="small font-weight-bold text-dark mb-1">
+                        <i class="fa-solid fa-map-location-dot mr-1 text-secondary"></i> Comisión de Usuarios de Destino (JUSHSAL) <span class="text-danger">*</span>
+                    </label>
+                    <select name="comision_destino" id="justModal_comision_destino" class="form-control font-weight-bold">
+                        <option value="">-- Seleccionar Comisión de Usuarios --</option>
+                        <option value="Comisión de Usuarios Hualtaco I-II">Comisión de Usuarios Hualtaco I-II</option>
+                        <option value="Comisión de Usuarios Hualtaco III">Comisión de Usuarios Hualtaco III</option>
+                        <option value="Comisión de Usuarios Hualtaco IV">Comisión de Usuarios Hualtaco IV</option>
+                        <option value="Comisión de Usuarios TG-Malingas">Comisión de Usuarios TG-Malingas</option>
+                        <option value="Comisión de Usuarios M-Malingas">Comisión de Usuarios M-Malingas</option>
+                        <option value="Comisión de Usuarios Valle de los Incas">Comisión de Usuarios Valle de los Incas</option>
+                        <option value="Comisión de Usuarios Tejedores">Comisión de Usuarios Tejedores</option>
+                        <option value="Comisión de Usuarios San Isidro I y II">Comisión de Usuarios San Isidro I y II</option>
+                        <option value="Comisión de Usuarios Quiroz Paimas">Comisión de Usuarios Quiroz Paimas</option>
+                        <option value="Comisión de Usuarios Chipillico Margen Derecha">Comisión de Usuarios Chipillico Margen Derecha</option>
+                        <option value="Comisión de Usuarios Chipillico Margen Izquierda">Comisión de Usuarios Chipillico Margen Izquierda</option>
+                        <option value="Comisión de Usuarios Tambogrande">Comisión de Usuarios Tambogrande</option>
+                        <option value="Comisión de Usuarios Quebrada Totoral Pampelera Alta">Comisión de Usuarios Quebrada Totoral Pampelera Alta</option>
+                        <option value="Comisión de Usuarios Somate Alto">Comisión de Usuarios Somate Alto</option>
+                        <option value="Comisión de Usuarios Somate Bajo">Comisión de Usuarios Somate Bajo</option>
+                        <option value="Comisión de Usuarios Algarrobo - Yuscay">Comisión de Usuarios Algarrobo - Yuscay</option>
+                        <option value="Represa Los Quiroz / Bocatoma Zamba / Partidores">Represa Los Quiroz / Bocatoma Zamba / Partidores</option>
+                        <option value="Otra Sede o Entidad Externa">Otra Sede o Entidad Externa</option>
+                    </select>
+                    <small class="text-muted d-block mt-1">Horario oficial automático: 08:00 - 13:00 y 13:45 - 17:00 (8h 15m laboradas).</small>
+                </div>
+
                 <div class="row">
-                    <div class="col-6">
-                        <div class="form-group">
-                            <label class="small font-weight-bold text-secondary">Fecha Desde</label>
-                            <input type="date" name="fecha_inicio" class="form-control form-control-sm" value="<?= date('Y-m-d') ?>" required>
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label class="small font-weight-bold text-secondary">Fecha Desde <span class="text-danger">*</span></label>
+                            <input type="date" name="fecha_inicio" class="form-control" value="<?= date('Y-m-d') ?>" required>
                         </div>
                     </div>
-                    <div class="col-6">
-                        <div class="form-group">
-                            <label class="small font-weight-bold text-secondary">Fecha Hasta</label>
-                            <input type="date" name="fecha_fin" class="form-control form-control-sm" value="<?= date('Y-m-d') ?>" required>
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label class="small font-weight-bold text-secondary">Fecha Hasta <span class="text-danger">*</span></label>
+                            <input type="date" name="fecha_fin" class="form-control" value="<?= date('Y-m-d') ?>" required>
                         </div>
                     </div>
                 </div>
 
-                <div class="form-group mb-2">
-                    <label class="small font-weight-bold text-secondary">Motivo Detallado</label>
-                    <textarea name="motivo" class="form-control form-control-sm" rows="3" placeholder="Ingresa el motivo o justificación..." required></textarea>
+                <div class="form-group mb-3">
+                    <label class="small font-weight-bold text-secondary">Motivo Detallado <span class="text-danger">*</span></label>
+                    <textarea name="motivo" class="form-control" rows="3" placeholder="Ingresa el motivo o justificación..." required></textarea>
                 </div>
 
                 <div class="form-group mb-0">
-                    <label class="small font-weight-bold text-secondary">Comprobante / Documento de Sustento (Opcional)</label>
+                    <label class="small font-weight-bold text-secondary">Documento de Sustento (Opcional)</label>
                     <div class="custom-file">
                         <input type="file" name="archivo_adjunto" class="custom-file-input" id="customFileJustif" accept=".pdf,.jpg,.jpeg,.png,.webp" onchange="document.getElementById('customFileLabel').innerText = this.files[0]?.name || 'Seleccionar archivo (PDF, JPG, PNG)...'">
                         <label class="custom-file-label text-truncate small" id="customFileLabel" for="customFileJustif">Seleccionar archivo (PDF, JPG, PNG)...</label>
@@ -339,8 +373,8 @@
                 </div>
             </div>
             <div class="modal-footer justify-content-between">
-                <button type="button" class="btn btn-default btn-sm" data-dismiss="modal">Cancelar</button>
-                <button type="submit" class="btn btn-primary btn-sm">
+                <button type="button" class="btn btn-outline-secondary btn-sm px-3" data-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary btn-sm px-4 font-weight-bold">
                     <?php if ($userRole === 'SUPERVISOR'): ?>
                         <i class="fa-solid fa-paper-plane mr-1"></i> Enviar Solicitud a RRHH
                     <?php else: ?>
@@ -352,6 +386,21 @@
     </div>
 </div>
 <script>
+function onJustModalTipoChanged(val) {
+    const box = document.getElementById('justModal_comision_container');
+    const sel = document.getElementById('justModal_comision_destino');
+    if (val === 'COMISION_SERVICIO') {
+        if (box) box.style.display = 'block';
+        if (sel) sel.setAttribute('required', 'required');
+    } else {
+        if (box) box.style.display = 'none';
+        if (sel) {
+            sel.removeAttribute('required');
+            sel.value = '';
+        }
+    }
+}
+
 function validateJustificacionForm(e) {
     const fInicio = document.querySelector('#modalJustificacion input[name="fecha_inicio"]').value;
     const fFin = document.querySelector('#modalJustificacion input[name="fecha_fin"]').value;
@@ -359,6 +408,16 @@ function validateJustificacionForm(e) {
         if (e) e.preventDefault();
         alert('Error: La fecha de inicio (' + fInicio + ') no puede ser posterior a la fecha de fin (' + fFin + ').');
         return false;
+    }
+    const tipo = document.getElementById('justModal_tipo')?.value;
+    if (tipo === 'COMISION_SERVICIO') {
+        const dest = document.getElementById('justModal_comision_destino')?.value;
+        if (!dest) {
+            if (e) e.preventDefault();
+            alert('Por favor selecciona la Comisión de Usuarios de destino.');
+            document.getElementById('justModal_comision_destino')?.focus();
+            return false;
+        }
     }
     return true;
 }

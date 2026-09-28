@@ -342,20 +342,20 @@
                             <div class="pt-2 border-top">
                                 <div class="d-flex justify-content-between align-items-center py-1 border-bottom" style="font-size: 0.79rem;">
                                     <span class="text-dark"><i class="fa-solid fa-circle text-success mr-1" style="font-size: 8px;"></i> <strong>Presentes</strong> (A tiempo)</span>
-                                    <span class="font-weight-bold text-dark"><?= $presentesHoy ?> <span class="badge badge-light border text-success ml-1"><?= $porcPresentes ?>%</span></span>
+                                    <span class="font-weight-bold text-dark"><?= $presentesHoy ?> <span class="badge-pill-custom badge-pill-presente ml-1" style="font-size: 0.7rem;"><?= $porcPresentes ?>%</span></span>
                                 </div>
                                 <div class="d-flex justify-content-between align-items-center py-1 border-bottom" style="font-size: 0.79rem;">
                                     <span class="text-dark"><i class="fa-solid fa-circle text-warning mr-1" style="font-size: 8px;"></i> <strong>Tardanzas</strong></span>
-                                    <span class="font-weight-bold text-dark"><?= $tardanzasHoy ?> <span class="badge badge-light border text-warning ml-1"><?= $porcTardanzas ?>%</span></span>
+                                    <span class="font-weight-bold text-dark"><?= $tardanzasHoy ?> <span class="badge-pill-custom badge-pill-tardanza ml-1" style="font-size: 0.7rem;"><?= $porcTardanzas ?>%</span></span>
                                 </div>
                                 <div class="d-flex justify-content-between align-items-center py-1 border-bottom" style="font-size: 0.79rem;">
                                     <span class="text-dark"><i class="fa-solid fa-circle text-danger mr-1" style="font-size: 8px;"></i> <strong>Inasistencias</strong> (Faltas)</span>
-                                    <span class="font-weight-bold text-dark"><?= (int)($statsHoy['faltas'] ?? 0) ?> <span class="badge badge-light border text-danger ml-1"><?= $porcFaltas ?>%</span></span>
+                                    <span class="font-weight-bold text-dark"><?= (int)($statsHoy['faltas'] ?? 0) ?> <span class="badge-pill-custom badge-pill-falta ml-1" style="font-size: 0.7rem;"><?= $porcFaltas ?>%</span></span>
                                 </div>
                                 <?php if (((int)($statsHoy['justificados'] ?? 0) > 0) || ((int)($statsHoy['sin_salida'] ?? 0) > 0)): ?>
                                     <div class="d-flex justify-content-between align-items-center py-1" style="font-size: 0.79rem;">
                                         <span class="text-secondary"><i class="fa-solid fa-circle text-primary mr-1" style="font-size: 8px;"></i> Justificados o En Curso</span>
-                                        <span class="font-weight-bold text-dark"><?= (int)($statsHoy['justificados'] ?? 0) + (int)($statsHoy['sin_salida'] ?? 0) ?> <span class="badge badge-light border text-primary ml-1"><?= round($porcJustificados + $porcSinSalida, 1) ?>%</span></span>
+                                        <span class="font-weight-bold text-dark"><?= (int)($statsHoy['justificados'] ?? 0) + (int)($statsHoy['sin_salida'] ?? 0) ?> <span class="badge-pill-custom badge-pill-neutral ml-1" style="font-size: 0.7rem;"><?= round($porcJustificados + $porcSinSalida, 1) ?>%</span></span>
                                     </div>
                                 <?php endif; ?>
                             </div>
@@ -430,10 +430,10 @@
                         <div class="kpi-card-header">
                             <div>
                                 <div class="kpi-title">Tasa de Puntualidad Hoy</div>
-                                <div class="kpi-value text-success"><?= $puntualidadHoyPorc ?>%</div>
+                                <div class="kpi-value"><?= $puntualidadHoyPorc ?>%</div>
                                 <div class="kpi-subtitle"><?= $presentesHoy ?> de <?= $totalEmpleados ?> trabajadores a tiempo</div>
                             </div>
-                            <div class="kpi-icon-box kpi-icon-emerald">
+                            <div class="kpi-icon-box">
                                 <i class="fa-solid fa-user-check"></i>
                             </div>
                         </div>
@@ -450,10 +450,10 @@
                         <div class="kpi-card-header">
                             <div>
                                 <div class="kpi-title">Tardanzas de Hoy</div>
-                                <div class="kpi-value text-warning"><?= (int)($statsHoy['tardanzas'] ?? 0) ?></div>
+                                <div class="kpi-value"><?= (int)($statsHoy['tardanzas'] ?? 0) ?></div>
                                 <div class="kpi-subtitle"><?= (int)($statsHoy['total_minutos_tardanza'] ?? 0) ?> min acumulados hoy</div>
                             </div>
-                            <div class="kpi-icon-box kpi-icon-amber">
+                            <div class="kpi-icon-box">
                                 <i class="fa-solid fa-clock-rotate-left"></i>
                             </div>
                         </div>
@@ -470,10 +470,10 @@
                         <div class="kpi-card-header">
                             <div>
                                 <div class="kpi-title">Inasistencias Hoy</div>
-                                <div class="kpi-value text-danger"><?= (int)($statsHoy['faltas'] ?? 0) ?></div>
+                                <div class="kpi-value"><?= (int)($statsHoy['faltas'] ?? 0) ?></div>
                                 <div class="kpi-subtitle"><?= $justificacionesPendientes ?> justificaciones pendientes</div>
                             </div>
-                            <div class="kpi-icon-box kpi-icon-rose">
+                            <div class="kpi-icon-box">
                                 <i class="fa-solid fa-user-xmark"></i>
                             </div>
                         </div>
@@ -489,17 +489,17 @@
                     <div class="kpi-card h-100">
                         <div class="kpi-card-header">
                             <div>
-                                <div class="kpi-title">Horas Extras del Mes</div>
-                                <div class="kpi-value text-primary"><?= $horasExtraMes ?> <span style="font-size: 0.95rem; color: #64748b; font-weight: 600;">hrs</span></div>
-                                <div class="kpi-subtitle"><?= (int)($statsMes['total_minutos_extra_mes'] ?? 0) ?> min acumulados</div>
+                                <div class="kpi-title">Personal Activo</div>
+                                <div class="kpi-value"><?= $totalEmpleados ?></div>
+                                <div class="kpi-subtitle">Trabajadores en padrón activo</div>
                             </div>
-                            <div class="kpi-icon-box kpi-icon-blue">
-                                <i class="fa-solid fa-business-time"></i>
+                            <div class="kpi-icon-box">
+                                <i class="fa-solid fa-users"></i>
                             </div>
                         </div>
                         <div>
-                            <a href="?route=asistencia&fecha_inicio=<?= $monthStart ?>&fecha_fin=<?= $today ?>" class="kpi-footer-link">
-                                Revisar acumulado <i class="fas fa-arrow-right ml-1"></i>
+                            <a href="?route=empleados" class="kpi-footer-link">
+                                Ver directorio <i class="fas fa-arrow-right ml-1"></i>
                             </a>
                         </div>
                     </div>
@@ -662,20 +662,20 @@
                             <div class="pt-2 border-top">
                                 <div class="d-flex justify-content-between align-items-center py-1 border-bottom" style="font-size: 0.79rem;">
                                     <span class="text-dark"><i class="fa-solid fa-circle text-success mr-1" style="font-size: 8px;"></i> <strong>Presentes</strong></span>
-                                    <span class="font-weight-bold text-dark"><?= $presentesHoy ?> <span class="badge badge-light border text-success ml-1"><?= $porcPresentes ?>%</span></span>
+                                    <span class="font-weight-bold text-dark"><?= $presentesHoy ?> <span class="badge-pill-custom badge-pill-presente ml-1" style="font-size: 0.7rem;"><?= $porcPresentes ?>%</span></span>
                                 </div>
                                 <div class="d-flex justify-content-between align-items-center py-1 border-bottom" style="font-size: 0.79rem;">
                                     <span class="text-dark"><i class="fa-solid fa-circle text-warning mr-1" style="font-size: 8px;"></i> <strong>Tardanzas</strong></span>
-                                    <span class="font-weight-bold text-dark"><?= $tardanzasHoy ?> <span class="badge badge-light border text-warning ml-1"><?= $porcTardanzas ?>%</span></span>
+                                    <span class="font-weight-bold text-dark"><?= $tardanzasHoy ?> <span class="badge-pill-custom badge-pill-tardanza ml-1" style="font-size: 0.7rem;"><?= $porcTardanzas ?>%</span></span>
                                 </div>
                                 <div class="d-flex justify-content-between align-items-center py-1 border-bottom" style="font-size: 0.79rem;">
                                     <span class="text-dark"><i class="fa-solid fa-circle text-danger mr-1" style="font-size: 8px;"></i> <strong>Faltas</strong></span>
-                                    <span class="font-weight-bold text-dark"><?= (int)($statsHoy['faltas'] ?? 0) ?> <span class="badge badge-light border text-danger ml-1"><?= $porcFaltas ?>%</span></span>
+                                    <span class="font-weight-bold text-dark"><?= (int)($statsHoy['faltas'] ?? 0) ?> <span class="badge-pill-custom badge-pill-falta ml-1" style="font-size: 0.7rem;"><?= $porcFaltas ?>%</span></span>
                                 </div>
                                 <?php if (((int)($statsHoy['justificados'] ?? 0) > 0) || ((int)($statsHoy['sin_salida'] ?? 0) > 0)): ?>
                                     <div class="d-flex justify-content-between align-items-center py-1" style="font-size: 0.79rem;">
                                         <span class="text-secondary"><i class="fa-solid fa-circle text-primary mr-1" style="font-size: 8px;"></i> Justificados o En Turno</span>
-                                        <span class="font-weight-bold text-dark"><?= (int)($statsHoy['justificados'] ?? 0) + (int)($statsHoy['sin_salida'] ?? 0) ?> <span class="badge badge-light border text-primary ml-1"><?= round($porcJustificados + $porcSinSalida, 1) ?>%</span></span>
+                                        <span class="font-weight-bold text-dark"><?= (int)($statsHoy['justificados'] ?? 0) + (int)($statsHoy['sin_salida'] ?? 0) ?> <span class="badge-pill-custom badge-pill-neutral ml-1" style="font-size: 0.7rem;"><?= round($porcJustificados + $porcSinSalida, 1) ?>%</span></span>
                                     </div>
                                 <?php endif; ?>
                             </div>
@@ -729,10 +729,10 @@
                         <div class="kpi-card-header">
                             <div>
                                 <div class="kpi-title">Personal en Turno Hoy</div>
-                                <div class="kpi-value text-success"><?= $presentesHoy ?></div>
+                                <div class="kpi-value"><?= $presentesHoy ?></div>
                                 <div class="kpi-subtitle">Presentes con ingreso marcado</div>
                             </div>
-                            <div class="kpi-icon-box kpi-icon-emerald">
+                            <div class="kpi-icon-box">
                                 <i class="fa-solid fa-users-viewfinder"></i>
                             </div>
                         </div>
@@ -749,10 +749,10 @@
                         <div class="kpi-card-header">
                             <div>
                                 <div class="kpi-title">Llegadas Tarde Hoy</div>
-                                <div class="kpi-value text-warning"><?= $tardanzasHoy ?></div>
+                                <div class="kpi-value"><?= $tardanzasHoy ?></div>
                                 <div class="kpi-subtitle"><?= (int)($statsHoy['total_minutos_tardanza'] ?? 0) ?> min acumulados</div>
                             </div>
-                            <div class="kpi-icon-box kpi-icon-amber">
+                            <div class="kpi-icon-box">
                                 <i class="fa-solid fa-person-walking-arrow-right"></i>
                             </div>
                         </div>
@@ -769,10 +769,10 @@
                         <div class="kpi-card-header">
                             <div>
                                 <div class="kpi-title">Inasistencias del Turno</div>
-                                <div class="kpi-value text-danger"><?= (int)($statsHoy['faltas'] ?? 0) ?></div>
+                                <div class="kpi-value"><?= (int)($statsHoy['faltas'] ?? 0) ?></div>
                                 <div class="kpi-subtitle">Sin registro de entrada</div>
                             </div>
-                            <div class="kpi-icon-box kpi-icon-rose">
+                            <div class="kpi-icon-box">
                                 <i class="fa-solid fa-user-slash"></i>
                             </div>
                         </div>
@@ -789,10 +789,10 @@
                         <div class="kpi-card-header">
                             <div>
                                 <div class="kpi-title">Sin Salida Registrada</div>
-                                <div class="kpi-value text-primary"><?= (int)($statsHoy['sin_salida'] ?? 0) ?></div>
+                                <div class="kpi-value"><?= (int)($statsHoy['sin_salida'] ?? 0) ?></div>
                                 <div class="kpi-subtitle">Jornada en curso o pendiente</div>
                             </div>
-                            <div class="kpi-icon-box kpi-icon-indigo">
+                            <div class="kpi-icon-box">
                                 <i class="fa-solid fa-clock"></i>
                             </div>
                         </div>
@@ -888,15 +888,15 @@
                             <div class="pt-2 border-top">
                                 <div class="d-flex justify-content-between align-items-center py-1 border-bottom" style="font-size: 0.79rem;">
                                     <span class="text-dark"><i class="fa-solid fa-circle text-success mr-1" style="font-size: 8px;"></i> <strong>Presentes</strong></span>
-                                    <span class="font-weight-bold text-dark"><?= $presentesHoy ?> <span class="badge badge-light border text-success ml-1"><?= $porcPresentes ?>%</span></span>
+                                    <span class="font-weight-bold text-dark"><?= $presentesHoy ?> <span class="badge-pill-custom badge-pill-presente ml-1" style="font-size: 0.7rem;"><?= $porcPresentes ?>%</span></span>
                                 </div>
                                 <div class="d-flex justify-content-between align-items-center py-1 border-bottom" style="font-size: 0.79rem;">
                                     <span class="text-dark"><i class="fa-solid fa-circle text-warning mr-1" style="font-size: 8px;"></i> <strong>Tardanzas</strong></span>
-                                    <span class="font-weight-bold text-dark"><?= $tardanzasHoy ?> <span class="badge badge-light border text-warning ml-1"><?= $porcTardanzas ?>%</span></span>
+                                    <span class="font-weight-bold text-dark"><?= $tardanzasHoy ?> <span class="badge-pill-custom badge-pill-tardanza ml-1" style="font-size: 0.7rem;"><?= $porcTardanzas ?>%</span></span>
                                 </div>
                                 <div class="d-flex justify-content-between align-items-center py-1" style="font-size: 0.79rem;">
                                     <span class="text-dark"><i class="fa-solid fa-circle text-danger mr-1" style="font-size: 8px;"></i> <strong>Faltas</strong></span>
-                                    <span class="font-weight-bold text-dark"><?= (int)($statsHoy['faltas'] ?? 0) ?> <span class="badge badge-light border text-danger ml-1"><?= $porcFaltas ?>%</span></span>
+                                    <span class="font-weight-bold text-dark"><?= (int)($statsHoy['faltas'] ?? 0) ?> <span class="badge-pill-custom badge-pill-falta ml-1" style="font-size: 0.7rem;"><?= $porcFaltas ?>%</span></span>
                                 </div>
                             </div>
                         </div>
@@ -945,10 +945,10 @@
                         <div class="kpi-card-header">
                             <div>
                                 <div class="kpi-title">Total Presentes Hoy</div>
-                                <div class="kpi-value text-success"><?= $presentesHoy ?></div>
+                                <div class="kpi-value"><?= $presentesHoy ?></div>
                                 <div class="kpi-subtitle">Personal con ingreso registrado</div>
                             </div>
-                            <div class="kpi-icon-box kpi-icon-emerald">
+                            <div class="kpi-icon-box">
                                 <i class="fa-solid fa-user-check"></i>
                             </div>
                         </div>
@@ -959,10 +959,10 @@
                         <div class="kpi-card-header">
                             <div>
                                 <div class="kpi-title">Tardanzas Hoy</div>
-                                <div class="kpi-value text-warning"><?= $tardanzasHoy ?></div>
+                                <div class="kpi-value"><?= $tardanzasHoy ?></div>
                                 <div class="kpi-subtitle">Ingresos fuera de tolerancia</div>
                             </div>
-                            <div class="kpi-icon-box kpi-icon-amber">
+                            <div class="kpi-icon-box">
                                 <i class="fa-solid fa-clock-rotate-left"></i>
                             </div>
                         </div>
@@ -973,10 +973,10 @@
                         <div class="kpi-card-header">
                             <div>
                                 <div class="kpi-title">Inasistencias Registradas</div>
-                                <div class="kpi-value text-danger"><?= (int)($statsHoy['faltas'] ?? 0) ?></div>
+                                <div class="kpi-value"><?= (int)($statsHoy['faltas'] ?? 0) ?></div>
                                 <div class="kpi-subtitle">Sin registro de entrada</div>
                             </div>
-                            <div class="kpi-icon-box kpi-icon-rose">
+                            <div class="kpi-icon-box">
                                 <i class="fa-solid fa-user-slash"></i>
                             </div>
                         </div>
@@ -1090,47 +1090,72 @@
 </section>
 
 <!-- MODAL DE SELECCIÓN DE SINCRONIZACIÓN -->
-<div class="modal fade" id="modalSincronizacion" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content shadow-lg border-0">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title font-weight-bold"><i class="fa-solid fa-arrows-rotate mr-2"></i> Sincronización de Biométricos</h5>
-                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+<div class="modal fade" id="modalSincronizacion" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 560px;">
+        <div class="modal-content shadow-lg border-0 rounded-lg">
+            <div class="modal-header">
+                <h5 class="modal-title font-weight-bold d-flex align-items-center">
+                    <i class="fa-solid fa-arrows-rotate mr-2" style="color: #1e40af;"></i> Sincronización de Relojes Biométricos
+                </h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">&times;</button>
             </div>
-            <div class="modal-body py-4">
-                <p class="text-secondary small mb-3">Selecciona el modo de sincronización para los relojes ZKTeco:</p>
+            <div class="modal-body p-4">
+                <p class="mb-3" style="color: #475569; font-size: 0.88rem;">
+                    Selecciona el método de extracción de marcaciones para los relojes ZKTeco registrados:
+                </p>
                 
-                <div class="list-group">
+                <div class="d-flex flex-column" style="gap: 10px;">
                     <!-- Opción 1: Incremental Inteligente (Recomendado) -->
-                    <a href="javascript:void(0)" onclick="executeSyncMode('incremental')" class="list-group-item list-group-item-action d-flex align-items-center p-3 mb-2 border rounded">
-                        <div class="mr-3 text-success"><i class="fa-solid fa-arrows-rotate fa-2x"></i></div>
-                        <div>
-                            <div class="font-weight-bold text-dark">Sincronización Inteligente (Pendientes) <span class="badge badge-success ml-1">Recomendado</span></div>
-                            <small class="text-muted">Descarga todas las marcaciones nuevas desde la última fecha registrada hasta hoy sin omitir ningún día.</small>
+                    <a href="javascript:void(0)" onclick="executeSyncMode('incremental')" class="list-group-item-action d-flex align-items-start p-3 border rounded bg-white" style="border-color: #cbd5e1 !important; border-radius: 8px; text-decoration: none; transition: all 0.15s ease;">
+                        <div class="mr-3 mt-1" style="color: #1e40af;">
+                            <i class="fa-solid fa-arrows-rotate fa-2x"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="font-weight-bold d-flex align-items-center justify-content-between" style="color: #0f172a; font-size: 0.95rem;">
+                                <span>Sincronización Inteligente</span>
+                                <span class="badge font-weight-bold" style="background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; font-size: 0.72rem;">Recomendado</span>
+                            </div>
+                            <small class="text-muted d-block mt-1" style="font-size: 0.8rem; line-height: 1.35;">
+                                Descarga únicamente las marcaciones nuevas desde la última fecha registrada hasta el momento actual sin omitir días pendientes.
+                            </small>
                         </div>
                     </a>
 
                     <!-- Opción 2: Rápido Hoy -->
-                    <a href="javascript:void(0)" onclick="executeSyncMode('today')" class="list-group-item list-group-item-action d-flex align-items-center p-3 mb-2 border rounded">
-                        <div class="mr-3 text-warning"><i class="fa-solid fa-bolt fa-2x"></i></div>
-                        <div>
-                            <div class="font-weight-bold text-dark">Sincronizar Solo Hoy (Rápido)</div>
-                            <small class="text-muted">Procesa únicamente las marcaciones del día de hoy.</small>
+                    <a href="javascript:void(0)" onclick="executeSyncMode('today')" class="list-group-item-action d-flex align-items-start p-3 border rounded bg-white" style="border-color: #e2e8f0 !important; border-radius: 8px; text-decoration: none; transition: all 0.15s ease;">
+                        <div class="mr-3 mt-1" style="color: #475569;">
+                            <i class="fa-solid fa-bolt fa-2x"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="font-weight-bold" style="color: #0f172a; font-size: 0.95rem;">
+                                Sincronizar Solo Hoy (Rápido)
+                            </div>
+                            <small class="text-muted d-block mt-1" style="font-size: 0.8rem; line-height: 1.35;">
+                                Procesa de forma ultrarrápida exclusivamente los fichajes capturados durante la jornada de hoy.
+                            </small>
                         </div>
                     </a>
 
                     <!-- Opción 3: Histórico Completo -->
-                    <a href="javascript:void(0)" onclick="executeSyncMode('full')" class="list-group-item list-group-item-action d-flex align-items-center p-3 border rounded">
-                        <div class="mr-3 text-primary"><i class="fa-solid fa-database fa-2x"></i></div>
-                        <div>
-                            <div class="font-weight-bold text-dark">Sincronización Histórica Completa</div>
-                            <small class="text-muted">Descarga todos los registros almacenados en la memoria del reloj.</small>
+                    <a href="javascript:void(0)" onclick="executeSyncMode('full')" class="list-group-item-action d-flex align-items-start p-3 border rounded bg-white" style="border-color: #e2e8f0 !important; border-radius: 8px; text-decoration: none; transition: all 0.15s ease;">
+                        <div class="mr-3 mt-1" style="color: #64748b;">
+                            <i class="fa-solid fa-database fa-2x"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="font-weight-bold" style="color: #0f172a; font-size: 0.95rem;">
+                                Sincronización Histórica Completa
+                            </div>
+                            <small class="text-muted d-block mt-1" style="font-size: 0.8rem; line-height: 1.35;">
+                                Extrae todo el historial de eventos almacenado en la memoria de los dispositivos biométricos.
+                            </small>
                         </div>
                     </a>
                 </div>
             </div>
-            <div class="modal-footer justify-content-end bg-light">
-                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cerrar</button>
+            <div class="modal-footer justify-content-end bg-light px-4 py-3" style="border-top: 1px solid #e2e8f0;">
+                <button type="button" class="btn btn-outline-secondary px-3" data-dismiss="modal">
+                    <i class="fa-solid fa-times mr-1"></i> Cerrar
+                </button>
             </div>
         </div>
     </div>

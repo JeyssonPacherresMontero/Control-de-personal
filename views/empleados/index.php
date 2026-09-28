@@ -296,10 +296,10 @@
                     </div>
 
                     <div class="col-md-1 col-sm-4 mb-2 d-flex" style="gap: 4px;">
-                        <button type="submit" class="btn btn-primary btn-sm flex-fill" title="Filtrar resultados" style="height: 34px;">
-                            <i class="fa-solid fa-filter"></i>
+                        <button type="submit" class="btn btn-primary btn-sm flex-fill" title="Filtrar resultados" style="height: 38px; display: inline-flex; align-items: center; justify-content: center;">
+                            <i class="fa-solid fa-filter mr-1 d-sm-none"></i><span class="d-none d-sm-inline"><i class="fa-solid fa-filter"></i></span>
                         </button>
-                        <a href="?route=empleados" class="btn btn-outline-secondary btn-sm" title="Limpiar filtros" style="height: 34px; display: inline-flex; align-items: center; justify-content: center;">
+                        <a href="?route=empleados" class="btn btn-outline-secondary btn-sm" title="Limpiar filtros" style="height: 38px; width: 38px; display: inline-flex; align-items: center; justify-content: center;">
                             <i class="fa-solid fa-rotate-left"></i>
                         </a>
                     </div>
@@ -388,12 +388,12 @@
                                             $sName = $fingerShort[$fid] ?? "Dedo $fid";
                                         ?>
                                             <?php if ($isCap): ?>
-                                                <span class="badge badge-light border border-success text-success font-weight-bold" style="font-size: 72%; padding: 2px 5px;" title="<?= $sName ?> (ID <?= $fid ?>): Huella respaldada en BDD">
+                                                <span class="badge-pill-custom badge-pill-presente" style="font-size: 0.68rem; padding: 2px 6px;" title="<?= $sName ?> (ID <?= $fid ?>): Huella respaldada en BDD">
                                                     <i class="fa-solid fa-check mr-0.5"></i> <?= $sName ?>
                                                 </span>
                                             <?php else: ?>
-                                                <span class="badge badge-light border border-warning text-dark font-weight-bold" style="font-size: 72%; padding: 2px 5px; background-color: #fffbeb;" title="<?= $sName ?> (ID <?= $fid ?>): Pendiente de captura en reloj">
-                                                    <i class="fa-regular fa-clock text-warning mr-0.5"></i> <?= $sName ?>
+                                                <span class="badge-pill-custom badge-pill-neutral" style="font-size: 0.68rem; padding: 2px 6px;" title="<?= $sName ?> (ID <?= $fid ?>): Pendiente de captura en reloj">
+                                                    <i class="fa-regular fa-clock text-secondary mr-0.5"></i> <?= $sName ?>
                                                 </span>
                                             <?php endif; ?>
                                         <?php endforeach; ?>
@@ -412,12 +412,17 @@
                                 </td>
                                 <?php if (in_array($userRole, ['ADMIN', 'RRHH'], true)): ?>
                                     <td class="text-center">
-                                        <button class="btn btn-xs btn-outline-primary mr-1" onclick="openEditEmpleadoModal(<?= htmlspecialchars(json_encode($e)) ?>)" title="Editar">
-                                            <i class="fa-solid fa-pen"></i>
-                                        </button>
-                                        <button class="btn btn-xs btn-outline-success" onclick="openEmpBiometricModal(<?= htmlspecialchars(json_encode($e)) ?>)" title="Biometría ZKTeco">
-                                            <i class="fa-solid fa-fingerprint"></i>
-                                        </button>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <a href="?route=asistencia&empleado_id=<?= $e['id'] ?>" class="btn btn-outline-secondary" title="Ver Reporte Individual de Asistencia">
+                                                <i class="fa-solid fa-calendar-check text-primary"></i>
+                                            </a>
+                                            <button type="button" class="btn btn-outline-secondary" onclick="openEditEmpleadoModal(<?= htmlspecialchars(json_encode($e)) ?>)" title="Editar Empleado">
+                                                <i class="fa-solid fa-pen text-secondary"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary" onclick="openEmpBiometricModal(<?= htmlspecialchars(json_encode($e)) ?>)" title="Biometría ZKTeco">
+                                                <i class="fa-solid fa-fingerprint text-secondary"></i>
+                                            </button>
+                                        </div>
                                     </td>
                                 <?php endif; ?>
                             </tr>
@@ -436,69 +441,83 @@
     <div class="modal-dialog modal-lg">
         <form method="POST" action="?route=empleados&action=guardar" class="modal-content">
             <?= csrf_field() ?>
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title font-weight-bold" id="empModalTitle">Ficha de Empleado</h5>
-                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            <div class="modal-header">
+                <h5 class="modal-title font-weight-bold" id="empModalTitle">
+                    <i class="fa-solid fa-user-tie mr-2"></i> Ficha de Empleado
+                </h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">&times;</button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body p-4">
                 <input type="hidden" name="id" id="emp_id">
                 
+                <div class="modal-section-title mt-0">
+                    <i class="fa-solid fa-id-card"></i> 1. Identificación y Reloj ZKTeco
+                </div>
+
                 <div class="row">
                     <div class="col-md-6">
-                        <div class="form-group">
+                        <div class="form-group mb-3">
                             <div class="d-flex justify-content-between align-items-center mb-1">
                                 <label class="small font-weight-bold text-secondary mb-0">ID de Usuario en Reloj ZKTeco <span class="text-danger">*</span></label>
-                                <button type="button" class="btn btn-xs btn-outline-primary" onclick="document.getElementById('emp_codigo_reloj').value = '<?= $siguienteCodigo ?>'" title="Genera el siguiente número correlativo disponible">
-                                    <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Sugerir ID (<?= $siguienteCodigo ?>)
+                                <button type="button" class="btn btn-xs btn-outline-secondary" onclick="document.getElementById('emp_codigo_reloj').value = '<?= $siguienteCodigo ?>'" title="Genera el siguiente número correlativo disponible">
+                                    <i class="fa-solid fa-wand-magic-sparkles mr-1 text-secondary"></i> Sugerir ID (<?= $siguienteCodigo ?>)
                                 </button>
                             </div>
-                            <input type="text" name="codigo_reloj" id="emp_codigo_reloj" class="form-control form-control-sm font-monospace font-weight-bold" placeholder="Ej: 1, 2, 101..." required>
+                            <input type="text" name="codigo_reloj" id="emp_codigo_reloj" class="form-control font-monospace font-weight-bold" placeholder="Ej: 1, 2, 101..." required>
                             <small class="text-muted">Número correlativo registrado en el reloj</small>
                         </div>
                     </div>
                     <div class="col-md-6">
-                        <div class="form-group">
+                        <div class="form-group mb-3">
                             <label class="small font-weight-bold text-secondary">Número de DNI <span class="text-danger">*</span></label>
-                            <input type="text" name="dni" id="emp_dni" class="form-control form-control-sm font-monospace" placeholder="8 dígitos" required>
+                            <input type="text" name="dni" id="emp_dni" class="form-control font-monospace" placeholder="8 dígitos" required>
                         </div>
                     </div>
                 </div>
 
+                <div class="modal-section-title">
+                    <i class="fa-solid fa-user"></i> 2. Información Personal y Contacto
+                </div>
+
                 <div class="row">
                     <div class="col-md-6">
-                        <div class="form-group">
+                        <div class="form-group mb-3">
                             <label class="small font-weight-bold text-secondary">Nombres <span class="text-danger">*</span></label>
-                            <input type="text" name="nombres" id="emp_nombres" class="form-control form-control-sm" required>
+                            <input type="text" name="nombres" id="emp_nombres" class="form-control" required>
                         </div>
                     </div>
                     <div class="col-md-6">
-                        <div class="form-group">
+                        <div class="form-group mb-3">
                             <label class="small font-weight-bold text-secondary">Apellidos <span class="text-danger">*</span></label>
-                            <input type="text" name="apellidos" id="emp_apellidos" class="form-control form-control-sm" required>
+                            <input type="text" name="apellidos" id="emp_apellidos" class="form-control" required>
                         </div>
                     </div>
                 </div>
 
                 <div class="row">
                     <div class="col-md-6">
-                        <div class="form-group">
+                        <div class="form-group mb-3">
                             <label class="small font-weight-bold text-secondary">Correo Electrónico</label>
-                            <input type="email" name="email" id="emp_email" class="form-control form-control-sm" placeholder="usuario@empresa.com">
+                            <input type="email" name="email" id="emp_email" class="form-control" placeholder="usuario@empresa.com">
                         </div>
                     </div>
                     <div class="col-md-6">
-                        <div class="form-group">
+                        <div class="form-group mb-3">
                             <label class="small font-weight-bold text-secondary">Teléfono</label>
-                            <input type="text" name="telefono" id="emp_telefono" class="form-control form-control-sm" placeholder="+51 987 654 321">
+                            <input type="text" name="telefono" id="emp_telefono" class="form-control" placeholder="+51 987 654 321">
                         </div>
                     </div>
+                </div>
+
+                <div class="modal-section-title">
+                    <i class="fa-solid fa-sitemap"></i> 3. Organización y Turno Asignado
                 </div>
 
                 <div class="row">
                     <div class="col-md-4">
-                        <div class="form-group">
+                        <div class="form-group mb-3">
                             <label class="small font-weight-bold text-secondary">Departamento</label>
-                            <select name="departamento_id" id="emp_departamento_id" class="form-control form-control-sm">
+                            <select name="departamento_id" id="emp_departamento_id" class="form-control">
                                 <option value="">-- Sin Asignar --</option>
                                 <?php foreach ($departamentos as $d): ?>
                                     <option value="<?= $d['id'] ?>"><?= htmlspecialchars($d['nombre']) ?></option>
@@ -507,9 +526,9 @@
                         </div>
                     </div>
                     <div class="col-md-4">
-                        <div class="form-group">
+                        <div class="form-group mb-3">
                             <label class="small font-weight-bold text-secondary">Cargo o Puesto</label>
-                            <select name="cargo_id" id="emp_cargo_id" class="form-control form-control-sm">
+                            <select name="cargo_id" id="emp_cargo_id" class="form-control">
                                 <option value="">-- Sin Asignar --</option>
                                 <?php foreach ($cargos as $c): ?>
                                     <option value="<?= $c['id'] ?>"><?= htmlspecialchars($c['nombre']) ?></option>
@@ -518,9 +537,9 @@
                         </div>
                     </div>
                     <div class="col-md-4">
-                        <div class="form-group">
+                        <div class="form-group mb-3">
                             <label class="small font-weight-bold text-secondary">Turno Laboral Asignado <span class="text-danger">*</span></label>
-                            <select name="turno_id" id="emp_turno_id" class="form-control form-control-sm" required>
+                            <select name="turno_id" id="emp_turno_id" class="form-control" required>
                                 <?php foreach ($turnos as $t): ?>
                                     <option value="<?= $t['id'] ?>"><?= htmlspecialchars($t['nombre']) ?></option>
                                 <?php endforeach; ?>
@@ -531,13 +550,13 @@
 
                 <div class="row">
                     <div class="col-md-6">
-                        <div class="form-group">
+                        <div class="form-group mb-3">
                             <label class="small font-weight-bold text-secondary">Fecha de Ingreso</label>
-                            <input type="date" name="fecha_ingreso" id="emp_fecha_ingreso" class="form-control form-control-sm" value="<?= date('Y-m-d') ?>">
+                            <input type="date" name="fecha_ingreso" id="emp_fecha_ingreso" class="form-control" value="<?= date('Y-m-d') ?>">
                         </div>
                     </div>
                     <div class="col-md-6 d-flex align-items-center">
-                        <div class="custom-control custom-switch mt-3">
+                        <div class="custom-control custom-switch mt-2">
                             <input type="checkbox" class="custom-control-input" id="emp_activo" name="activo" value="1" checked>
                             <label class="custom-control-label font-weight-bold text-secondary" for="emp_activo">Empleado Activo</label>
                         </div>
@@ -551,36 +570,37 @@
                 <input type="hidden" name="dedos_nombre" id="emp_dedos_nombre" value="Índice Mano Derecha">
 
                 <!-- APARTADO VISUAL INTERACTIVO: SELECCIÓN DE MANOS Y DEDOS -->
+                <div class="modal-section-title">
+                    <i class="fa-solid fa-hands"></i> 4. Asignación de Dedos para Huella Biométrica
+                </div>
+
                 <div class="hand-selector-wrapper">
                     <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap" style="gap: 6px;">
-                        <label class="small font-weight-bold text-dark mb-0">
-                            <i class="fa-solid fa-hands mr-1 text-primary"></i> Asignación de Dedos para Huella Biométrica (Ambas Manos)
-                        </label>
-                        <span class="badge badge-success px-2 py-1 small">
-                            <i class="fa-solid fa-check-double mr-1"></i> Selección Múltiple Activada
+                        <span class="small text-muted">
+                            Selecciona 1 o más dedos que el empleado registrará en el sensor biométrico:
+                        </span>
+                        <span class="badge badge-light border text-secondary px-2 py-1 small">
+                            <i class="fa-solid fa-check-double mr-1 text-secondary"></i> Selección Múltiple Activada
                         </span>
                     </div>
-                    <p class="text-muted small mb-2" style="font-size: 83%;">
-                        Haz clic sobre cualquier dedo en las manos o en los botones para <strong>agregar o quitar</strong> los dedos que se registrarán en el reloj biométrico. Puedes seleccionar 1, 2 o hasta los 10 dedos.
-                    </p>
 
                     <!-- BARRA DE ACCIONES / SELECCIÓN RÁPIDA -->
                     <div class="finger-presets-bar">
-                        <span class="small font-weight-bold text-muted mr-1"><i class="fa-solid fa-wand-magic-sparkles mr-1 text-primary"></i> Atajos:</span>
+                        <span class="small font-weight-bold text-muted mr-1"><i class="fa-solid fa-wand-magic-sparkles mr-1 text-secondary"></i> Atajos:</span>
                         <button type="button" class="finger-preset-btn" onclick="setFingersPreset('sugerido')" title="Solo Índice Derecho (ID 2)">
-                            <i class="fa-solid fa-star text-warning"></i> Índice Sugerido (ID 2)
+                            <i class="fa-solid fa-check text-secondary"></i> Índice Sugerido (ID 2)
                         </button>
                         <button type="button" class="finger-preset-btn" onclick="setFingersPreset('indices')" title="Ambos Índices (IDs 2 y 7)">
-                            <i class="fa-solid fa-hand-peace text-info"></i> Ambos Índices (2 y 7)
+                            <i class="fa-solid fa-hand-peace text-secondary"></i> Ambos Índices (2 y 7)
                         </button>
                         <button type="button" class="finger-preset-btn" onclick="setFingersPreset('pulgares')" title="Ambos Pulgares (IDs 1 y 6)">
-                            <i class="fa-solid fa-thumbs-up text-primary"></i> Ambos Pulgares (1 y 6)
+                            <i class="fa-solid fa-thumbs-up text-secondary"></i> Ambos Pulgares (1 y 6)
                         </button>
                         <button type="button" class="finger-preset-btn" onclick="setFingersPreset('todos')" title="Seleccionar los 10 dedos">
-                            <i class="fa-solid fa-hands text-success"></i> Todos (10 Dedos)
+                            <i class="fa-solid fa-hands text-secondary"></i> Todos (10 Dedos)
                         </button>
-                        <button type="button" class="finger-preset-btn text-danger" onclick="setFingersPreset('limpiar')" title="Limpiar selección">
-                            <i class="fa-solid fa-trash-can"></i> Limpiar
+                        <button type="button" class="finger-preset-btn text-muted" onclick="setFingersPreset('limpiar')" title="Limpiar selección">
+                            <i class="fa-solid fa-eraser"></i> Limpiar
                         </button>
                     </div>
 
@@ -589,8 +609,8 @@
                         <div class="col-md-6 mb-3">
                             <div class="hand-box">
                                 <div>
-                                    <h6 class="font-weight-bold text-info small mb-2 d-flex align-items-center justify-content-center">
-                                        <i class="fa-solid fa-hand mr-1"></i> Mano Izquierda (IDs 6 - 10)
+                                    <h6 class="font-weight-bold text-dark small mb-2 d-flex align-items-center justify-content-center">
+                                        <i class="fa-solid fa-hand mr-1 text-secondary"></i> Mano Izquierda (IDs 6 - 10)
                                     </h6>
                                     
                                     <!-- MANO IZQUIERDA REALISTA CON PUNTOS INTERACTIVOS (6=Pulgar ... 10=Meñique) -->
@@ -635,8 +655,8 @@
                         <div class="col-md-6 mb-3">
                             <div class="hand-box">
                                 <div>
-                                    <h6 class="font-weight-bold text-primary small mb-2 d-flex align-items-center justify-content-center">
-                                        <i class="fa-solid fa-hand mr-1" style="transform: scaleX(-1);"></i> Mano Derecha (IDs 1 - 5)
+                                    <h6 class="font-weight-bold text-dark small mb-2 d-flex align-items-center justify-content-center">
+                                        <i class="fa-solid fa-hand mr-1 text-secondary" style="transform: scaleX(-1);"></i> Mano Derecha (IDs 1 - 5)
                                     </h6>
 
                                     <!-- MANO DERECHA REALISTA CON PUNTOS INTERACTIVOS (1=Pulgar ... 5=Meñique) -->
@@ -658,7 +678,7 @@
                                         <span class="chip-badge">ID 1</span>
                                     </button>
                                     <button type="button" class="finger-btn-chip is-active" data-finger-id="2" onclick="toggleFinger(2)">
-                                        <span><i class="fa-solid fa-fingerprint mr-1 text-secondary"></i> Índice Derecho <small class="text-success font-weight-bold">(Sugerido)</small></span>
+                                        <span><i class="fa-solid fa-fingerprint mr-1 text-secondary"></i> Índice Derecho <small class="text-secondary font-weight-bold">(Sugerido)</small></span>
                                         <span class="chip-badge">ID 2</span>
                                     </button>
                                     <button type="button" class="finger-btn-chip" data-finger-id="3" onclick="toggleFinger(3)">
@@ -679,78 +699,79 @@
                     </div>
 
                     <!-- BANNER INFORMATIVO DE DEDOS SELECCIONADOS -->
-                    <div class="selected-finger-summary mt-2">
+                    <div class="selected-finger-summary mt-2 p-3 rounded" style="background-color: #f8fafc; border: 1px solid #e2e8f0;">
                         <div class="w-100 d-flex justify-content-between align-items-center mb-1 flex-wrap" style="gap: 6px;">
                             <div class="d-flex align-items-center">
-                                <div class="bg-success text-white rounded-circle p-2 mr-2 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; flex-shrink: 0;">
+                                <div class="rounded-circle mr-2 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; flex-shrink: 0; background-color: #e2e8f0; color: #334155;">
                                     <i class="fa-solid fa-hands"></i>
                                 </div>
                                 <div>
                                     <small class="text-muted d-block" style="line-height: 1.1;">Dedos Seleccionados para Registro:</small>
-                                    <span class="badge badge-success px-2 py-1 font-weight-bold" id="emp_selected_fingers_count_badge">
+                                    <span class="badge badge-light border text-secondary px-2 py-1 font-weight-bold" id="emp_selected_fingers_count_badge">
                                         <i class="fa-solid fa-fingerprint mr-1"></i> 1 Dedo Seleccionado
                                     </span>
                                 </div>
                             </div>
                             <div>
                                 <span class="small text-muted" style="font-size: 80%;">
-                                    <i class="fa-solid fa-mouse-pointer mr-1 text-primary"></i> Haz clic en los dedos para agregar o quitar
+                                    <i class="fa-solid fa-mouse-pointer mr-1 text-secondary"></i> Haz clic en los dedos para agregar o quitar
                                 </span>
                             </div>
                         </div>
-                        <div class="w-100 pt-2 border-top" id="emp_selected_fingers_tags_container" style="border-color: rgba(134, 239, 172, 0.5) !important;">
+                        <div class="w-100 pt-2 border-top" id="emp_selected_fingers_tags_container" style="border-color: #e2e8f0 !important;">
                             <!-- Tags dinámicos de dedos seleccionados -->
                         </div>
                     </div>
                 </div>
 
                 <!-- SECCIÓN INTEGRADA: BIOMETRÍA & RELOJ ZKTECO -->
-                <div class="card card-outline card-success mt-3 mb-0 shadow-none border">
-                    <div class="card-header py-2 d-flex justify-content-between align-items-center bg-light">
-                        <h6 class="card-title font-weight-bold text-success mb-0 small">
-                            <i class="fa-solid fa-fingerprint mr-1"></i> BIOMETRÍA & CAPTURA DE HUELLA EN RELOJ ZKTECO
-                        </h6>
-                        <span class="badge badge-success px-2 py-1" id="emp_inline_bio_badge">
+                <div class="modal-section-title">
+                    <i class="fa-solid fa-fingerprint"></i> 5. Biometría & Captura Directa en Reloj
+                </div>
+
+                <div class="p-3 rounded" style="background-color: #f8fafc; border: 1px solid #e2e8f0;">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="font-weight-bold text-dark small text-uppercase">Acceso y Respaldo Biométrico</span>
+                        <span class="badge badge-light border text-secondary px-2 py-1" id="emp_inline_bio_badge">
                             <i class="fa-solid fa-fingerprint mr-1"></i> <span id="emp_inline_bio_text">0 Huellas en BDD</span>
                         </span>
                     </div>
-                    <div class="card-body py-3">
-                        <div class="row align-items-end">
-                            <div class="col-md-5 mb-2">
-                                <label class="small font-weight-bold text-secondary mb-1">Reloj Biométrico de Captura:</label>
-                                <select id="emp_inline_device_id" class="form-control form-control-sm">
-                                    <?php if (!empty($dispositivos)): ?>
-                                        <?php foreach ($dispositivos as $dev): ?>
-                                            <option value="<?= $dev['id'] ?>">
-                                                <?= htmlspecialchars($dev['nombre']) ?> (<?= $dev['ip'] ?>) - <?= $dev['estado_conexion'] ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    <?php else: ?>
-                                        <option value="1">Reloj Principal (192.168.1.201)</option>
-                                    <?php endif; ?>
-                                </select>
-                            </div>
-                            <div class="col-md-7 mb-2">
-                                <div class="d-flex gap-2" style="gap: 8px;">
-                                    <button type="button" class="btn btn-sm btn-outline-primary flex-fill" onclick="quickRegisterInClock()" title="1. Registra el ID y Nombre del empleado en el reloj">
-                                        <i class="fa-solid fa-upload mr-1"></i> 1. Enviar a Reloj
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-success font-weight-bold flex-fill shadow-sm" onclick="quickEnrollFingerInClock()" title="2. Activa el sensor para colocar la huella 3 veces y respalda en MySQL">
-                                        <i class="fa-solid fa-fingerprint mr-1"></i> 2. Capturar Huella
-                                    </button>
-                                </div>
+
+                    <div class="row align-items-end">
+                        <div class="col-md-5 mb-2">
+                            <label class="small font-weight-bold text-secondary mb-1">Reloj Biométrico de Captura:</label>
+                            <select id="emp_inline_device_id" class="form-control">
+                                <?php if (!empty($dispositivos)): ?>
+                                    <?php foreach ($dispositivos as $dev): ?>
+                                        <option value="<?= $dev['id'] ?>">
+                                            <?= htmlspecialchars($dev['nombre']) ?> (<?= $dev['ip'] ?>) - <?= $dev['estado_conexion'] ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <option value="1">Reloj Principal (192.168.1.201)</option>
+                                <?php endif; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-7 mb-2">
+                            <div class="d-flex gap-2" style="gap: 8px;">
+                                <button type="button" class="btn btn-sm btn-outline-secondary flex-fill" onclick="quickRegisterInClock()" title="1. Registra el ID y Nombre del empleado en el reloj">
+                                    <i class="fa-solid fa-upload mr-1"></i> 1. Enviar a Reloj
+                                </button>
+                                <button type="button" class="btn btn-sm btn-primary font-weight-bold flex-fill" onclick="quickEnrollFingerInClock()" title="2. Activa el sensor para colocar la huella 3 veces y respalda en MySQL">
+                                    <i class="fa-solid fa-fingerprint mr-1"></i> 2. Capturar Huella
+                                </button>
                             </div>
                         </div>
-                        <div class="small text-muted mt-1" style="font-size: 82%;">
-                            <i class="fa-solid fa-circle-info text-info mr-1"></i> <strong>Instrucciones:</strong> Primero ingresa el <em>ID de Reloj</em> y los <em>Nombres</em>, luego presiona <strong>"Capturar Huella"</strong>. El reloj ZKTeco pitará para que el empleado coloque su dedo 3 veces en el sensor y la huella quedará guardada en el reloj y respaldada en la base de datos.
-                        </div>
+                    </div>
+                    <div class="small text-muted mt-2" style="font-size: 82%;">
+                        <i class="fa-solid fa-circle-info text-secondary mr-1"></i> <strong>Instrucciones:</strong> Ingrese el ID de Reloj y Nombres, luego presione <strong>"Capturar Huella"</strong>. El reloj ZKTeco solicitará colocar el dedo 3 veces y la huella quedará registrada en el dispositivo y guardada en MySQL.
                     </div>
                 </div>
 
             </div>
             <div class="modal-footer justify-content-between">
-                <button type="button" class="btn btn-default btn-sm" data-dismiss="modal">Cancelar</button>
-                <button type="submit" class="btn btn-primary btn-sm"><i class="fa-solid fa-floppy-disk mr-1"></i> Guardar Empleado</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm px-3" data-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary btn-sm px-4 font-weight-bold"><i class="fa-solid fa-floppy-disk mr-1"></i> Guardar Empleado</button>
             </div>
         </form>
     </div>
@@ -758,26 +779,26 @@
 
 <!-- MODAL DE ENROLAMIENTO BIOMÉTRICO (EMPLEADOS) -->
 <div class="modal fade" id="modalBiometriaEmp" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-md" role="document">
-        <div class="modal-content shadow-lg">
-            <div class="modal-header bg-success text-white">
+    <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 540px;">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header">
                 <h5 class="modal-title font-weight-bold">
                     <i class="fa-solid fa-fingerprint mr-2"></i> Gestión Biométrica ZKTeco (Huella & Rostro)
                 </h5>
-                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">&times;</button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body p-4">
                 <input type="hidden" id="emp_bio_user_id">
                 <input type="hidden" id="emp_bio_user_name">
 
-                <div class="p-3 bg-light rounded border mb-3 text-center">
+                <div class="p-3 rounded mb-3 text-center" style="background-color: #f8fafc; border: 1px solid #e2e8f0;">
                     <div class="h5 font-weight-bold text-dark mb-1" id="empBioDisplayUser">Empleado</div>
-                    <span class="badge badge-primary px-2 py-1 font-monospace" id="empBioDisplayCode">ID Reloj: -</span>
+                    <span class="badge badge-light border text-secondary px-2 py-1 font-monospace" id="empBioDisplayCode">ID Reloj: -</span>
                 </div>
 
-                <div class="form-group mb-2">
+                <div class="form-group mb-3">
                     <label class="small font-weight-bold text-secondary">Seleccionar Reloj Biométrico ZKTeco:</label>
-                    <select id="emp_bio_device_select" class="form-control form-control-sm">
+                    <select id="emp_bio_device_select" class="form-control">
                         <?php if (!empty($dispositivos)): ?>
                             <?php foreach ($dispositivos as $dev): ?>
                                 <option value="<?= $dev['id'] ?>">
@@ -791,23 +812,24 @@
                 </div>
 
                 <!-- ESTADO DE DEDOS ASIGNADOS VS CAPTURA -->
-                <div class="card card-outline card-primary mb-3 shadow-none border">
-                    <div class="card-header py-1 bg-light d-flex justify-content-between align-items-center">
-                        <span class="small font-weight-bold text-dark"><i class="fa-solid fa-hands mr-1 text-primary"></i> Estado de Dedos Asignados vs Captura:</span>
-                        <span id="empBioSummaryBadge" class="badge badge-secondary px-2 py-0.5">Consultando...</span>
+                <div class="modal-section-title">
+                    <i class="fa-solid fa-hands"></i> Estado de Dedos Asignados vs Captura
+                </div>
+                <div class="p-3 rounded mb-3" style="background-color: #f8fafc; border: 1px solid #e2e8f0;" id="empBioFingersListContainer">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="small font-weight-bold text-secondary">Verificación Biométrica:</span>
+                        <span id="empBioSummaryBadge" class="badge badge-light border text-secondary px-2 py-0.5">Consultando...</span>
                     </div>
-                    <div class="card-body p-2" id="empBioFingersListContainer">
-                        <div id="empBioFingersList" class="d-flex flex-column" style="gap: 6px;">
-                            <div class="text-center text-muted small py-2">
-                                <i class="fa-solid fa-spinner fa-spin mr-1"></i> Verificando dedos asignados...
-                            </div>
+                    <div id="empBioFingersList" class="d-flex flex-column" style="gap: 6px;">
+                        <div class="text-center text-muted small py-2">
+                            <i class="fa-solid fa-spinner fa-spin mr-1"></i> Verificando dedos asignados...
                         </div>
                     </div>
                 </div>
 
-                <div class="form-group mb-2">
-                    <label class="small font-weight-bold text-secondary">Dedo a Enrolar Manualmente:</label>
-                    <select id="emp_bio_finger_select" class="form-control form-control-sm">
+                <div class="form-group mb-3">
+                    <label class="small font-weight-bold text-secondary">Dedo a Enrolar en Reloj:</label>
+                    <select id="emp_bio_finger_select" class="form-control">
                         <optgroup label="Mano Derecha">
                             <option value="1">Pulgar Derecho (ID 1)</option>
                             <option value="2" selected>Índice Derecho (ID 2 - Sugerido)</option>
@@ -823,59 +845,58 @@
                             <option value="10">Meñique Izquierdo (ID 10)</option>
                         </optgroup>
                     </select>
-                    <small class="text-muted">Seleccione el dedo para activar el sensor del reloj biométrico.</small>
+                    <small class="text-muted d-block mt-1">Seleccione el dedo para activar el sensor del reloj biométrico.</small>
                 </div>
 
                 <!-- ESTADO EN BDD -->
-                <div class="card card-outline card-secondary mb-3 shadow-none border">
-                    <div class="card-header py-1">
-                        <span class="small font-weight-bold text-secondary"><i class="fa-solid fa-database mr-1"></i> Estado en Base de Datos (MySQL):</span>
+                <div class="modal-section-title">
+                    <i class="fa-solid fa-database"></i> Estado en Base de Datos (MySQL)
+                </div>
+                <div class="p-3 rounded mb-3" style="background-color: #f8fafc; border: 1px solid #e2e8f0;">
+                    <div id="empBioStatusLoading" class="text-center text-muted small py-2">
+                        <i class="fa-solid fa-spinner fa-spin mr-1"></i> Consultando plantillas biométricas...
                     </div>
-                    <div class="card-body py-2">
-                        <div id="empBioStatusLoading" class="text-center text-muted small py-2">
-                            <i class="fa-solid fa-spinner fa-spin mr-1"></i> Consultando plantillas biométricas...
-                        </div>
-                        <div id="empBioStatusContent" style="display: none;">
-                            <div class="d-flex justify-content-around text-center">
-                                <div>
-                                    <i class="fa-solid fa-fingerprint fa-2x text-primary mb-1"></i>
-                                    <div class="font-weight-bold h6 mb-0" id="empBioCountHuellas">0</div>
-                                    <small class="text-muted">Huellas en BDD</small>
-                                </div>
-                                <div class="border-left"></div>
-                                <div>
-                                    <i class="fa-solid fa-camera fa-2x text-info mb-1"></i>
-                                    <div class="font-weight-bold h6 mb-0" id="empBioCountFacial">0</div>
-                                    <small class="text-muted">Rostro Facial</small>
-                                </div>
+                    <div id="empBioStatusContent" style="display: none;">
+                        <div class="d-flex justify-content-around text-center">
+                            <div>
+                                <i class="fa-solid fa-fingerprint fa-2x text-secondary mb-1"></i>
+                                <div class="font-weight-bold h6 mb-0" id="empBioCountHuellas">0</div>
+                                <small class="text-muted">Huellas en BDD</small>
+                            </div>
+                            <div class="border-left"></div>
+                            <div>
+                                <i class="fa-solid fa-camera fa-2x text-secondary mb-1"></i>
+                                <div class="font-weight-bold h6 mb-0" id="empBioCountFacial">0</div>
+                                <small class="text-muted">Rostro Facial</small>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- ACCIONES CON EL RELOJ BIOMÉTRICO -->
-                <div class="form-group mb-2">
-                    <label class="small font-weight-bold text-secondary">Acciones de Captura y Sincronización:</label>
-                    
-                    <button type="button" class="btn btn-outline-primary btn-block btn-sm mb-2 text-left" onclick="sendEmpToClock()">
-                        <i class="fa-solid fa-upload mr-2 text-primary"></i> <strong>1. Registrar y Enviar Empleado al Reloj</strong>
+                <div class="modal-section-title">
+                    <i class="fa-solid fa-bolt"></i> Acciones de Captura y Sincronización
+                </div>
+                <div class="d-flex flex-column mb-0" style="gap: 8px;">
+                    <button type="button" class="btn btn-outline-secondary btn-block btn-sm text-left py-2 px-3" onclick="sendEmpToClock()">
+                        <i class="fa-solid fa-upload mr-2 text-secondary"></i> <strong>1. Registrar y Enviar Empleado al Reloj</strong>
                         <div class="small text-muted pl-4">Crea el ID y nombre del empleado en la memoria del reloj biométrico.</div>
                     </button>
 
-                    <button type="button" class="btn btn-outline-success btn-block btn-sm mb-2 text-left" onclick="triggerEnrollEmpFinger()">
-                        <i class="fa-solid fa-fingerprint mr-2 text-success"></i> <strong>2. Capturar Huella Dactilar en Reloj</strong>
+                    <button type="button" class="btn btn-outline-secondary btn-block btn-sm text-left py-2 px-3" onclick="triggerEnrollEmpFinger()">
+                        <i class="fa-solid fa-fingerprint mr-2 text-secondary"></i> <strong>2. Capturar Huella Dactilar en Reloj</strong>
                         <div class="small text-muted pl-4">Activa el sensor del reloj para que el empleado coloque el dedo seleccionado 3 veces.</div>
                     </button>
 
-                    <button type="button" class="btn btn-outline-info btn-block btn-sm mb-2 text-left" onclick="syncEmpTemplatesToDB()">
-                        <i class="fa-solid fa-cloud-arrow-down mr-2 text-info"></i> <strong>3. Respaldar Huellas y Rostro a la BDD (MySQL)</strong>
+                    <button type="button" class="btn btn-outline-secondary btn-block btn-sm text-left py-2 px-3" onclick="syncEmpTemplatesToDB()">
+                        <i class="fa-solid fa-cloud-arrow-down mr-2 text-secondary"></i> <strong>3. Respaldar Huellas y Rostro a la BDD (MySQL)</strong>
                         <div class="small text-muted pl-4">Descarga las plantillas del reloj y las guarda en la tabla `plantillas_biometricas`.</div>
                     </button>
                 </div>
 
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cerrar</button>
+            <div class="modal-footer justify-content-end">
+                <button type="button" class="btn btn-outline-secondary btn-sm px-3" data-dismiss="modal">Cerrar</button>
             </div>
         </div>
     </div>

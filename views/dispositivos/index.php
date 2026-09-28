@@ -101,11 +101,11 @@
         <!-- DEVICE CARDS -->
         <div class="row">
             <?php foreach ($dispositivos as $d): ?>
-                <div class="col-md-6 col-lg-4 mb-3" id="card-col-<?= $d['id'] ?>">
-                    <div class="card h-100" id="device-card-<?= $d['id'] ?>">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <h3 class="card-title font-weight-bold text-dark">
-                                <i class="fa-solid fa-fingerprint text-primary mr-2"></i>
+                <div class="col-md-6 col-lg-4 mb-4" id="card-col-<?= $d['id'] ?>">
+                    <div class="card h-100 shadow-sm border" id="device-card-<?= $d['id'] ?>">
+                        <div class="card-header d-flex justify-content-between align-items-center py-3">
+                            <h3 class="card-title font-weight-bold" style="font-size: 0.95rem; color: #0f172a;">
+                                <i class="fa-solid fa-network-wired mr-2" style="color: #1e40af;"></i>
                                 <?= htmlspecialchars($d['nombre']) ?>
                             </h3>
                             <div class="card-tools" id="device-badge-<?= $d['id'] ?>">
@@ -116,56 +116,73 @@
                                 <?php endif; ?>
                             </div>
                         </div>
-                        <div class="card-body py-3 d-flex flex-column justify-content-between">
-                            <ul class="list-group list-group-flush mb-3 small">
-                                <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-0 border-0 border-bottom">
-                                    <span class="text-secondary"><i class="fa-solid fa-network-wired mr-2 text-primary"></i> Dirección IP y Puerto:</span>
-                                    <span class="font-weight-bold font-monospace text-dark"><?= htmlspecialchars($d['ip']) ?>:<?= $d['puerto'] ?></span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-0 border-0 border-bottom">
-                                    <span class="text-secondary"><i class="fa-solid fa-shield-halved mr-2 text-secondary"></i> Protocolo y Clave:</span>
-                                    <span><span class="badge-pill-custom badge-pill-neutral"><?= $d['protocolo'] ?></span> (Clave: <?= $d['clave_comunicacion'] ?>)</span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-0 border-0 border-bottom">
-                                    <span class="text-secondary"><i class="fa-solid fa-location-dot text-danger mr-2"></i> Ubicación:</span>
-                                    <span class="text-dark font-weight-bold"><?= htmlspecialchars($d['ubicacion'] ?? 'Sede Principal') ?></span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-0 border-0">
-                                    <span class="text-secondary"><i class="fa-solid fa-clock mr-2 text-secondary"></i> Último Sync:</span>
-                                    <span class="text-muted font-monospace small" id="device-sync-<?= $d['id'] ?>"><?= $d['ultimo_sync'] ? substr($d['ultimo_sync'], 0, 16) : 'Nunca' ?></span>
-                                </li>
-                            </ul>
+                        <div class="card-body p-3 d-flex flex-column justify-content-between">
+                            <div class="d-flex flex-column mb-2" style="gap: 4px;">
+                                <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-color: #f1f5f9 !important;">
+                                    <span class="text-muted small font-weight-medium">
+                                        <i class="fa-solid fa-ethernet mr-2" style="color: #1e40af; width: 16px;"></i> Dirección IP y Puerto
+                                    </span>
+                                    <span class="font-weight-bold font-monospace text-dark" style="font-size: 0.9rem;">
+                                        <?= htmlspecialchars($d['ip']) ?>:<?= $d['puerto'] ?>
+                                    </span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-color: #f1f5f9 !important;">
+                                    <span class="text-muted small font-weight-medium">
+                                        <i class="fa-solid fa-shield-halved mr-2" style="color: #64748b; width: 16px;"></i> Protocolo / Clave
+                                    </span>
+                                    <span>
+                                        <span class="badge-pill-custom badge-pill-neutral font-weight-bold"><?= $d['protocolo'] ?></span>
+                                        <small class="text-muted ml-1 font-monospace">Clave: <?= $d['clave_comunicacion'] ?></small>
+                                    </span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-color: #f1f5f9 !important;">
+                                    <span class="text-muted small font-weight-medium">
+                                        <i class="fa-solid fa-location-dot mr-2" style="color: #64748b; width: 16px;"></i> Ubicación / Sede
+                                    </span>
+                                    <span class="font-weight-semibold text-dark" style="font-size: 0.85rem;">
+                                        <?= htmlspecialchars($d['ubicacion'] ?? 'Sede Principal') ?>
+                                    </span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center py-2">
+                                    <span class="text-muted small font-weight-medium">
+                                        <i class="fa-solid fa-clock mr-2" style="color: #64748b; width: 16px;"></i> Última Sincronización
+                                    </span>
+                                    <span class="text-muted font-monospace small" id="device-sync-<?= $d['id'] ?>">
+                                        <?= $d['ultimo_sync'] ? substr($d['ultimo_sync'], 0, 16) : 'Nunca' ?>
+                                    </span>
+                                </div>
+                            </div>
 
                             <div id="device-error-<?= $d['id'] ?>">
                                 <?php if (!empty($d['ultimo_error'])): ?>
-                                    <div class="alert alert-danger p-2 small mb-3">
+                                    <div class="alert alert-danger p-2 small mb-3 rounded" style="font-size: 0.78rem;">
                                         <i class="fa-solid fa-triangle-exclamation mr-1"></i> <?= htmlspecialchars(mb_strimwidth($d['ultimo_error'], 0, 90, '...')) ?>
                                     </div>
                                 <?php endif; ?>
                             </div>
 
-                            <div class="d-flex justify-content-between align-items-center pt-2 border-top" style="gap: 5px;">
-                                <button type="button" class="btn btn-outline-primary btn-sm flex-grow-1" onclick="testConnection(<?= $d['id'] ?>, this)">
-                                    <i class="fa-solid fa-plug mr-1"></i> Probar Conexión
+                            <div class="d-flex justify-content-between align-items-center pt-3 border-top mt-2" style="border-color: #e2e8f0 !important; gap: 6px;">
+                                <button type="button" class="btn btn-outline-secondary btn-sm flex-grow-1" onclick="testConnection(<?= $d['id'] ?>, this)">
+                                    <i class="fa-solid fa-plug mr-1 text-primary"></i> Probar Conexión
                                 </button>
-                                <button type="button" class="btn btn-success btn-sm" onclick="syncDevice(<?= $d['id'] ?>, this, 'incremental')" title="Sincronizar marcaciones pendientes">
+                                <button type="button" class="btn btn-primary btn-sm px-3" onclick="syncDevice(<?= $d['id'] ?>, this, 'incremental')" title="Sincronizar marcaciones de hoy">
                                     <i class="fa-solid fa-arrows-rotate"></i>
                                 </button>
                                 
                                 <div class="btn-group">
-                                    <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" data-toggle="dropdown">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" data-toggle="dropdown" title="Más opciones">
                                         <i class="fa-solid fa-gear"></i>
                                     </button>
-                                    <div class="dropdown-menu dropdown-menu-right shadow border-0">
-                                        <a class="dropdown-item small" href="javascript:void(0)" onclick="syncDevice(<?= $d['id'] ?>, null, 'full')">
+                                    <div class="dropdown-menu dropdown-menu-right shadow-sm border-0">
+                                        <a class="dropdown-item py-2" href="javascript:void(0)" onclick="syncDevice(<?= $d['id'] ?>, null, 'full')">
                                             <i class="fa-solid fa-database mr-2 text-primary"></i> Sincronización Histórica
                                         </a>
-                                        <a class="dropdown-item small" href="javascript:void(0)" onclick="openEditDeviceModal(<?= htmlspecialchars(json_encode($d)) ?>)">
+                                        <a class="dropdown-item py-2" href="javascript:void(0)" onclick="openEditDeviceModal(<?= htmlspecialchars(json_encode($d)) ?>)">
                                             <i class="fa-solid fa-pen mr-2 text-secondary"></i> Editar Configuración
                                         </a>
                                         <?php if (($currentUser['rol'] ?? '') === 'ADMIN'): ?>
-                                            <div class="dropdown-divider"></div>
-                                            <a class="dropdown-item small text-danger" href="javascript:void(0)" onclick="confirmClearDeviceMemory(<?= $d['id'] ?>, '<?= htmlspecialchars($d['nombre']) ?>')">
+                                            <div class="dropdown-divider my-1"></div>
+                                            <a class="dropdown-item py-2 text-danger font-weight-bold" href="javascript:void(0)" onclick="confirmClearDeviceMemory(<?= $d['id'] ?>, '<?= htmlspecialchars($d['nombre']) ?>')">
                                                 <i class="fa-solid fa-broom mr-2"></i> Liberar Memoria
                                             </a>
                                         <?php endif; ?>
@@ -247,73 +264,100 @@
 </section>
 
 <!-- MODAL CREAR Y EDITAR DISPOSITIVO -->
-<div class="modal fade" id="modalDispositivo" tabindex="-1">
-    <div class="modal-dialog">
-        <form method="POST" action="?route=dispositivos&action=guardar" class="modal-content">
+<div class="modal fade" id="modalDispositivo" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 580px;">
+        <form method="POST" action="?route=dispositivos&action=guardar" class="modal-content shadow-lg border-0 rounded-lg">
             <?= csrf_field() ?>
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title font-weight-bold" id="deviceModalTitle">Configurar Reloj Biométrico</h5>
-                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            <div class="modal-header">
+                <h5 class="modal-title font-weight-bold d-flex align-items-center">
+                    <i class="fa-solid fa-network-wired mr-2" style="color: #1e40af;"></i>
+                    <span id="deviceModalTitle">Configurar Reloj Biométrico</span>
+                </h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">&times;</button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body p-4">
                 <input type="hidden" name="id" id="dev_id">
                 
-                <div class="form-group">
-                    <label class="small font-weight-bold text-secondary">Nombre Descriptivo</label>
-                    <input type="text" name="nombre" id="dev_nombre" class="form-control form-control-sm" placeholder="Ej: Reloj Principal Recepción" required>
+                <div class="modal-section-title">
+                    <i class="fa-solid fa-server mr-2"></i> Identificación y Conexión de Red
+                </div>
+
+                <div class="form-group mb-3">
+                    <label class="modal-form-label">Nombre Descriptivo <span class="text-danger">*</span></label>
+                    <input type="text" name="nombre" id="dev_nombre" class="form-control" placeholder="Ej: Reloj Principal Recepción" style="height: 38px;" required>
                 </div>
 
                 <div class="row">
-                    <div class="col-8">
-                        <div class="form-group">
-                            <label class="small font-weight-bold text-secondary">Dirección IP Fija</label>
-                            <input type="text" name="ip" id="dev_ip" class="form-control form-control-sm font-monospace" placeholder="192.168.1.201" required>
+                    <div class="col-md-8">
+                        <div class="form-group mb-3">
+                            <label class="modal-form-label">Dirección IP Fija <span class="text-danger">*</span></label>
+                            <input type="text" name="ip" id="dev_ip" class="form-control font-monospace" placeholder="192.168.1.201" style="height: 38px;" required>
                         </div>
                     </div>
-                    <div class="col-4">
-                        <div class="form-group">
-                            <label class="small font-weight-bold text-secondary">Puerto</label>
-                            <input type="number" name="puerto" id="dev_puerto" class="form-control form-control-sm font-monospace" value="4370" required>
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label class="modal-form-label">Puerto <span class="text-danger">*</span></label>
+                            <input type="number" name="puerto" id="dev_puerto" class="form-control font-monospace" value="4370" style="height: 38px;" required>
                         </div>
                     </div>
                 </div>
 
                 <div class="row">
-                    <div class="col-6">
-                        <div class="form-group">
-                            <label class="small font-weight-bold text-secondary">Protocolo</label>
-                            <select name="protocolo" id="dev_protocolo" class="form-control form-control-sm">
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label class="modal-form-label">Protocolo de Red</label>
+                            <select name="protocolo" id="dev_protocolo" class="form-control" style="height: 38px;">
                                 <option value="TCP">TCP (Estándar)</option>
                                 <option value="UDP">UDP</option>
                             </select>
                         </div>
                     </div>
-                    <div class="col-6">
-                        <div class="form-group">
-                            <label class="small font-weight-bold text-secondary">Clave de Comunicación (ComKey)</label>
-                            <input type="number" name="clave_comunicacion" id="dev_clave" class="form-control form-control-sm" value="0">
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label class="modal-form-label">Clave de Comunicación (ComKey)</label>
+                            <input type="number" name="clave_comunicacion" id="dev_clave" class="form-control" value="0" style="height: 38px;">
                         </div>
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label class="small font-weight-bold text-secondary">Ubicación o Sede</label>
-                    <input type="text" name="ubicacion" id="dev_ubicacion" class="form-control form-control-sm" placeholder="Ej: Puerta Principal, Almacén...">
+                <div class="modal-section-title mt-3">
+                    <i class="fa-solid fa-location-dot mr-2"></i> Ubicación y Parámetros
                 </div>
 
-                <div class="form-group">
-                    <label class="small font-weight-bold text-secondary">Modelo</label>
-                    <input type="text" name="modelo" id="dev_modelo" class="form-control form-control-sm" placeholder="Ej: ZKTeco MB20, K40 o SilkBio">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label class="modal-form-label">Ubicación o Sede</label>
+                            <input type="text" name="ubicacion" id="dev_ubicacion" class="form-control" placeholder="Ej: Puerta Principal, Sede Central" style="height: 38px;">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label class="modal-form-label">Modelo del Dispositivo</label>
+                            <input type="text" name="modelo" id="dev_modelo" class="form-control" placeholder="Ej: ZKTeco MB20, SilkBio..." style="height: 38px;">
+                        </div>
+                    </div>
                 </div>
 
-                <div class="form-group custom-control custom-checkbox">
-                    <input class="custom-control-input" type="checkbox" name="activo" id="dev_activo" value="1" checked>
-                    <label class="custom-control-label small font-weight-bold" for="dev_activo">Dispositivo Activo para Sincronización</label>
+                <div class="p-3 rounded border mt-2" style="background: #f8fafc; border-color: #e2e8f0 !important;">
+                    <div class="custom-control custom-switch">
+                        <input class="custom-control-input" type="checkbox" name="activo" id="dev_activo" value="1" checked>
+                        <label class="custom-control-label font-weight-bold" for="dev_activo" style="color: #334155; cursor: pointer; font-size: 0.88rem;">
+                            Dispositivo Activo para Sincronización
+                        </label>
+                        <small class="d-block text-muted mt-1" style="font-size: 0.78rem;">
+                            Si está deshabilitado, el sistema omitirá los sondeos automáticos de presencia y marcaciones de este reloj.
+                        </small>
+                    </div>
                 </div>
             </div>
-            <div class="modal-footer justify-content-between">
-                <button type="button" class="btn btn-default btn-sm" data-dismiss="modal">Cancelar</button>
-                <button type="submit" class="btn btn-primary btn-sm"><i class="fa-solid fa-floppy-disk mr-1"></i> Guardar Dispositivo</button>
+            <div class="modal-footer justify-content-between bg-light px-4 py-3" style="border-top: 1px solid #e2e8f0;">
+                <button type="button" class="btn btn-outline-secondary px-3" data-dismiss="modal">
+                    <i class="fa-solid fa-times mr-1"></i> Cancelar
+                </button>
+                <button type="submit" class="btn btn-primary px-4 font-weight-bold">
+                    <i class="fa-solid fa-floppy-disk mr-1"></i> Guardar Dispositivo
+                </button>
             </div>
         </form>
     </div>
