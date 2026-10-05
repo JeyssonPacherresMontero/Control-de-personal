@@ -10,6 +10,9 @@ require_once __DIR__ . '/../config/config.php';
 class Database {
     private static ?PDO $instance = null;
 
+    /**
+     * Retorna la instancia de conexión PDO (Patrón Singleton)
+     */
     public static function getConnection(): PDO {
         if (self::$instance === null) {
             try {
@@ -30,6 +33,33 @@ class Database {
             }
         }
         return self::$instance;
+    }
+
+    /**
+     * Retorna la instancia Singleton del gestor de base de datos.
+     * Soporta tanto Database::getInstance() como Database::getInstance()->getConnection().
+     */
+    public static function getInstance(): self {
+        static $singleton = null;
+        if ($singleton === null) {
+            $singleton = new self();
+        }
+        self::getConnection();
+        return $singleton;
+    }
+
+    /**
+     * Alias directo para obtener el objeto PDO nativo
+     */
+    public static function pdo(): PDO {
+        return self::getConnection();
+    }
+
+    /**
+     * Delegación dinámica de métodos PDO cuando se usa la instancia como objeto
+     */
+    public function __call(string $method, array $args) {
+        return self::getConnection()->$method(...$args);
     }
 
     public static function query(string $sql, array $params = []): array {
@@ -113,23 +143,42 @@ class Database {
      * @return mixed Retorno de la función ejecutada
      * @throws Throwable
      */
-    public static function transaction(callable $callback) {
+    public static function transaction(callable $callback, int $maxRetries = 3) {
         $alreadyInTransaction = self::inTransaction();
-        if (!$alreadyInTransaction) {
-            self::beginTransaction();
+        if ($alreadyInTransaction) {
+            return $callback();
         }
 
-        try {
-            $result = $callback();
-            if (!$alreadyInTransaction) {
+        $attempts = 0;
+        while (true) {
+            $attempts++;
+            self::beginTransaction();
+
+            try {
+                $result = $callback();
                 self::commit();
+                return $result;
+            } catch (Throwable $e) {
+                if (self::inTransaction()) {
+                    self::rollBack();
+                }
+
+                $isDeadlock = false;
+                if ($e instanceof PDOException) {
+                    $code = (string)$e->getCode();
+                    $driverCode = $e->errorInfo[1] ?? 0;
+                    if ($code === '40001' || $driverCode === 1213 || $driverCode === 1205) {
+                        $isDeadlock = true;
+                    }
+                }
+
+                if ($isDeadlock && $attempts < $maxRetries) {
+                    usleep(random_int(20000, 80000)); // 20ms - 80ms backoff
+                    continue;
+                }
+
+                throw $e;
             }
-            return $result;
-        } catch (Throwable $e) {
-            if (!$alreadyInTransaction && self::inTransaction()) {
-                self::rollBack();
-            }
-            throw $e;
         }
     }
 }

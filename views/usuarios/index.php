@@ -57,26 +57,114 @@
                     <button type="button" class="close" data-dismiss="alert">&times;</button>
                 </div>
             <?php elseif ($_GET['msg'] === 'eliminado'): ?>
-                <div class="alert alert-warning alert-dismissible fade show mb-3" role="alert">
-                    <i class="fa-solid fa-trash mr-2"></i> Usuario eliminado del sistema.
+                <div class="alert alert-success alert-dismissible fade show mb-3" role="alert">
+                    <i class="fa-solid fa-circle-check mr-2"></i> Usuario eliminado definitivamente del sistema.
                     <button type="button" class="close" data-dismiss="alert">&times;</button>
                 </div>
-            <?php elseif ($_GET['msg'] === 'error_admin_protegido' || $_GET['msg'] === 'error_auto_eliminar' || $_GET['msg'] === 'error_auto_desactivar'): ?>
+            <?php elseif ($_GET['msg'] === 'error_admin_protegido'): ?>
                 <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
-                    <i class="fa-solid fa-shield-halved mr-2"></i> Acción no permitida: El usuario Administrador principal del sistema está protegido y no puede ser eliminado, desactivado ni modificado a otro rol.
+                    <i class="fa-solid fa-shield-halved mr-2"></i> Acción denegada: La cuenta de Administrador principal está protegida y no puede ser eliminada ni desactivada.
+                    <button type="button" class="close" data-dismiss="alert">&times;</button>
+                </div>
+            <?php elseif ($_GET['msg'] === 'error_auto_desactivar'): ?>
+                <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+                    <i class="fa-solid fa-triangle-exclamation mr-2"></i> Acción no permitida: No puedes desactivar tu propia cuenta mientras estás en sesión activa.
+                    <button type="button" class="close" data-dismiss="alert">&times;</button>
+                </div>
+            <?php elseif ($_GET['msg'] === 'error_auto_eliminar'): ?>
+                <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+                    <i class="fa-solid fa-triangle-exclamation mr-2"></i> Acción no permitida: No puedes eliminar tu propia cuenta mientras estás en sesión activa.
+                    <button type="button" class="close" data-dismiss="alert">&times;</button>
+                </div>
+            <?php elseif ($_GET['msg'] === 'error_db'): ?>
+                <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+                    <i class="fa-solid fa-triangle-exclamation mr-2"></i> Ocurrió un error en la base de datos al procesar la solicitud.
                     <button type="button" class="close" data-dismiss="alert">&times;</button>
                 </div>
             <?php endif; ?>
         <?php endif; ?>
 
-        <!-- ACTIONS TOOLBAR -->
-        <div class="actions-toolbar no-print">
-            <div class="actions-toolbar-group">
-                <h5 class="text-dark font-weight-bold mb-0" style="font-size: 1.05rem;">
-                    <i class="fa-solid fa-users-gear mr-2 text-primary"></i> Lista de Cuentas y Permisos de Módulos
-                </h5>
+        <?php
+            $userTotal = count($usuarios);
+            $userAdmin = 0;
+            $userGestion = 0;
+            $userActivos = 0;
+            foreach ($usuarios as $u) {
+                if (!empty($u['activo'])) $userActivos++;
+                if (($u['rol'] ?? '') === 'ADMIN') $userAdmin++;
+                if (in_array($u['rol'] ?? '', ['RRHH', 'SUPERVISOR', 'ASISTENTE'], true)) $userGestion++;
+            }
+            $userConsulta = $userTotal - $userAdmin - $userGestion;
+        ?>
+
+        <!-- KPI SUMMARY CARDS (PANTALLA) -->
+        <div class="row no-print mb-2">
+            <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="kpi-card h-100">
+                    <div class="kpi-card-header">
+                        <div>
+                            <div class="kpi-title">Total Cuentas</div>
+                            <div class="kpi-value"><?= $userTotal ?></div>
+                            <div class="kpi-subtitle"><b><?= $userActivos ?></b> cuentas activas</div>
+                        </div>
+                        <div class="kpi-icon-box">
+                            <i class="fa-solid fa-users-gear"></i>
+                        </div>
+                    </div>
+                </div>
             </div>
+            <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="kpi-card h-100">
+                    <div class="kpi-card-header">
+                        <div>
+                            <div class="kpi-title">Administradores</div>
+                            <div class="kpi-value"><?= $userAdmin ?></div>
+                            <div class="kpi-subtitle">Acceso global irrestricto</div>
+                        </div>
+                        <div class="kpi-icon-box">
+                            <i class="fa-solid fa-user-shield"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="kpi-card h-100">
+                    <div class="kpi-card-header">
+                        <div>
+                            <div class="kpi-title">Gestión Operativa</div>
+                            <div class="kpi-value"><?= $userGestion ?></div>
+                            <div class="kpi-subtitle">RRHH, Supervisor y Asistente</div>
+                        </div>
+                        <div class="kpi-icon-box">
+                            <i class="fa-solid fa-user-tie"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="kpi-card h-100">
+                    <div class="kpi-card-header">
+                        <div>
+                            <div class="kpi-title">Usuarios / Consulta</div>
+                            <div class="kpi-value"><?= $userConsulta ?></div>
+                            <div class="kpi-subtitle">Acceso de visualización básica</div>
+                        </div>
+                        <div class="kpi-icon-box">
+                            <i class="fa-solid fa-user-check"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ACTIONS TOOLBAR -->
+        <div class="actions-toolbar no-print mb-3">
             <div class="actions-toolbar-group">
+                <span class="font-weight-bold text-dark" style="font-size: 0.95rem;">
+                    <i class="fa-solid fa-users-gear mr-2 text-primary"></i> Lista de Cuentas y Permisos de Módulos
+                </span>
+            </div>
+            <div class="actions-toolbar-group flex-wrap">
                 <button type="button" class="btn btn-primary btn-sm font-weight-bold" onclick="openNewUserModal()">
                     <i class="fa-solid fa-user-plus mr-1"></i> Crear Nuevo Usuario
                 </button>
@@ -86,7 +174,7 @@
         <!-- MAIN TABLE CARD -->
         <div class="card">
             <div class="card-body p-0 table-responsive">
-                <table class="table table-hover table-sm mb-0">
+                <table class="table table-hover datatable text-nowrap table-sm mb-0">
                     <thead>
                         <tr>
                             <th style="width: 45px;" class="text-center">ID</th>
@@ -125,13 +213,15 @@
                                 </td>
                                 <td class="py-2 text-center">
                                     <?php if ($u['rol'] === 'ADMIN'): ?>
-                                        <span class="badge-pill-custom badge-pill-falta font-weight-bold" style="font-size: 0.7rem;">ADMINISTRADOR</span>
+                                        <span class="badge-pill-custom badge-role-admin font-weight-bold" style="font-size: 0.72rem;"><i class="fa-solid fa-shield-halved mr-1"></i> ADMIN</span>
                                     <?php elseif ($u['rol'] === 'RRHH'): ?>
-                                        <span class="badge-pill-custom badge-pill-justificado font-weight-bold" style="font-size: 0.7rem;">RECURSOS HUMANOS</span>
+                                        <span class="badge-pill-custom badge-role-rrhh font-weight-bold" style="font-size: 0.72rem;"><i class="fa-solid fa-user-tie mr-1"></i> RRHH</span>
                                     <?php elseif ($u['rol'] === 'SUPERVISOR'): ?>
-                                        <span class="badge-pill-custom badge-pill-tardanza font-weight-bold" style="font-size: 0.7rem;">SUPERVISOR</span>
+                                        <span class="badge-pill-custom badge-role-supervisor font-weight-bold" style="font-size: 0.72rem;"><i class="fa-solid fa-eye mr-1"></i> SUPERVISOR</span>
+                                    <?php elseif ($u['rol'] === 'ASISTENTE'): ?>
+                                        <span class="badge-pill-custom badge-role-asistente font-weight-bold" style="font-size: 0.72rem;"><i class="fa-solid fa-clipboard-user mr-1"></i> ASISTENTE</span>
                                     <?php else: ?>
-                                        <span class="badge-pill-custom badge-pill-neutral font-weight-bold" style="font-size: 0.7rem;"><?= htmlspecialchars($u['rol']) ?></span>
+                                        <span class="badge-pill-custom badge-role-user font-weight-bold" style="font-size: 0.72rem;"><i class="fa-solid fa-user mr-1"></i> <?= htmlspecialchars($u['rol']) ?></span>
                                     <?php endif; ?>
                                 </td>
                                 <td class="py-2">
@@ -146,14 +236,14 @@
                                                         $activeCount++;
                                             ?>
                                                 <span class="badge-pill-custom badge-pill-neutral" style="font-size: 0.69rem; padding: 2px 6px;" title="<?= htmlspecialchars($mInfo['description']) ?>">
-                                                    <i class="<?= $mInfo['icon'] ?> text-primary mr-1"></i><?= htmlspecialchars($mInfo['name']) ?>
+                                                    <i class="<?= $mInfo['icon'] ?> text-secondary mr-1"></i><?= htmlspecialchars($mInfo['name']) ?>
                                                 </span>
                                             <?php 
-                                                    endif;
+                                                     endif;
                                                 endforeach; 
                                                 if ($activeCount === 0):
                                             ?>
-                                                <span class="badge-pill-custom badge-pill-tardanza" style="font-size: 0.7rem;">Sin módulos asignados</span>
+                                                <span class="badge-pill-custom badge-pill-neutral text-muted" style="font-size: 0.7rem;">Sin módulos asignados</span>
                                             <?php endif; ?>
                                         </div>
                                     <?php endif; ?>
@@ -162,7 +252,7 @@
                                     <?php if ((int)$u['huellas_count'] > 0): ?>
                                         <span class="badge-pill-custom badge-pill-presente" style="font-size: 0.7rem;" title="Huellas respaldadas en BDD"><i class="fa-solid fa-fingerprint mr-1"></i> <?= $u['huellas_count'] ?> Huella(s)</span>
                                     <?php else: ?>
-                                        <span class="badge-pill-custom badge-pill-neutral" style="font-size: 0.7rem;"><i class="fa-solid fa-fingerprint mr-1"></i> Sin huella</span>
+                                        <span class="badge-pill-custom badge-pill-neutral" style="font-size: 0.7rem;"><i class="fa-solid fa-fingerprint mr-1 text-secondary"></i> Sin huella</span>
                                     <?php endif; ?>
                                 </td>
                                 <td class="text-center py-2" id="user-status-badge-<?= $u['id'] ?>">
@@ -178,36 +268,34 @@
                                     </small>
                                 </td>
                                 <td class="text-center py-2" style="white-space: nowrap;">
-                                    <!-- Editar Usuario & Permisos -->
-                                    <button type="button" class="btn btn-xs btn-outline-primary mr-1" onclick="openEditUserModal(<?= htmlspecialchars(json_encode($u)) ?>)" title="Editar Usuario">
-                                        <i class="fa-solid fa-pen"></i>
-                                    </button>
-
-                                    <!-- Restablecer Contraseña -->
-                                    <button type="button" class="btn btn-xs btn-outline-warning mr-1" onclick="openResetPasswordModal(<?= htmlspecialchars(json_encode(['id' => $u['id'], 'usuario' => $u['usuario'], 'nombre_completo' => $u['nombre_completo']])) ?>)" title="Restablecer Contraseña">
-                                        <i class="fa-solid fa-key"></i>
-                                    </button>
-
-                                    <!-- Biometría Reloj -->
-                                    <button type="button" class="btn btn-xs btn-outline-success mr-1" onclick="openBiometricModal(<?= htmlspecialchars(json_encode($u)) ?>)" title="Biometría ZKTeco">
-                                        <i class="fa-solid fa-fingerprint"></i>
-                                    </button>
-
-                                    <?php if ($u['id'] !== ($currentUser['id'] ?? 0)): ?>
-                                        <!-- Cambiar Estado (Activar/Desactivar) vía POST seguro -->
-                                        <button type="button" class="btn btn-xs btn-outline-secondary mr-1" id="btn-toggle-status-<?= $u['id'] ?>" title="<?= $u['activo'] ? 'Desactivar Usuario' : 'Activar Usuario' ?>" onclick="toggleUserStatus(<?= $u['id'] ?>, '<?= htmlspecialchars($u['usuario'], ENT_QUOTES) ?>', <?= $u['activo'] ? 1 : 0 ?>)">
-                                            <i class="fa-solid <?= $u['activo'] ? 'fa-user-slash text-warning' : 'fa-user-check text-success' ?>"></i>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <!-- Editar Usuario & Permisos -->
+                                        <button type="button" class="btn btn-outline-secondary" onclick="openEditUserModal(<?= htmlspecialchars(json_encode($u)) ?>)" title="Editar Usuario">
+                                            <i class="fa-solid fa-pen text-secondary"></i>
                                         </button>
 
-                                        <!-- Eliminar Usuario -->
-                                        <form method="POST" action="?route=usuarios&action=eliminar" style="display:inline;" onsubmit="return confirm('¿Estás seguro de eliminar este usuario definitivamente?');">
-                                            <?= csrf_field() ?>
-                                            <input type="hidden" name="id" value="<?= $u['id'] ?>">
-                                            <button type="submit" class="btn btn-xs btn-outline-danger" title="Eliminar Usuario">
+                                        <!-- Restablecer Contraseña -->
+                                        <button type="button" class="btn btn-outline-secondary" onclick="openResetPasswordModal(<?= htmlspecialchars(json_encode(['id' => $u['id'], 'usuario' => $u['usuario'], 'nombre_completo' => $u['nombre_completo']])) ?>)" title="Restablecer Contraseña">
+                                            <i class="fa-solid fa-key text-secondary"></i>
+                                        </button>
+
+                                        <!-- Biometría Reloj -->
+                                        <button type="button" class="btn btn-outline-secondary" onclick="openBiometricModal(<?= htmlspecialchars(json_encode($u)) ?>)" title="Biometría ZKTeco">
+                                            <i class="fa-solid fa-fingerprint text-secondary"></i>
+                                        </button>
+
+                                        <?php if ($u['id'] !== ($currentUser['id'] ?? 0) && $u['rol'] !== 'ADMIN'): ?>
+                                            <!-- Cambiar Estado (Activar / Desactivar) -->
+                                            <button type="button" class="btn btn-outline-secondary" id="btn-toggle-status-<?= $u['id'] ?>" title="<?= $u['activo'] ? 'Desactivar Usuario' : 'Activar Usuario' ?>" onclick="toggleUserStatus(<?= $u['id'] ?>, '<?= htmlspecialchars($u['usuario'], ENT_QUOTES) ?>', <?= $u['activo'] ? 1 : 0 ?>)">
+                                                <i class="fa-solid <?= $u['activo'] ? 'fa-user-slash text-muted' : 'fa-user-check text-success' ?>"></i>
+                                            </button>
+
+                                            <!-- Eliminar Usuario Definitivamente -->
+                                            <button type="button" class="btn btn-outline-secondary text-danger" title="Eliminar Usuario Definitivamente" onclick="deleteUser(<?= $u['id'] ?>, '<?= htmlspecialchars($u['usuario'], ENT_QUOTES) ?>')">
                                                 <i class="fa-solid fa-trash"></i>
                                             </button>
-                                        </form>
-                                    <?php endif; ?>
+                                        <?php endif; ?>
+                                    </div>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -221,154 +309,168 @@
 
 <!-- MODAL GESTIÓN DE USUARIO -->
 <div class="modal fade" id="modalUsuario" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-lg" role="document">
-        <form method="POST" action="?route=usuarios&action=guardar" class="modal-content shadow-lg" id="formUsuario">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document" style="max-width: 840px;">
+        <form method="POST" action="?route=usuarios&action=guardar" class="modal-content shadow-lg border-0 rounded-lg" id="formUsuario">
             <?= csrf_field() ?>
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title font-weight-bold" id="usrModalTitle">
-                    <i class="fa-solid fa-user-gear mr-2"></i> Gestión de Usuario
+            <div class="modal-header">
+                <h5 class="modal-title font-weight-bold d-flex align-items-center" id="usrModalTitle">
+                    <i class="fa-solid fa-user-gear mr-2" style="color: #1e40af;"></i> Gestión de Usuario
                 </h5>
-                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">&times;</button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body p-4">
                 <input type="hidden" name="id" id="usr_id">
 
                 <!-- DATOS PRINCIPALES -->
-                <div class="card card-outline card-secondary mb-3 shadow-none border">
-                    <div class="card-header py-2">
-                        <h6 class="card-title font-weight-bold text-secondary mb-0 small">
-                            <i class="fa-solid fa-id-card mr-1"></i> DATOS DE LA CUENTA
-                        </h6>
+                <div class="modal-section-title">
+                    <i class="fa-solid fa-id-card mr-2"></i> Datos de la Cuenta y Rol
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label class="modal-form-label">Nombre de Usuario (Login) <span class="text-danger">*</span></label>
+                            <input type="text" name="usuario" id="usr_usuario" class="form-control font-monospace" placeholder="Ej: joperador, rrhh_asistencias" style="height: 38px;" required>
+                        </div>
                     </div>
-                    <div class="card-body py-3">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group mb-2">
-                                    <label class="small font-weight-bold text-secondary">Nombre de Usuario (Login) <span class="text-danger">*</span></label>
-                                    <input type="text" name="usuario" id="usr_usuario" class="form-control form-control-sm font-monospace" placeholder="Ej: joperador, rrhh_asistencias" required>
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label class="modal-form-label">Nombre Completo <span class="text-danger">*</span></label>
+                            <input type="text" name="nombre_completo" id="usr_nombre" class="form-control" placeholder="Ej: Juan Pérez Morales" style="height: 38px;" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label class="modal-form-label">Correo Electrónico</label>
+                            <input type="email" name="email" id="usr_email" class="form-control" placeholder="usuario@empresa.com" style="height: 38px;">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label class="modal-form-label" id="usr_pass_label">Contraseña <span class="text-danger" id="usr_pass_required_star">*</span></label>
+                            <div class="input-group">
+                                <input type="password" name="password" id="usr_password" class="form-control" placeholder="Ingresa contraseña" style="height: 38px;">
+                                <div class="input-group-append">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="togglePassVisibility('usr_password', this)" title="Ver/Ocultar contraseña" style="height: 38px;">
+                                        <i class="fa-solid fa-eye"></i>
+                                    </button>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="form-group mb-2">
-                                    <label class="small font-weight-bold text-secondary">Nombre Completo <span class="text-danger">*</span></label>
-                                    <input type="text" name="nombre_completo" id="usr_nombre" class="form-control form-control-sm" placeholder="Ej: Juan Pérez Morales" required>
-                                </div>
+                            <small class="text-muted d-block mt-1" id="usr_pass_hint" style="font-size: 0.78rem;">Obligatoria para nuevo usuario</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label class="modal-form-label">Rol Asignado <span class="text-danger">*</span></label>
+                            <select name="rol" id="usr_rol" class="form-control font-weight-bold" onchange="onRoleChange(this.value)" style="height: 38px;">
+                                <option value="RRHH" selected>RRHH - Recursos Humanos</option>
+                                <option value="SUPERVISOR">SUPERVISOR - Supervisor de Área</option>
+                                <option value="CONSULTA">CONSULTA - Solo Consulta u Operador</option>
+                            </select>
+                            <div id="usr_admin_badge" class="badge px-2.5 py-1 mt-1 font-weight-bold" style="background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; display: none; font-size: 0.8rem;">
+                                <i class="fa-solid fa-lock mr-1"></i> Administrador Principal (Único)
                             </div>
                         </div>
+                    </div>
+                </div>
 
-                        <div class="row">
-                            <div class="col-md-4">
-                                <div class="form-group mb-2">
-                                    <label class="small font-weight-bold text-secondary">Correo Electrónico</label>
-                                    <input type="email" name="email" id="usr_email" class="form-control form-control-sm" placeholder="usuario@empresa.com">
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-group mb-2">
-                                    <label class="small font-weight-bold text-secondary" id="usr_pass_label">Contraseña <span class="text-danger" id="usr_pass_required_star">*</span></label>
-                                    <div class="input-group input-group-sm">
-                                        <input type="password" name="password" id="usr_password" class="form-control" placeholder="Ingresa contraseña">
-                                        <div class="input-group-append">
-                                            <button class="btn btn-outline-secondary" type="button" onclick="togglePassVisibility('usr_password', this)" title="Ver/Ocultar contraseña">
-                                                <i class="fa-solid fa-eye"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <small class="text-muted" id="usr_pass_hint">Contraseña obligatoria para el nuevo usuario</small>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-group mb-2">
-                                    <label class="small font-weight-bold text-secondary">Rol Asignado <span class="text-danger">*</span></label>
-                                    <select name="rol" id="usr_rol" class="form-control form-control-sm font-weight-bold" onchange="onRoleChange(this.value)">
-                                        <option value="RRHH" selected>RRHH - Recursos Humanos</option>
-                                        <option value="SUPERVISOR">SUPERVISOR - Supervisor de Área</option>
-                                        <option value="CONSULTA">CONSULTA - Solo Consulta u Operador</option>
-                                    </select>
-                                    <div id="usr_admin_badge" class="badge badge-danger px-2 py-1 mt-1 font-weight-bold" style="display: none;">
-                                        <i class="fa-solid fa-lock mr-1"></i> Administrador Principal (Único)
-                                    </div>
-                                </div>
-                            </div>
+                <div class="row" id="row_supervisor_depto" style="display: none;">
+                    <div class="col-md-12">
+                        <div class="form-group mb-3 p-3 rounded border" style="background: #f8fafc; border-color: #e2e8f0 !important;">
+                            <label class="modal-form-label d-flex align-items-center mb-1.5" style="color: #1e40af;">
+                                <i class="fa-solid fa-building-user mr-1.5"></i> Departamento / Área Asignada al Supervisor <span class="text-danger ml-1">*</span>
+                            </label>
+                            <select name="departamento_id" id="usr_departamento_id" class="form-control" style="height: 38px;">
+                                <option value="">-- Seleccionar Área que Supervisa --</option>
+                                <?php if (!empty($departamentos)): ?>
+                                    <?php foreach ($departamentos as $dep): ?>
+                                        <option value="<?= $dep['id'] ?>"><?= htmlspecialchars($dep['nombre']) ?></option>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </select>
+                            <small class="text-muted d-block mt-1" style="font-size: 0.78rem;">El supervisor solo podrá ver y gestionar personal y justificaciones de este departamento.</small>
                         </div>
+                    </div>
+                </div>
 
-
-                        <div class="row mt-2">
-                            <div class="col-12">
-                                <div class="custom-control custom-switch">
-                                    <input type="checkbox" class="custom-control-input" id="usr_activo" name="activo" value="1" checked>
-                                    <label class="custom-control-label font-weight-bold text-secondary small" for="usr_activo">Usuario Activo en el Sistema</label>
-                                </div>
-                            </div>
-                        </div>
+                <div class="p-3 rounded border mt-1 mb-4" style="background: #f8fafc; border-color: #e2e8f0 !important;">
+                    <div class="custom-control custom-switch">
+                        <input type="checkbox" class="custom-control-input" id="usr_activo" name="activo" value="1" checked>
+                        <label class="custom-control-label font-weight-bold" for="usr_activo" style="color: #334155; cursor: pointer; font-size: 0.88rem;">
+                            Usuario Activo en el Sistema
+                        </label>
+                        <small class="d-block text-muted mt-1" style="font-size: 0.78rem;">
+                            Los usuarios inactivos no pueden iniciar sesión ni operar en la plataforma.
+                        </small>
                     </div>
                 </div>
 
                 <!-- SECCIÓN DE APARTADOS DEL MENÚ (PERMISOS) -->
-                <div class="card card-outline card-primary mb-0 shadow-none border" id="containerPermisos">
-                    <div class="card-header py-2 d-flex align-items-center justify-content-between">
-                        <h6 class="card-title font-weight-bold text-primary mb-0 small">
-                            <i class="fa-solid fa-list-check mr-1"></i> CONTROL DE ACCESO A LOS APARTADOS DEL MENÚ
-                        </h6>
-                        <span class="badge badge-info small">Marca los apartados que el usuario verá en su menú</span>
+                <div id="containerPermisos">
+                    <div class="modal-section-title d-flex align-items-center justify-content-between flex-wrap">
+                        <span><i class="fa-solid fa-shield-halved mr-2"></i> Control de Acceso a Módulos</span>
+                        <span class="text-muted font-normal" style="font-size: 0.78rem; text-transform: none; letter-spacing: normal;">Habilita las vistas autorizadas para este usuario</span>
                     </div>
-                    <div class="card-body py-2">
 
-                        <!-- BOTONES DE PLANTILLA RÁPIDA -->
-                        <div class="mb-3 p-2 bg-light rounded border d-flex flex-wrap align-items-center" style="gap: 6px;">
-                            <span class="small font-weight-bold text-muted mr-1"><i class="fa-solid fa-wand-magic-sparkles text-warning mr-1"></i> Accesos Rápidos:</span>
-                            <button type="button" class="btn btn-xs btn-outline-success font-weight-bold" onclick="setPresetOnlyAsistencia()">
-                                <i class="fa-solid fa-calendar-check mr-1"></i> Solo Asistencias Diarias
-                            </button>
-                            <button type="button" class="btn btn-xs btn-outline-primary" onclick="setPresetRRHH()">
-                                <i class="fa-solid fa-users mr-1"></i> Perfil RRHH Completo
-                            </button>
-                            <button type="button" class="btn btn-xs btn-outline-info" onclick="setPresetSupervisor()">
-                                <i class="fa-solid fa-user-tie mr-1"></i> Perfil Supervisor
-                            </button>
-                            <button type="button" class="btn btn-xs btn-outline-secondary" onclick="setPresetConsulta()">
-                                <i class="fa-solid fa-eye mr-1"></i> Solo Consulta
-                            </button>
-                            <button type="button" class="btn btn-xs btn-default border text-dark font-weight-bold" onclick="toggleAllModules(true)">
-                                <i class="fa-solid fa-check-double text-success mr-1"></i> Marcar Todos
-                            </button>
-                            <button type="button" class="btn btn-xs btn-default border text-danger" onclick="toggleAllModules(false)">
-                                <i class="fa-solid fa-xmark mr-1"></i> Desmarcar
-                            </button>
-                        </div>
+                    <!-- HERRAMIENTAS DE PLANTILLA RÁPIDA -->
+                    <div class="mb-3 p-2 rounded border d-flex flex-wrap align-items-center" style="background: #f8fafc; border-color: #e2e8f0 !important; gap: 6px;">
+                        <span class="small font-weight-bold text-muted mr-1" style="font-size: 0.78rem;"><i class="fa-solid fa-wand-magic-sparkles mr-1 text-secondary"></i> Accesos Rápidos:</span>
+                        <button type="button" class="btn btn-xs btn-outline-secondary font-weight-medium" onclick="setPresetOnlyAsistencia()">
+                            <i class="fa-solid fa-calendar-check mr-1 text-primary"></i> Solo Asistencias
+                        </button>
+                        <button type="button" class="btn btn-xs btn-outline-secondary font-weight-medium" onclick="setPresetRRHH()">
+                            <i class="fa-solid fa-users mr-1 text-primary"></i> Perfil RRHH
+                        </button>
+                        <button type="button" class="btn btn-xs btn-outline-secondary font-weight-medium" onclick="setPresetSupervisor()">
+                            <i class="fa-solid fa-user-tie mr-1 text-primary"></i> Supervisor
+                        </button>
+                        <button type="button" class="btn btn-xs btn-outline-secondary font-weight-medium" onclick="setPresetConsulta()">
+                            <i class="fa-solid fa-eye mr-1 text-primary"></i> Solo Consulta
+                        </button>
+                        <div class="mx-1 border-left" style="height: 18px; border-color: #cbd5e1 !important;"></div>
+                        <button type="button" class="btn btn-xs btn-light border text-dark font-weight-medium" onclick="toggleAllModules(true)">
+                            <i class="fa-solid fa-check-double text-primary mr-1"></i> Todos
+                        </button>
+                        <button type="button" class="btn btn-xs btn-light border text-muted font-weight-medium" onclick="toggleAllModules(false)">
+                            <i class="fa-solid fa-xmark mr-1"></i> Ninguno
+                        </button>
+                    </div>
 
-                        <!-- MATRIZ DE CHECKBOXES DE MÓDULOS -->
-                        <div class="row">
-                            <?php foreach ($modulosDisponibles as $modKey => $modInfo): ?>
-                                <?php if ($modKey === 'usuarios') continue; // Solo para Admin interno ?>
-                                <div class="col-md-6 mb-2">
-                                    <div class="p-2 border rounded module-card h-100 bg-white" style="transition: all 0.2s;">
-                                        <div class="custom-control custom-checkbox">
-                                            <input type="checkbox" class="custom-control-input chk-modulo" id="chk_<?= $modKey ?>" name="permisos[]" value="<?= $modKey ?>">
-                                            <label class="custom-control-label font-weight-bold text-dark d-flex align-items-center" for="chk_<?= $modKey ?>">
-                                                <i class="<?= $modInfo['icon'] ?> text-primary mr-2" style="font-size: 1.1rem; width: 22px;"></i>
-                                                <span><?= htmlspecialchars($modInfo['name']) ?></span>
-                                            </label>
-                                        </div>
-                                        <div class="small text-muted pl-4 mt-1" style="font-size: 80%;">
-                                            <?= htmlspecialchars($modInfo['description']) ?>
-                                        </div>
+                    <!-- MATRIZ DE CHECKBOXES DE MÓDULOS -->
+                    <div class="row">
+                        <?php foreach ($modulosDisponibles as $modKey => $modInfo): ?>
+                            <?php if ($modKey === 'usuarios') continue; // Solo para Admin interno ?>
+                            <div class="col-md-6 mb-2">
+                                <div class="p-2.5 px-3 border rounded module-card h-100 bg-white" style="border-color: #e2e8f0 !important; transition: all 0.2s;">
+                                    <div class="custom-control custom-checkbox">
+                                        <input type="checkbox" class="custom-control-input chk-modulo" id="chk_<?= $modKey ?>" name="permisos[]" value="<?= $modKey ?>">
+                                        <label class="custom-control-label font-weight-semibold text-dark d-flex align-items-center" for="chk_<?= $modKey ?>" style="cursor: pointer; font-size: 0.88rem;">
+                                            <i class="<?= $modInfo['icon'] ?> mr-2" style="font-size: 1rem; width: 20px; color: #1e40af;"></i>
+                                            <span><?= htmlspecialchars($modInfo['name']) ?></span>
+                                        </label>
+                                    </div>
+                                    <div class="small text-muted pl-4 mt-1" style="font-size: 0.78rem; line-height: 1.3;">
+                                        <?= htmlspecialchars($modInfo['description']) ?>
                                     </div>
                                 </div>
-                            <?php endforeach; ?>
-                        </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
 
-                        <div id="adminNotice" class="alert alert-info py-2 px-3 small mt-2 mb-0" style="display: none;">
-                            <i class="fa-solid fa-circle-info mr-1"></i> Los usuarios con rol <strong>ADMIN</strong> tienen acceso a todos los módulos y opciones de configuración del sistema de forma automática.
-                        </div>
-
+                    <div id="adminNotice" class="alert py-2.5 px-3 small mt-3 mb-0 rounded" style="background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; display: none;">
+                        <i class="fa-solid fa-circle-info mr-1"></i> Los usuarios con rol <strong>ADMIN</strong> tienen acceso integral a todos los módulos y configuraciones del sistema automáticamente.
                     </div>
                 </div>
 
             </div>
-            <div class="modal-footer justify-content-between">
-                <button type="button" class="btn btn-default btn-sm" data-dismiss="modal">Cancelar</button>
-                <button type="submit" class="btn btn-primary btn-sm font-weight-bold shadow-sm">
+            <div class="modal-footer justify-content-between bg-light px-4 py-3" style="border-top: 1px solid #e2e8f0;">
+                <button type="button" class="btn btn-outline-secondary px-3" data-dismiss="modal">
+                    <i class="fa-solid fa-times mr-1"></i> Cancelar
+                </button>
+                <button type="submit" class="btn btn-primary px-4 font-weight-bold">
                     <i class="fa-solid fa-floppy-disk mr-1"></i> Guardar Usuario y Accesos
                 </button>
             </div>
@@ -378,26 +480,26 @@
 
 <!-- MODAL DE ENROLAMIENTO BIOMÉTRICO (HUELLA / FACIAL EN RELOJ Y BDD) -->
 <div class="modal fade" id="modalBiometria" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-md" role="document">
-        <div class="modal-content shadow-lg">
-            <div class="modal-header bg-success text-white">
-                <h5 class="modal-title font-weight-bold">
-                    <i class="fa-solid fa-fingerprint mr-2"></i> Gestión Biométrica ZKTeco (Huella & Rostro)
+    <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 540px;">
+        <div class="modal-content shadow-lg border-0 rounded-lg">
+            <div class="modal-header">
+                <h5 class="modal-title font-weight-bold d-flex align-items-center">
+                    <i class="fa-solid fa-fingerprint mr-2" style="color: #1e40af;"></i> Gestión Biométrica ZKTeco
                 </h5>
-                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">&times;</button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body p-4">
                 <input type="hidden" id="bio_user_id">
                 <input type="hidden" id="bio_user_name">
 
-                <div class="p-3 bg-light rounded border mb-3 text-center">
-                    <div class="h5 font-weight-bold text-dark mb-1" id="bioDisplayUser">Usuario</div>
-                    <span class="badge badge-primary px-2 py-1 font-monospace" id="bioDisplayCode">ID Reloj: -</span>
+                <div class="p-3 rounded border mb-3 text-center" style="background: #f8fafc; border-color: #e2e8f0 !important;">
+                    <div class="h5 font-weight-bold mb-1" id="bioDisplayUser" style="color: #0f172a;">Usuario</div>
+                    <span class="badge border text-secondary px-2.5 py-1 font-monospace" id="bioDisplayCode" style="background: #ffffff; border-color: #cbd5e1 !important; font-size: 0.8rem;">ID Reloj: -</span>
                 </div>
 
-                <div class="form-group">
-                    <label class="small font-weight-bold text-secondary">Seleccionar Reloj Biométrico ZKTeco:</label>
-                    <select id="bio_device_select" class="form-control form-control-sm">
+                <div class="form-group mb-3">
+                    <label class="modal-form-label">Seleccionar Reloj Biométrico ZKTeco</label>
+                    <select id="bio_device_select" class="form-control" style="height: 38px;">
                         <?php foreach ($dispositivos as $dev): ?>
                             <option value="<?= $dev['id'] ?>">
                                 <?= htmlspecialchars($dev['nombre']) ?> (<?= $dev['ip'] ?>:<?= $dev['puerto'] ?>) - <?= $dev['estado_conexion'] ?>
@@ -410,55 +512,71 @@
                 </div>
 
                 <!-- ESTADO EN BDD -->
-                <div class="card card-outline card-secondary mb-3 shadow-none border">
-                    <div class="card-header py-1">
-                        <span class="small font-weight-bold text-secondary"><i class="fa-solid fa-database mr-1"></i> Estado en Base de Datos (MySQL):</span>
+                <div class="modal-section-title mt-3">
+                    <i class="fa-solid fa-database mr-2"></i> Estado en Base de Datos Central
+                </div>
+                <div class="p-3 rounded border mb-3 bg-white" style="border-color: #e2e8f0 !important;">
+                    <div id="bioStatusLoading" class="text-center text-muted small py-2">
+                        <i class="fa-solid fa-spinner fa-spin mr-1"></i> Consultando plantillas biométricas...
                     </div>
-                    <div class="card-body py-2">
-                        <div id="bioStatusLoading" class="text-center text-muted small py-2">
-                            <i class="fa-solid fa-spinner fa-spin mr-1"></i> Consultando plantillas biométricas...
-                        </div>
-                        <div id="bioStatusContent" style="display: none;">
-                            <div class="d-flex justify-content-around text-center">
-                                <div>
-                                    <i class="fa-solid fa-fingerprint fa-2x text-primary mb-1"></i>
-                                    <div class="font-weight-bold h6 mb-0" id="bioCountHuellas">0</div>
-                                    <small class="text-muted">Huellas en BDD</small>
-                                </div>
-                                <div class="border-left"></div>
-                                <div>
-                                    <i class="fa-solid fa-camera fa-2x text-info mb-1"></i>
-                                    <div class="font-weight-bold h6 mb-0" id="bioCountFacial">0</div>
-                                    <small class="text-muted">Rostro Facial</small>
-                                </div>
+                    <div id="bioStatusContent" style="display: none;">
+                        <div class="d-flex justify-content-around text-center">
+                            <div>
+                                <i class="fa-solid fa-fingerprint fa-2x mb-1" style="color: #1e40af;"></i>
+                                <div class="font-weight-bold h5 mb-0" id="bioCountHuellas" style="color: #0f172a;">0</div>
+                                <small class="text-muted">Huellas en BDD</small>
+                            </div>
+                            <div class="border-left" style="border-color: #e2e8f0 !important;"></div>
+                            <div>
+                                <i class="fa-solid fa-camera fa-2x mb-1" style="color: #0284c7;"></i>
+                                <div class="font-weight-bold h5 mb-0" id="bioCountFacial" style="color: #0f172a;">0</div>
+                                <small class="text-muted">Rostro Facial</small>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- ACCIONES CON EL RELOJ BIOMÉTRICO -->
-                <div class="form-group mb-2">
-                    <label class="small font-weight-bold text-secondary">Acciones de Captura y Sincronización:</label>
-                    
-                    <button type="button" class="btn btn-outline-primary btn-block btn-sm mb-2 text-left" onclick="sendUserToClock()">
-                        <i class="fa-solid fa-upload mr-2 text-primary"></i> <strong>1. Registrar y Enviar Usuario al Reloj</strong>
-                        <div class="small text-muted pl-4">Crea el nombre y número de usuario en la memoria del reloj biométrico.</div>
+                <div class="modal-section-title mt-3">
+                    <i class="fa-solid fa-network-wired mr-2"></i> Acciones con el Dispositivo
+                </div>
+                <div class="d-flex flex-column" style="gap: 8px;">
+                    <button type="button" class="btn btn-outline-secondary btn-block text-left p-2.5 bg-white border" style="border-color: #e2e8f0 !important; border-radius: 8px; transition: all 0.15s;" onclick="sendUserToClock()">
+                        <div class="d-flex align-items-center">
+                            <i class="fa-solid fa-upload mr-2.5" style="color: #1e40af; font-size: 1.1rem; width: 22px; text-align: center;"></i>
+                            <div>
+                                <strong class="d-block text-dark" style="font-size: 0.88rem;">1. Registrar Usuario en el Reloj</strong>
+                                <span class="small text-muted" style="font-size: 0.78rem;">Crea el nombre y número de usuario en la memoria del dispositivo.</span>
+                            </div>
+                        </div>
                     </button>
 
-                    <button type="button" class="btn btn-outline-success btn-block btn-sm mb-2 text-left" onclick="triggerEnrollFinger()">
-                        <i class="fa-solid fa-fingerprint mr-2 text-success"></i> <strong>2. Capturar Huella Dactilar en Reloj</strong>
-                        <div class="small text-muted pl-4">Activa el sensor del reloj para que el usuario coloque su dedo 3 veces.</div>
+                    <button type="button" class="btn btn-outline-secondary btn-block text-left p-2.5 bg-white border mt-0" style="border-color: #e2e8f0 !important; border-radius: 8px; transition: all 0.15s;" onclick="triggerEnrollFinger()">
+                        <div class="d-flex align-items-center">
+                            <i class="fa-solid fa-fingerprint mr-2.5" style="color: #1e40af; font-size: 1.1rem; width: 22px; text-align: center;"></i>
+                            <div>
+                                <strong class="d-block text-dark" style="font-size: 0.88rem;">2. Capturar Huella Dactilar en Reloj</strong>
+                                <span class="small text-muted" style="font-size: 0.78rem;">Activa el sensor del reloj para que el usuario coloque su dedo 3 veces.</span>
+                            </div>
+                        </div>
                     </button>
 
-                    <button type="button" class="btn btn-outline-info btn-block btn-sm mb-2 text-left" onclick="syncTemplatesToDB()">
-                        <i class="fa-solid fa-cloud-arrow-down mr-2 text-info"></i> <strong>3. Respaldar Huellas y Rostro a la BDD (MySQL)</strong>
-                        <div class="small text-muted pl-4">Descarga las plantillas del reloj y las guarda en la tabla `plantillas_biometricas`.</div>
+                    <button type="button" class="btn btn-outline-secondary btn-block text-left p-2.5 bg-white border mt-0" style="border-color: #e2e8f0 !important; border-radius: 8px; transition: all 0.15s;" onclick="syncTemplatesToDB()">
+                        <div class="d-flex align-items-center">
+                            <i class="fa-solid fa-cloud-arrow-down mr-2.5" style="color: #1e40af; font-size: 1.1rem; width: 22px; text-align: center;"></i>
+                            <div>
+                                <strong class="d-block text-dark" style="font-size: 0.88rem;">3. Respaldar a Base de Datos Central</strong>
+                                <span class="small text-muted" style="font-size: 0.78rem;">Descarga las plantillas del reloj y las guarda en el servidor.</span>
+                            </div>
+                        </div>
                     </button>
                 </div>
 
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cerrar</button>
+            <div class="modal-footer justify-content-end bg-light px-4 py-3" style="border-top: 1px solid #e2e8f0;">
+                <button type="button" class="btn btn-outline-secondary px-3" data-dismiss="modal">
+                    <i class="fa-solid fa-times mr-1"></i> Cerrar
+                </button>
             </div>
         </div>
     </div>
@@ -467,59 +585,51 @@
 <!-- MODAL RESTABLECER CONTRASEÑA DE USUARIO (EXCLUSIVO ADMINISTRADOR) -->
 <div class="modal fade" id="modalRestablecerPass" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 480px;">
-        <div class="modal-content shadow-lg border-0" style="border-radius: 12px; overflow: hidden;">
-            <div class="modal-header bg-warning py-3 px-4 d-flex align-items-center justify-content-between">
-                <h5 class="modal-title font-weight-bold text-dark mb-0 d-flex align-items-center" style="font-size: 1.05rem;">
-                    <i class="fa-solid fa-key mr-2"></i> Restablecer Contraseña de Usuario
+        <div class="modal-content shadow-lg border-0 rounded-lg">
+            <div class="modal-header">
+                <h5 class="modal-title font-weight-bold d-flex align-items-center">
+                    <i class="fa-solid fa-key mr-2" style="color: #1e40af;"></i> Restablecer Contraseña
                 </h5>
-                <button type="button" class="close text-dark" data-dismiss="modal" aria-label="Close" style="outline: none;">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">&times;</button>
             </div>
-            <div class="modal-body p-4 bg-light">
+            <div class="modal-body p-4 bg-white">
                 <input type="hidden" id="reset_user_id">
 
                 <!-- DATOS DEL USUARIO SELECCIONADO -->
-                <div class="card mb-3 border bg-white shadow-none" style="border-radius: 8px;">
-                    <div class="card-body p-3">
-                        <div class="d-flex align-items-center">
-                            <div class="bg-warning text-dark rounded-circle d-flex align-items-center justify-content-center mr-3 font-weight-bold" style="width: 42px; height: 42px; font-size: 1.1rem; flex-shrink: 0;">
-                                <i class="fa-solid fa-user-lock"></i>
-                            </div>
-                            <div class="overflow-hidden">
-                                <h6 class="font-weight-bold text-dark mb-0 text-truncate" id="reset_display_nombre">Nombre del Usuario</h6>
-                                <div class="text-muted small font-monospace" id="reset_display_usuario">usuario: -</div>
-                            </div>
-                        </div>
+                <div class="p-3 rounded border mb-3 d-flex align-items-center" style="background: #f8fafc; border-color: #e2e8f0 !important;">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center mr-3 font-weight-bold" style="width: 44px; height: 44px; font-size: 1.1rem; background: #e0e7ff; color: #1e40af; flex-shrink: 0;">
+                        <i class="fa-solid fa-user-lock"></i>
+                    </div>
+                    <div class="overflow-hidden">
+                        <h6 class="font-weight-bold mb-0 text-truncate" id="reset_display_nombre" style="color: #0f172a; font-size: 0.95rem;">Nombre del Usuario</h6>
+                        <div class="text-muted small font-monospace" id="reset_display_usuario">usuario: -</div>
                     </div>
                 </div>
 
                 <!-- FORMULARIO DE RESTABLECIMIENTO -->
-                <div class="card border bg-white shadow-none mb-0" style="border-radius: 8px;">
-                    <div class="card-body p-3">
-                        <div class="form-group mb-2">
-                            <label class="small font-weight-bold text-secondary mb-1">Nueva Contraseña para el Usuario <span class="text-danger">*</span></label>
-                            <div class="input-group input-group-sm mb-2">
-                                <input type="password" id="reset_new_pass" class="form-control font-monospace" placeholder="Mínimo 5 caracteres" required>
-                                <div class="input-group-append">
-                                    <button class="btn btn-outline-secondary" type="button" onclick="togglePassVisibility('reset_new_pass', this)" title="Ver/Ocultar contraseña">
-                                        <i class="fa-solid fa-eye"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <small class="text-muted d-block mb-2">Define una contraseña manual o utiliza el generador automático.</small>
-
-                            <!-- BOTÓN GENERAR CONTRASEÑA ALEATORIA -->
-                            <button type="button" class="btn btn-outline-primary btn-xs btn-block py-1 mb-2" onclick="generateRandomPass()">
-                                <i class="fa-solid fa-wand-magic-sparkles mr-1 text-warning"></i> Generar Contraseña Aleatoria Segura
+                <div class="form-group mb-3">
+                    <label class="modal-form-label">Nueva Contraseña para el Usuario <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        <input type="password" id="reset_new_pass" class="form-control font-monospace" placeholder="Mínimo 8 caracteres" minlength="8" style="height: 38px;" required>
+                        <div class="input-group-append">
+                            <button class="btn btn-outline-secondary" type="button" onclick="togglePassVisibility('reset_new_pass', this)" title="Ver/Ocultar contraseña" style="height: 38px;">
+                                <i class="fa-solid fa-eye"></i>
                             </button>
                         </div>
                     </div>
+                    <small class="text-muted d-block mt-1" style="font-size: 0.78rem;">Debe tener al menos 8 caracteres, 1 mayúscula y 1 número.</small>
                 </div>
+
+                <!-- BOTÓN GENERAR CONTRASEÑA ALEATORIA -->
+                <button type="button" class="btn btn-outline-secondary btn-block py-2 mb-2 bg-white text-dark font-weight-medium" onclick="generateRandomPass()" style="border-color: #cbd5e1; font-size: 0.85rem;">
+                    <i class="fa-solid fa-key mr-2" style="color: #1e40af;"></i> Generar Contraseña Segura (12 car.)
+                </button>
             </div>
-            <div class="modal-footer bg-white d-flex justify-content-between py-2 px-4 border-top">
-                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancelar</button>
-                <button type="button" id="btnConfirmResetPass" class="btn btn-warning btn-sm font-weight-bold" onclick="submitResetPassword()">
+            <div class="modal-footer d-flex justify-content-between bg-light px-4 py-3" style="border-top: 1px solid #e2e8f0;">
+                <button type="button" class="btn btn-outline-secondary px-3" data-dismiss="modal">
+                    <i class="fa-solid fa-times mr-1"></i> Cancelar
+                </button>
+                <button type="button" id="btnConfirmResetPass" class="btn btn-primary px-4 font-weight-bold" onclick="submitResetPassword()">
                     <i class="fa-solid fa-check mr-1"></i> Guardar Nueva Contraseña
                 </button>
             </div>
@@ -537,8 +647,8 @@ function openNewUserModal() {
     document.getElementById('usr_email').value = '';
     document.getElementById('usr_password').value = '';
     document.getElementById('usr_password').required = true;
-    document.getElementById('usr_password').placeholder = 'Contraseña requerida (min. 5 caracteres)';
-    document.getElementById('usr_pass_hint').innerText = 'Contraseña obligatoria para el nuevo usuario (No se asignará por defecto)';
+    document.getElementById('usr_password').placeholder = 'Contraseña requerida (min. 8 caracteres, mayúscula y número)';
+    document.getElementById('usr_pass_hint').innerText = 'Mínimo 8 caracteres, con al menos una mayúscula y un número.';
     document.getElementById('usr_pass_required_star').style.display = 'inline';
     
     // Configuración de Rol: Exclusivo no-admin
@@ -547,11 +657,15 @@ function openNewUserModal() {
     rolSelect.disabled = false;
     rolSelect.value = 'RRHH';
     document.getElementById('usr_admin_badge').style.display = 'none';
+    if (document.getElementById('usr_departamento_id')) {
+        document.getElementById('usr_departamento_id').value = '';
+    }
 
     document.getElementById('usr_activo').checked = true;
 
     // Preset inicial por defecto
     setPresetRRHH();
+    onRoleChange('RRHH');
     $('#modalUsuario').modal('show');
 }
 
@@ -579,6 +693,10 @@ function openEditUserModal(u) {
         rolSelect.disabled = false;
         rolSelect.value = inArray(u.rol, ['RRHH', 'SUPERVISOR', 'CONSULTA']) ? u.rol : 'RRHH';
         adminBadge.style.display = 'none';
+    }
+
+    if (document.getElementById('usr_departamento_id')) {
+        document.getElementById('usr_departamento_id').value = u.departamento_id || '';
     }
 
     document.getElementById('usr_activo').checked = (parseInt(u.activo) === 1);
@@ -620,11 +738,27 @@ function openResetPasswordModal(user) {
 }
 
 function generateRandomPass() {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%&*';
-    let pass = '';
-    for (let i = 0; i < 10; i++) {
-        pass += chars.charAt(Math.floor(Math.random() * chars.length));
+    const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    const lower = 'abcdefghijkmnopqrstuvwxyz';
+    const digits = '23456789';
+    const symbols = '!@#$%&*';
+    const all = upper + lower + digits + symbols;
+
+    // Garantizar que contenga al menos mayúsculas, minúsculas, números y símbolos
+    let pass = [
+        upper.charAt(Math.floor(Math.random() * upper.length)),
+        upper.charAt(Math.floor(Math.random() * upper.length)),
+        lower.charAt(Math.floor(Math.random() * lower.length)),
+        lower.charAt(Math.floor(Math.random() * lower.length)),
+        digits.charAt(Math.floor(Math.random() * digits.length)),
+        digits.charAt(Math.floor(Math.random() * digits.length)),
+        symbols.charAt(Math.floor(Math.random() * symbols.length))
+    ];
+    for (let i = 0; i < 5; i++) {
+        pass.push(all.charAt(Math.floor(Math.random() * all.length)));
     }
+    pass = pass.sort(() => Math.random() - 0.5).join('');
+
     const input = document.getElementById('reset_new_pass');
     input.value = pass;
     input.type = 'text'; // Mostrar para que el admin la pueda leer y copiar
@@ -647,11 +781,11 @@ function submitResetPassword() {
     const userId = document.getElementById('reset_user_id').value;
     const newPass = document.getElementById('reset_new_pass').value.trim();
 
-    if (!newPass || newPass.length < 5) {
+    if (!newPass || newPass.length < 8 || !/[A-Z]/.test(newPass) || !/[0-9]/.test(newPass)) {
         Swal.fire({
             icon: 'warning',
             title: 'Contraseña no válida',
-            text: 'La nueva contraseña debe tener al menos 5 caracteres.',
+            text: 'La nueva contraseña debe tener al menos 8 caracteres, contener al menos una letra mayúscula y al menos un número.',
             confirmButtonColor: '#1d4ed8'
         });
         return;
@@ -706,14 +840,14 @@ function submitResetPassword() {
     });
 }
 
-// CAMBIAR ESTADO DE USUARIO (ACTIVAR / DESACTIVAR) VÍA POST
+// CAMBIAR ESTADO DE USUARIO (ACTIVAR / DESACTIVAR) VÍA AJAX SEGURO
 function toggleUserStatus(userId, username, currentStatus) {
     const actionText = currentStatus ? 'desactivar' : 'activar';
-    const confirmBtnColor = currentStatus ? '#dc2626' : '#16a34a';
+    const confirmBtnColor = currentStatus ? '#f59e0b' : '#16a34a';
 
     Swal.fire({
         title: `¿Deseas ${actionText} a ${username}?`,
-        text: currentStatus ? 'El usuario no podrá iniciar sesión en el sistema mientras esté inactivo.' : 'El usuario volverá a tener acceso con sus credenciales habituales.',
+        text: currentStatus ? 'El usuario no podrá iniciar sesión en el sistema mientras esté inactivo.' : 'El usuario volverá a tener acceso con sus credenciales y permisos habituales.',
         icon: currentStatus ? 'warning' : 'question',
         showCancelButton: true,
         confirmButtonColor: confirmBtnColor,
@@ -722,13 +856,25 @@ function toggleUserStatus(userId, username, currentStatus) {
         cancelButtonText: 'Cancelar'
     }).then(function(result) {
         if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Actualizando estado...',
+                allowOutsideClick: false,
+                didOpen: function() { Swal.showLoading(); }
+            });
+
+            const token = window._csrfToken || '<?= csrf_token() ?>';
             const fd = new FormData();
             fd.append('id', userId);
+            fd.append('_csrf', token);
+            fd.append('_csrf_token', token);
 
             fetch('?route=usuarios&action=cambiar_estado', {
                 method: 'POST',
                 body: fd,
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                headers: { 
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': token
+                }
             })
             .then(function(res) { return res.json(); })
             .then(function(data) {
@@ -753,13 +899,83 @@ function toggleUserStatus(userId, username, currentStatus) {
     });
 }
 
+// ELIMINAR USUARIO DEFINITIVAMENTE VÍA AJAX SEGURO
+function deleteUser(userId, username) {
+    Swal.fire({
+        title: `¿Eliminar a ${username}?`,
+        html: `¿Estás seguro de que deseas <b>eliminar definitivamente</b> al usuario <b>${username}</b> del sistema?<br><br><span class="text-danger small font-weight-bold"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Esta acción es irreversible y borrará la cuenta por completo de la base de datos.</span>`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: '<i class="fa-solid fa-trash mr-1"></i> Sí, eliminar definitivamente',
+        cancelButtonText: 'Cancelar'
+    }).then(function(result) {
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Eliminando usuario...',
+                text: 'Procesando eliminación física en el servidor',
+                allowOutsideClick: false,
+                didOpen: function() { Swal.showLoading(); }
+            });
+
+            const token = window._csrfToken || '<?= csrf_token() ?>';
+            const fd = new FormData();
+            fd.append('id', userId);
+            fd.append('_csrf', token);
+            fd.append('_csrf_token', token);
+
+            fetch('?route=usuarios&action=eliminar', {
+                method: 'POST',
+                body: fd,
+                headers: { 
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': token
+                }
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Usuario Eliminado!',
+                        text: data.message || 'El usuario ha sido eliminado definitivamente.',
+                        timer: 1600,
+                        showConfirmButton: false
+                    }).then(function() {
+                        window.location.reload();
+                    });
+                } else {
+                    Swal.fire('No se pudo eliminar', data.error || 'Ocurrió un error al eliminar.', 'error');
+                }
+            })
+            .catch(function() {
+                Swal.fire('Error', 'Fallo de red al intentar eliminar el usuario.', 'error');
+            });
+        }
+    });
+}
+
 function onRoleChange(role) {
     var adminNotice = document.getElementById('adminNotice');
+    var rowSupervisor = document.getElementById('row_supervisor_depto');
     if (role === 'ADMIN') {
         toggleAllModules(true);
         if (adminNotice) adminNotice.style.display = 'block';
     } else {
         if (adminNotice) adminNotice.style.display = 'none';
+    }
+
+    if (rowSupervisor) {
+        if (role === 'SUPERVISOR') {
+            rowSupervisor.style.display = 'block';
+        } else {
+            rowSupervisor.style.display = 'none';
+            var deptoSelect = document.getElementById('usr_departamento_id');
+            if (deptoSelect && role !== 'SUPERVISOR') {
+                deptoSelect.value = '';
+            }
+        }
     }
 }
 

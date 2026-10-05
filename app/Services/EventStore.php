@@ -27,31 +27,46 @@ class EventStore {
             $ipAddress = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
         }
 
-        // Obtener la última versión del stream para versionado secuencial
-        $lastEvent = Database::queryOne(
-            "SELECT version FROM eventos_asistencia 
-             WHERE aggregate_type = ? AND aggregate_id = ? 
-             ORDER BY version DESC LIMIT 1",
-            [$aggregateType, $aggregateId]
-        );
-        $nextVersion = $lastEvent ? ((int)$lastEvent['version'] + 1) : 1;
-
         $jsonPayload = json_encode($eventData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
-        return Database::execute(
-            "INSERT INTO eventos_asistencia 
-             (aggregate_type, aggregate_id, event_type, event_data, version, created_by, ip_address) 
-             VALUES (?, ?, ?, ?, ?, ?, ?)",
-            [
-                $aggregateType,
-                $aggregateId,
-                $eventType,
-                $jsonPayload,
-                $nextVersion,
-                $createdBy,
-                $ipAddress
-            ]
-        );
+        $maxRetries = 3;
+        for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+            try {
+                // Obtener la última versión del stream para versionado secuencial
+                $lastEvent = Database::queryOne(
+                    "SELECT version FROM eventos_asistencia 
+                     WHERE aggregate_type = ? AND aggregate_id = ? 
+                     ORDER BY version DESC LIMIT 1",
+                    [$aggregateType, $aggregateId]
+                );
+                $nextVersion = $lastEvent ? ((int)$lastEvent['version'] + 1) : 1;
+
+                return Database::execute(
+                    "INSERT INTO eventos_asistencia 
+                     (aggregate_type, aggregate_id, event_type, event_data, version, created_by, ip_address) 
+                     VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    [
+                        $aggregateType,
+                        $aggregateId,
+                        $eventType,
+                        $jsonPayload,
+                        $nextVersion,
+                        $createdBy,
+                        $ipAddress
+                    ]
+                );
+            } catch (\PDOException $e) {
+                $errorCode = (string)$e->getCode();
+                $errorInfo = $e->errorInfo[1] ?? 0;
+                // Código SQLSTATE 23000 o MySQL error 1062 es violación de clave única
+                if (($errorCode === '23000' || $errorInfo === 1062) && $attempt < $maxRetries) {
+                    usleep(random_int(10000, 50000)); // 10ms - 50ms backoff
+                    continue;
+                }
+                throw $e;
+            }
+        }
+        return 0;
     }
 
     /**
@@ -70,6 +85,33 @@ class EventStore {
         }
 
         return $rows;
+    }
+
+    /**
+     * Obtiene los eventos asociados a un ID de agregado o stream específico.
+     * Soporta identificadores compuestos de empleados (ej. emp_{id}_{fecha}) y agregados genéricos.
+     */
+    public static function getEventsForAggregate(string $aggregateId): array {
+        if (preg_match('/^emp_(\d+)_(\d{4}-\d{2}-\d{2})$/', $aggregateId, $matches)) {
+            return self::getTimelineForEmployeeDate((int)$matches[1], $matches[2]);
+        }
+
+        $rows = Database::query(
+            "SELECT * FROM eventos_asistencia 
+             WHERE aggregate_id = ? 
+             ORDER BY created_at ASC, id ASC",
+            [$aggregateId]
+        );
+
+        $events = [];
+        foreach ($rows as $row) {
+            $data = json_decode($row['event_data'], true) ?: [];
+            $row['event_data'] = $data;
+            $row['display'] = self::formatEventForDisplay($row['event_type'], $data, $row['created_by'], $row['created_at']);
+            $events[] = $row;
+        }
+
+        return $events;
     }
 
     /**

@@ -25,6 +25,8 @@ except ImportError:
 
 from config import DB_CONFIG, ZK_CONFIG
 from zk_service import ZKDeviceService
+from idempotency import compute_idempotency_key
+from queue_manager import QueueManager
 
 # Configurar logging
 logging.basicConfig(
@@ -50,7 +52,8 @@ class AttendanceSynchronizer:
                     database=DB_CONFIG['database'],
                     charset=DB_CONFIG['charset'],
                     cursorclass=DictCursor,
-                    autocommit=True
+                    autocommit=True,
+                    init_command=DB_CONFIG.get('init_command', "SET time_zone = '-05:00'")
                 )
             return self.db_conn
         except Exception as e:
@@ -137,16 +140,16 @@ class AttendanceSynchronizer:
             logger.error(f"Error al sincronizar usuarios de dispositivo {device_id}: {str(e)}")
             return 0
 
-    def log_sync_event(self, device_id, event_type, downloaded, inserted, duplicates, status, message, duration):
-        """Registra el resultado de la sincronización en log_sincronizacion"""
+    def log_sync_event(self, device_id, event_type, downloaded, inserted, duplicates, status, message, duration, modo='PULL', latency_ms=0, failed=0):
+        """Registra el resultado de la sincronización en log_sincronizacion con métricas completas"""
         try:
             conn = self.get_db()
             with conn.cursor() as cursor:
                 cursor.execute("""
                     INSERT INTO log_sincronizacion 
-                    (id_dispositivo, tipo_evento, total_descargados, total_insertados, total_duplicados, estado, mensaje, duracion_segundos)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                """, (device_id, event_type, downloaded, inserted, duplicates, status, message, round(duration, 2)))
+                    (id_dispositivo, tipo_evento, modo, total_descargados, total_insertados, total_duplicados, total_fallidos, estado, mensaje, duracion_segundos, latencia_ms)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """, (device_id, event_type, modo, downloaded, inserted, duplicates, failed, status, message, round(duration, 2), int(latency_ms or 0)))
         except Exception as e:
             logger.error(f"Error guardando log de sincronización: {str(e)}")
 
@@ -175,10 +178,11 @@ class AttendanceSynchronizer:
         except Exception as e:
             logger.error(f"Error actualizando estado de dispositivo {device_id}: {str(e)}")
 
-    def sync_device(self, device, clear_after=False, sync_users=True, today_only=False, target_date=None, days=None):
+    def sync_device(self, device, clear_after=False, sync_users=True, today_only=False, target_date=None, days=None, full=False):
         """
         Ejecuta la sincronización para un dispositivo biométrico específico.
-        Soporta filtrado rápido por día (today_only), fecha específica (target_date) o ventana de días (days).
+        Soporta filtrado rápido por día (today_only), fecha específica (target_date),
+        ventana de días (days), o histórico completo (full).
         """
         device_id = device['id']
         ip = device['ip']
@@ -188,19 +192,22 @@ class AttendanceSynchronizer:
         force_udp = (protocol.upper() == 'UDP')
 
         start_time = time.time()
-        filter_mode = "SOLO HOY" if today_only else (f"FECHA {target_date}" if target_date else (f"ÚLTIMOS {days} DÍAS" if days else "INCREMENTAL"))
+        filter_mode = "HISTÓRICO COMPLETO" if full else ("SOLO HOY" if today_only else (f"FECHA {target_date}" if target_date else (f"ÚLTIMOS {days} DÍAS" if days else "INCREMENTAL (7 DÍAS)")))
         logger.info(f"==> Iniciando sincronización ({filter_mode}) con biométrico #{device_id} [{device['nombre']}] en {ip}:{port} ({protocol})")
 
         zk_service = ZKDeviceService(
             ip=ip,
             port=port,
-            timeout=ZK_CONFIG['default_timeout'],
+            timeout=ZK_CONFIG.get('default_timeout', 30),
             password=comm_key,
             force_udp=force_udp
         )
 
         try:
-            zk_service.connect()
+            zk_service.connect_with_retry(
+                max_retries=ZK_CONFIG.get('max_retries', 4),
+                backoff_delays=ZK_CONFIG.get('retry_backoff', [2, 5, 10, 30])
+            )
             
             # Sincronizar hora del reloj con el servidor
             try:
@@ -218,11 +225,12 @@ class AttendanceSynchronizer:
 
             if total_downloaded == 0:
                 duration = time.time() - start_time
+                latency = getattr(zk_service, 'last_latency_ms', 0) or 0
                 self.update_device_status(device_id, 'ONLINE')
-                self.log_sync_event(device_id, 'SYNC_AUTO', 0, 0, 0, 'EXITO', 'Sin nuevas marcaciones en el dispositivo.', duration)
+                self.log_sync_event(device_id, 'SYNC_AUTO', 0, 0, 0, 'EXITO', 'Sin nuevas marcaciones en el dispositivo.', duration, modo='PULL', latency_ms=latency, failed=0)
                 logger.info(f"Dispositivo #{device_id} no tiene registros de asistencia pendientes.")
                 zk_service.disconnect()
-                return {"success": True, "downloaded": 0, "inserted": 0, "duplicates": 0}
+                return {"success": True, "downloaded": 0, "inserted": 0, "duplicates": 0, "affected_dates": []}
 
             # Mapeo de empleados
             emp_map = self.get_employee_mapping()
@@ -237,13 +245,15 @@ class AttendanceSynchronizer:
                 today_dt = datetime.date.today()
                 
                 if today_only:
-                    # Filtra estrictamente las marcaciones de la fecha de hoy
                     candidate_records = [r for r in records if r['timestamp'].date() == today_dt]
                 elif target_date:
                     candidate_records = [r for r in records if r['timestamp'].date() == target_date]
                 elif days and days > 0:
                     cutoff_days = datetime.datetime.now() - datetime.timedelta(days=days)
                     candidate_records = [r for r in records if r['timestamp'] >= cutoff_days]
+                elif full:
+                    # MODO HISTÓRICO COMPLETO: evalúa el 100% de las marcaciones almacenadas en el reloj
+                    candidate_records = records
                 else:
                     # Modo Incremental inteligente:
                     # Consultar la última marcación registrada de este dispositivo
@@ -251,28 +261,38 @@ class AttendanceSynchronizer:
                     max_row = cursor.fetchone()
                     max_fecha = max_row['max_fecha'] if max_row and max_row['max_fecha'] else None
 
-                    # Si ya tenemos histórico, filtramos solo los registros de los últimos 2 días o posteriores
+                    # Ventana de seguridad de 7 días (para proteger fines de semana largos y descansos)
                     if max_fecha and isinstance(max_fecha, datetime.datetime):
-                        cutoff = max_fecha - datetime.timedelta(days=2)
+                        cutoff = max_fecha - datetime.timedelta(days=7)
                         candidate_records = [r for r in records if r['timestamp'] >= cutoff]
                     else:
                         candidate_records = records
 
                 insert_query = """
                     INSERT IGNORE INTO marcaciones 
-                    (id_empleado, codigo_reloj, id_dispositivo, fecha_hora, tipo, tipo_verificacion, uid_dispositivo, procesado)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, 0)
+                    (id_empleado, codigo_reloj, id_dispositivo, fecha_hora, tipo, tipo_verificacion, uid_dispositivo, procesado, idempotency_key, origen)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, 0, %s, %s)
                 """
                 
                 batch_data = []
                 event_batch_data = []
                 disp_name = device.get('nombre', 'Reloj ZKTeco')
+                device_serial = device.get('numero_serie') or (getattr(zk_service.conn, 'get_serialnumber', lambda: None)() if zk_service.conn else None) or f"DEV_{device_id}"
                 
                 for rec in candidate_records:
                     user_id_str = str(rec['user_id']).strip()
                     emp_id = emp_map.get(user_id_str) or emp_map.get(user_id_str.lstrip('0') or '0')
                     dt_str = rec['timestamp'].strftime('%Y-%m-%d %H:%M:%S')
                     tipo_verif = rec.get('tipo_verificacion', 'huella')
+                    
+                    # Generación determinista de clave de idempotencia SHA-256
+                    idempotency_key = compute_idempotency_key(
+                        device_serial=device_serial,
+                        user_id=user_id_str,
+                        timestamp=dt_str,
+                        punch_type=rec['tipo'],
+                        verify_type=tipo_verif
+                    )
                     
                     batch_data.append((
                         emp_id,
@@ -281,13 +301,15 @@ class AttendanceSynchronizer:
                         dt_str,
                         rec['tipo'],
                         tipo_verif,
-                        rec['uid']
+                        rec['uid'],
+                        idempotency_key,
+                        'PULL'
                     ))
 
                     # Formatear etiqueta amigable para el log inmutable
                     verif_label = "Reconocimiento Facial" if tipo_verif == "facial" else ("Huella Dactilar" if tipo_verif == "huella" else ("Tarjeta RFID" if tipo_verif == "tarjeta" else "Contraseña / PIN"))
 
-                    # Event Sourcing: Preparar payload inmutable del evento
+                    # Event Sourcing: Preparar payload inmutable del evento con clave de idempotencia
                     agg_id = f"emp_{emp_id}_{dt_str.replace(' ', '_').replace(':', '-')}" if emp_id else f"zk_{user_id_str}_{dt_str.replace(' ', '_').replace(':', '-')}"
                     event_payload = json.dumps({
                         "id_empleado": emp_id,
@@ -295,10 +317,13 @@ class AttendanceSynchronizer:
                         "id_dispositivo": device_id,
                         "dispositivo_nombre": disp_name,
                         "dispositivo_ip": ip,
+                        "dispositivo_serial": device_serial,
                         "fecha_hora": dt_str,
                         "tipo": rec['tipo'],
                         "tipo_verificacion": verif_label,
-                        "uid_dispositivo": rec['uid']
+                        "uid_dispositivo": rec['uid'],
+                        "idempotency_key": idempotency_key,
+                        "origen": "PULL"
                     }, ensure_ascii=False)
 
                     event_batch_data.append((
@@ -337,20 +362,41 @@ class AttendanceSynchronizer:
 
                 duplicates_count = len(candidate_records) - inserted_count
 
-            # Si el usuario solicitó limpiar la memoria del reloj tras descargar y guardar con éxito
-            if (clear_after or ZK_CONFIG.get('clear_after_sync', False)) and total_downloaded > 0:
+            # REGLA ESTRICTA: No ejecutar automáticamente clear_attendance().
+            # La limpieza debe ser una acción administrativa explícita (vía CLI --clear o panel).
+            if clear_after and total_downloaded > 0:
                 try:
                     zk_service.clear_attendance()
-                    logger.info(f"Memoria de registros limpiada en el dispositivo #{device_id}")
+                    logger.warning(f"Memoria de registros liberada explícitamente en el dispositivo #{device_id}")
                 except Exception as ce:
                     logger.error(f"Error al limpiar memoria de {ip}: {str(ce)}")
 
             duration = time.time() - start_time
-            msg = f"Sincronización ({filter_mode}): {total_downloaded} en reloj, {len(candidate_records)} evaluados, {inserted_count} nuevos insertados, {duplicates_count} ya existentes."
-            logger.info(msg)
+            latency = getattr(zk_service, 'last_latency_ms', 0) or 0
+            
+            # Formato de log estructurado y trazable
+            structured_log = (
+                f"\n[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}]\n"
+                f"DEVICE: {disp_name} (ID: #{device_id})\n"
+                f"IP: {ip}:{port}\n"
+                f"MODE: PULL\n"
+                f"ACTION: GET_ATTENDANCE\n"
+                f"RESULT: SUCCESS\n"
+                f"RECORDS: {total_downloaded}\n"
+                f"NEW: {inserted_count}\n"
+                f"DUPLICATED: {duplicates_count}\n"
+                f"TIME: {duration:.2f}s (Latency: {latency}ms)"
+            )
+            logger.info(structured_log)
 
-            self.update_device_status(device_id, 'ONLINE')
-            self.log_sync_event(device_id, 'SYNC_AUTO' if not today_only else 'SYNC_MANUAL', total_downloaded, inserted_count, duplicates_count, 'EXITO', msg, duration)
+            msg = f"Sincronización PULL ({filter_mode}): {total_downloaded} en reloj, {inserted_count} insertados, {duplicates_count} duplicados. Tiempo: {duration:.2f}s."
+            self.update_device_status(device_id, 'ONLINE', firmware=getattr(zk_service.conn, 'get_firmware_version', lambda: None)())
+            self.log_sync_event(device_id, 'SYNC_AUTO' if not (today_only or full) else 'SYNC_MANUAL', total_downloaded, inserted_count, duplicates_count, 'EXITO', msg, duration, modo='PULL', latency_ms=latency, failed=0)
+
+            # Recolectar fechas únicas de las marcaciones candidatas
+            affected_dates = set()
+            for rec in candidate_records:
+                affected_dates.add(rec['timestamp'].date().strftime('%Y-%m-%d'))
 
             zk_service.disconnect()
             return {
@@ -359,16 +405,29 @@ class AttendanceSynchronizer:
                 "downloaded": total_downloaded,
                 "evaluated": len(candidate_records),
                 "inserted": inserted_count,
-                "duplicates": duplicates_count
+                "duplicates": duplicates_count,
+                "latency_ms": latency,
+                "affected_dates": list(affected_dates)
             }
 
         except Exception as e:
             duration = time.time() - start_time
-            err_msg = f"Error en sincronización con {ip}:{port}: {str(e)}"
-            logger.error(err_msg)
+            err_msg = str(e)
             
-            self.update_device_status(device_id, 'OFFLINE', error_msg=str(e))
-            self.log_sync_event(device_id, 'ERROR', 0, 0, 0, 'ERROR', err_msg, duration)
+            error_log = (
+                f"\n[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}]\n"
+                f"DEVICE: {device.get('nombre', 'ZKTeco')} (ID: #{device_id})\n"
+                f"IP: {ip}:{port}\n"
+                f"MODE: PULL\n"
+                f"ACTION: CONNECT\n"
+                f"RESULT: ERROR\n"
+                f"ERROR: {err_msg}\n"
+                f"TIME: {duration:.2f}s"
+            )
+            logger.error(error_log)
+            
+            self.update_device_status(device_id, 'OFFLINE', error_msg=err_msg)
+            self.log_sync_event(device_id, 'ERROR', 0, 0, 0, 'ERROR', f"PULL FALLIDO: {err_msg}", duration, modo='PULL', latency_ms=0, failed=1)
             
             try:
                 zk_service.disconnect()
@@ -377,10 +436,10 @@ class AttendanceSynchronizer:
             return {
                 "success": False,
                 "device_id": device_id,
-                "error": str(e)
+                "error": err_msg
             }
 
-    def run_attendance_calculation(self):
+    def run_attendance_calculation(self, dates=None):
         """Invoca el motor de cálculo de asistencia diaria en PHP tras sincronizar"""
         try:
             import shutil
@@ -388,7 +447,6 @@ class AttendanceSynchronizer:
             script_path = base_dir / 'app' / 'Console' / 'process_attendance.php'
             
             if script_path.exists():
-                logger.info("Ejecutando motor de cálculo de asistencia diaria...")
                 php_bin = shutil.which('php')
                 if not php_bin:
                     xampp_php = Path("C:/xampp/php/php.exe")
@@ -397,39 +455,82 @@ class AttendanceSynchronizer:
                     else:
                         php_bin = 'php'
                 
-                result = subprocess.run([php_bin, str(script_path)], capture_output=True, text=True, timeout=60)
-                if result.returncode == 0:
-                    logger.info(f"Cálculo completado: {result.stdout.strip()}")
+                if dates and len(dates) > 0:
+                    min_d = min(dates)
+                    max_d = max(dates)
+                    logger.info(f"Ejecutando motor de cálculo de asistencia diaria para rango {min_d} al {max_d}...")
+                    cmd_args = [php_bin, str(script_path), min_d, max_d]
                 else:
-                    logger.warning(f"Aviso en cálculo de asistencia: {result.stderr.strip()}")
+                    logger.info("Ejecutando motor de cálculo de asistencia diaria para hoy...")
+                    cmd_args = [php_bin, str(script_path)]
+
+                result = subprocess.run(cmd_args, capture_output=True, text=True, timeout=180)
+                if result.returncode == 0:
+                    logger.info(f"Cálculo completado exitosamente: {result.stdout.strip()[:300]}")
+                else:
+                    logger.warning(f"Aviso en cálculo de asistencia: {result.stderr.strip()[:300]}")
         except Exception as e:
             logger.error(f"Error al invocar cálculo de asistencia PHP: {str(e)}")
 
-    def sync_all_devices(self, device_id=None, clear_after=False, sync_users=True, today_only=False, target_date=None, days=None):
-        """Itera y sincroniza todos los biométricos activos sin detenerse por fallos individuales"""
+    def sync_all_devices(self, device_id=None, clear_after=False, sync_users=True, today_only=False, target_date=None, days=None, full=False, force_pull=False):
+        """Itera y sincroniza los biométricos activos respetando su modo operativo (PULL, PUSH o HÍBRIDO)"""
         devices = self.get_active_devices(device_id)
         if not devices:
             logger.info("No hay dispositivos biométricos activos para sincronizar.")
             return
 
-        logger.info(f"Iniciando ciclo de sincronización para {len(devices)} dispositivo(s)...")
+        mode_desc = "HISTÓRICO COMPLETO" if full else ("SOLO HOY" if today_only else (f"FECHA {target_date}" if target_date else (f"ÚLTIMOS {days} DÍAS" if days else "INCREMENTAL (7 DÍAS)")))
+        logger.info(f"Iniciando ciclo de sincronización ({mode_desc}) para {len(devices)} dispositivo(s)...")
         total_new_punches = 0
+        all_affected_dates = set()
+
+        # Drenar eventos pendientes en la cola lógica (por ejemplo acumulados de PUSH o reintentos)
+        try:
+            queue_mgr = QueueManager(self.get_db())
+            emp_map = self.get_employee_mapping()
+            q_stats = queue_mgr.process_pending_events(emp_map)
+            if q_stats['total'] > 0:
+                logger.info(f"Cola lógica de eventos: {q_stats['total']} evaluados, {q_stats['inserted']} insertados, {q_stats['retried']} en reintento, {q_stats['failed']} fallidos.")
+                total_new_punches += q_stats['inserted']
+                for ad in q_stats.get('affected_dates', []):
+                    all_affected_dates.add(ad)
+        except Exception as q_err:
+            logger.warning(f"Aviso al drenar cola lógica de eventos: {str(q_err)}")
 
         for dev in devices:
-            res = self.sync_device(
-                dev,
-                clear_after=clear_after,
-                sync_users=sync_users,
-                today_only=today_only,
-                target_date=target_date,
-                days=days
-            )
-            if res.get('success', False):
-                total_new_punches += res.get('inserted', 0)
+            dev_mode = (dev.get('modo') or 'PULL').upper()
+            if dev_mode == 'PUSH' and not force_pull and not full:
+                logger.info(f"Dispositivo #{dev['id']} [{dev.get('nombre')}] configurado en modo PUSH exclusivo. Omitiendo PULL de rutina.")
+                continue
 
-        # Si hubo nuevas marcaciones, procesar reglas de asistencia automáticamente
-        if total_new_punches > 0:
-            self.run_attendance_calculation()
+            try:
+                res = self.sync_device(
+                    dev,
+                    clear_after=clear_after,
+                    sync_users=sync_users,
+                    today_only=today_only,
+                    target_date=target_date,
+                    days=days,
+                    full=full
+                )
+                if res.get('success', False):
+                    ins = res.get('inserted', 0)
+                    total_new_punches += ins
+                    if ins > 0 or full:
+                        for d in res.get('affected_dates', []):
+                            all_affected_dates.add(d)
+                else:
+                    logger.warning(f"Sincronización omitida/fallida para dispositivo #{dev['id']} [{dev.get('nombre')}]. Continuando con el resto...")
+            except Exception as e_dev:
+                logger.error(f"Excepción imprevista en dispositivo #{dev['id']} [{dev.get('nombre')}]: {str(e_dev)}")
+                continue
+
+        # Si hubo nuevas marcaciones o se solicitó histórico completo, procesar asistencia para las fechas afectadas
+        if total_new_punches > 0 or (full and all_affected_dates):
+            logger.info(f"Se insertaron {total_new_punches} marcaciones. Recalculando {len(all_affected_dates)} fecha(s) afectadas...")
+            self.run_attendance_calculation(dates=all_affected_dates)
+        else:
+            logger.info("No hubo marcaciones nuevas insertadas en este ciclo.")
 
         logger.info("Ciclo de sincronización finalizado exitosamente.")
 
@@ -458,9 +559,11 @@ def main():
     parser.add_argument('--test', action='store_true', help='Prueba la conexión con los biométricos configurados')
     parser.add_argument('--clear', action='store_true', help='Limpia los registros del reloj tras guardarlos en MySQL')
     parser.add_argument('--today-only', action='store_true', help='Filtra y procesa únicamente las marcaciones de hoy (Ultra Rápido)')
+    parser.add_argument('--full', action='store_true', help='Sincronización histórica completa: evalúa y procesa todas las marcaciones del reloj sin recortar por fecha')
     parser.add_argument('--days', type=int, help='Filtra marcaciones de los últimos N días')
     parser.add_argument('--date', type=str, help='Fecha específica a sincronizar (formato YYYY-MM-DD)')
     parser.add_argument('--skip-users', action='store_true', help='Omite la sincronización de usuarios para mayor velocidad')
+    parser.add_argument('--force-pull', action='store_true', help='Fuerza sondeo PULL en terminales configuradas como PUSH exclusivo')
     
     args = parser.parse_args()
 
@@ -509,7 +612,9 @@ def main():
                 sync_users=not args.skip_users,
                 today_only=args.today_only,
                 target_date=target_date_parsed,
-                days=args.days
+                days=args.days,
+                full=args.full,
+                force_pull=args.force_pull
             )
     finally:
         sync.close_db()

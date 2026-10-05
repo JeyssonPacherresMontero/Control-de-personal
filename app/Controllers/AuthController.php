@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 namespace App\Controllers;
 
 use App\Database;
@@ -7,7 +9,9 @@ class AuthController {
     public static function checkAuth(): void {
         $isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')
                   || isset($_GET['ajax'])
+                  || isset($_POST['ajax'])
                   || (isset($_SERVER['HTTP_ACCEPT']) && str_contains($_SERVER['HTTP_ACCEPT'], 'application/json'));
+
 
         if (!isset($_SESSION['user_id'])) {
             if ($isAjax) {
@@ -42,7 +46,69 @@ class AuthController {
             header('Location: ?route=login&msg=sesion_expirada');
             exit;
         }
+
+        // Validación en tiempo real de estado activo e invalidación de permisos
+        try {
+            $userRow = Database::queryOne(
+                "SELECT id, permisos, rol, activo, COALESCE(permisos_version, 1) as permisos_version 
+                 FROM usuarios_sistema WHERE id = ?", 
+                [$_SESSION['user_id']]
+            );
+
+            if (!$userRow || !(int)$userRow['activo']) {
+                $_SESSION = [];
+                if (ini_get("session.use_cookies")) {
+                    $params = session_get_cookie_params();
+                    setcookie(session_name(), '', time() - 42000,
+                        $params["path"], $params["domain"], $params["secure"], $params["httponly"]);
+                }
+                session_destroy();
+
+                if ($isAjax) {
+                    http_response_code(401);
+                    header('Content-Type: application/json; charset=utf-8');
+                    echo json_encode(['success' => false, 'error' => 'account_deactivated', 'message' => 'Tu cuenta ha sido desactivada o eliminada.'], JSON_UNESCAPED_UNICODE);
+                    exit;
+                }
+
+                header('Location: ?route=login&msg=cuenta_desactivada');
+                exit;
+            }
+
+            // Si los permisos o rol fueron actualizados por el Administrador, sincronizar en caliente
+            $currentSessionVersion = (int)($_SESSION['user_permisos_version'] ?? 1);
+            $dbVersion = (int)$userRow['permisos_version'];
+            if ($dbVersion !== $currentSessionVersion || !isset($_SESSION['user_permissions'])) {
+                $_SESSION['user_permisos_version'] = $dbVersion;
+                $_SESSION['user_role'] = $userRow['rol'];
+                $perms = !empty($userRow['permisos']) ? json_decode($userRow['permisos'], true) : null;
+                if (!is_array($perms)) {
+                    $perms = self::getDefaultPermissionsForRole($userRow['rol']);
+                }
+                $_SESSION['user_permissions'] = $perms;
+            }
+        } catch (\Exception $e) {
+            // Silencioso ante fallos temporales de conexión para no interrumpir
+        }
+
         $_SESSION['last_activity'] = time();
+    }
+
+    /**
+     * Valida la complejidad y robustez de contraseñas
+     * Regla: Mínimo 8 caracteres, al menos 1 letra mayúscula y al menos 1 número.
+     */
+    public static function validatePasswordStrength(string $password): ?string {
+        if (strlen($password) < 8) {
+            return 'La contraseña debe tener al menos 8 caracteres.';
+        }
+        if (!preg_match('/[A-Z]/', $password)) {
+            return 'La contraseña debe contener al menos una letra mayúscula.';
+        }
+        if (!preg_match('/[0-9]/', $password)) {
+            return 'La contraseña debe contener al menos un número.';
+        }
+        return null;
     }
 
     public static function user(): ?array {
@@ -52,6 +118,7 @@ class AuthController {
                 'usuario' => $_SESSION['user_username'] ?? '',
                 'nombre' => $_SESSION['user_name'] ?? 'Usuario',
                 'rol' => $_SESSION['user_role'] ?? 'RRHH',
+                'departamento_id' => (int)($_SESSION['user_departamento_id'] ?? 0),
                 'email' => $_SESSION['user_email'] ?? '',
                 'ultimo_login' => $_SESSION['user_ultimo_login'] ?? '',
                 'permisos' => self::getPermissions()
@@ -59,6 +126,7 @@ class AuthController {
         }
         return null;
     }
+
 
     public static function role(): string {
         return $_SESSION['user_role'] ?? 'CONSULTA';
@@ -128,7 +196,8 @@ class AuthController {
             'ADMIN' => ['*'],
             'RRHH' => ['dashboard', 'asistencia', 'marcaciones', 'empleados', 'turnos', 'justificaciones'],
             'SUPERVISOR' => ['dashboard', 'asistencia', 'marcaciones', 'empleados', 'justificaciones'],
-            'CONSULTA' => ['dashboard', 'asistencia', 'marcaciones'],
+            'ASISTENTE' => ['dashboard', 'asistencia', 'marcaciones', 'justificaciones'],
+            'USER', 'USUARIO', 'CONSULTA' => ['dashboard', 'asistencia', 'marcaciones'],
             default => ['asistencia']
         };
     }
@@ -272,6 +341,34 @@ class AuthController {
         }
     }
 
+    /**
+     * Extrae de forma segura la IP real del cliente considerando proxies y balanceadores confiables.
+     */
+    public static function getClientIp(): string {
+        $headers = [
+            'HTTP_CF_CONNECTING_IP',
+            'HTTP_X_REAL_IP',
+            'HTTP_X_FORWARDED_FOR',
+            'REMOTE_ADDR'
+        ];
+        foreach ($headers as $h) {
+            if (!empty($_SERVER[$h])) {
+                $ips = explode(',', $_SERVER[$h]);
+                foreach ($ips as $rawIp) {
+                    $ip = trim($rawIp);
+                    if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+                        return $ip;
+                    }
+                }
+                $firstIp = trim($ips[0]);
+                if (filter_var($firstIp, FILTER_VALIDATE_IP)) {
+                    return $firstIp;
+                }
+            }
+        }
+        return $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+    }
+
     public function login(): void {
         if (isset($_SESSION['user_id'])) {
             $dest = self::getFirstAccessibleRoute();
@@ -283,17 +380,32 @@ class AuthController {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             \App\Csrf::validateRequest();
 
-            // Rate Limiting persistente en Base de Datos (Máx. 5 intentos por IP / 5 minutos)
-            $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+            $ip = self::getClientIp();
+            $username = trim($_POST['usuario'] ?? '');
+            $password = $_POST['password'] ?? '';
+
+            // Rate Limiting por combinación de IP y Usuario (para evitar bloqueo global por proxy)
             $attemptRow = null;
             try {
-                $attemptRow = Database::queryOne("SELECT * FROM login_intentos WHERE ip = ?", [$ip]);
+                if (!empty($username)) {
+                    $attemptRow = Database::queryOne(
+                        "SELECT * FROM login_intentos WHERE ip = ? AND usuario = ?", 
+                        [$ip, $username]
+                    );
+                }
+                if (!$attemptRow) {
+                    $attemptRow = Database::queryOne(
+                        "SELECT * FROM login_intentos WHERE ip = ? AND (usuario IS NULL OR usuario = '')", 
+                        [$ip]
+                    );
+                }
+
                 if ($attemptRow && !empty($attemptRow['bloqueado_hasta'])) {
                     $blockedUntil = strtotime($attemptRow['bloqueado_hasta']);
                     if (time() < $blockedUntil) {
                         $secondsLeft = $blockedUntil - time();
                         $minutesLeft = max(1, (int)ceil($secondsLeft / 60));
-                        $error = "Demasiados intentos fallidos. Tu dirección IP ha sido bloqueada temporalmente por {$minutesLeft} minuto(s).";
+                        $error = "Demasiados intentos fallidos para esta cuenta. Acceso temporalmente bloqueado por {$minutesLeft} minuto(s).";
                         require_once APP_ROOT . '/views/auth/login.php';
                         return;
                     }
@@ -302,18 +414,15 @@ class AuthController {
                 // Silencioso ante fallos de tabla para no bloquear el inicio de sesión
             }
 
-            $username = trim($_POST['usuario'] ?? '');
-            $password = $_POST['password'] ?? '';
-
             if (empty($username) || empty($password)) {
                 $error = "Por favor ingrese usuario y contraseña.";
             } else {
                 $user = Database::queryOne("SELECT * FROM usuarios_sistema WHERE usuario = ? AND activo = 1", [$username]);
                 
                 if ($user && password_verify($password, $user['password'])) {
-                    // Éxito: Limpiar intentos fallidos en BD
+                    // Éxito: Limpiar intentos fallidos en BD para esta IP y usuario
                     try {
-                        Database::execute("DELETE FROM login_intentos WHERE ip = ?", [$ip]);
+                        Database::execute("DELETE FROM login_intentos WHERE ip = ? AND (usuario = ? OR usuario IS NULL)", [$ip, $username]);
                     } catch (\Exception $e) {
                         // Silencioso
                     }
@@ -325,9 +434,12 @@ class AuthController {
                     $_SESSION['user_username'] = $user['usuario'];
                     $_SESSION['user_name'] = $user['nombre_completo'];
                     $_SESSION['user_role'] = $user['rol'];
+                    $_SESSION['user_departamento_id'] = (int)($user['departamento_id'] ?? 0);
                     $_SESSION['user_email'] = $user['email'] ?? '';
                     $_SESSION['user_ultimo_login'] = $user['ultimo_login'] ?? '';
+                    $_SESSION['user_permisos_version'] = (int)($user['permisos_version'] ?? 1);
                     $_SESSION['last_activity'] = time();
+
 
                     $perms = !empty($user['permisos']) ? json_decode($user['permisos'], true) : null;
                     if (!is_array($perms)) {
@@ -350,27 +462,35 @@ class AuthController {
 
                     if ($currentAttempts >= 5) {
                         $lockUntil = date('Y-m-d H:i:s', time() + (5 * 60)); // 5 minutos de bloqueo
-                        $error = "Has superado el límite de 5 intentos fallidos. Tu acceso ha sido bloqueado temporalmente por 5 minutos.";
+                        $error = "Has superado el límite de 5 intentos fallidos. Tu acceso para esta cuenta ha sido bloqueado por 5 minutos.";
                     } else {
                         $remaining = 5 - $currentAttempts;
                         $error = "Credenciales incorrectas o usuario inactivo. (Intentos restantes: {$remaining})";
                     }
 
                     try {
-                        Database::execute("
-                            INSERT INTO login_intentos (ip, usuario, intentos, ultimo_intento, bloqueado_hasta)
-                            VALUES (:ip, :usr, :att, NOW(), :lock)
-                            ON DUPLICATE KEY UPDATE 
-                                usuario = VALUES(usuario),
-                                intentos = VALUES(intentos),
-                                ultimo_intento = NOW(),
-                                bloqueado_hasta = VALUES(bloqueado_hasta)
-                        ", [
-                            ':ip'   => $ip,
-                            ':usr'  => $username,
-                            ':att'  => $currentAttempts,
-                            ':lock' => $lockUntil
-                        ]);
+                        if ($attemptRow) {
+                            Database::execute("
+                                UPDATE login_intentos 
+                                SET usuario = :usr, intentos = :att, ultimo_intento = NOW(), bloqueado_hasta = :lock 
+                                WHERE id = :id
+                            ", [
+                                ':usr'  => $username,
+                                ':att'  => $currentAttempts,
+                                ':lock' => $lockUntil,
+                                ':id'   => $attemptRow['id']
+                            ]);
+                        } else {
+                            Database::execute("
+                                INSERT INTO login_intentos (ip, usuario, intentos, ultimo_intento, bloqueado_hasta)
+                                VALUES (:ip, :usr, :att, NOW(), :lock)
+                            ", [
+                                ':ip'   => $ip,
+                                ':usr'  => $username ?: null,
+                                ':att'  => $currentAttempts,
+                                ':lock' => $lockUntil
+                            ]);
+                        }
                     } catch (\Exception $e) {
                         // Silencioso
                     }
@@ -405,14 +525,14 @@ class AuthController {
             exit;
         }
 
-        if (strlen($newPassword) < 5) {
-            $msg = 'La nueva contraseña debe contener al menos 5 caracteres.';
+        $passError = self::validatePasswordStrength($newPassword);
+        if ($passError !== null) {
             if ($isAjax) {
                 header('Content-Type: application/json');
-                echo json_encode(['success' => false, 'error' => $msg]);
+                echo json_encode(['success' => false, 'error' => $passError]);
                 exit;
             }
-            header('Location: ?route=' . self::getFirstAccessibleRoute() . '&msg_perfil_error=' . urlencode($msg));
+            header('Location: ?route=' . self::getFirstAccessibleRoute() . '&msg_perfil_error=' . urlencode($passError));
             exit;
         }
 

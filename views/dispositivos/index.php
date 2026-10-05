@@ -46,17 +46,89 @@
             </div>
         <?php endif; endif; ?>
 
-        <!-- ACTIONS TOOLBAR -->
-        <div class="actions-toolbar no-print">
-            <div class="actions-toolbar-group">
-                <div>
-                    <h5 class="text-dark font-weight-bold mb-0" style="font-size: 1.05rem;">
-                        <i class="fa-solid fa-server mr-2 text-primary"></i> Terminales Biométricas en Red
-                    </h5>
-                    <div class="text-muted small">Gestión de dispositivos ZKTeco, conectividad IP y protocolos de comunicación.</div>
+        <?php
+            $dispTotal = count($dispositivos);
+            $dispOnline = 0;
+            $dispHybridOrPush = 0;
+            $dispPendientes = 0;
+            foreach ($dispositivos as $d) {
+                if (($d['estado_conexion'] ?? '') === 'ONLINE') $dispOnline++;
+                if (in_array($d['modo'] ?? '', ['HYBRID', 'PUSH'], true)) $dispHybridOrPush++;
+                $dispPendientes += (int)($d['eventos_pendientes'] ?? 0);
+            }
+        ?>
+
+        <!-- KPI SUMMARY CARDS (PANTALLA) -->
+        <div class="row no-print mb-2">
+            <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="kpi-card h-100">
+                    <div class="kpi-card-header">
+                        <div>
+                            <div class="kpi-title">Terminales Biométricas</div>
+                            <div class="kpi-value"><?= $dispTotal ?></div>
+                            <div class="kpi-subtitle"><b><?= $dispOnline ?></b> en línea en red local</div>
+                        </div>
+                        <div class="kpi-icon-box">
+                            <i class="fa-solid fa-server"></i>
+                        </div>
+                    </div>
                 </div>
             </div>
+            <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="kpi-card h-100">
+                    <div class="kpi-card-header">
+                        <div>
+                            <div class="kpi-title">Estado de Conexión</div>
+                            <div class="kpi-value"><?= $dispOnline ?> / <?= $dispTotal ?></div>
+                            <div class="kpi-subtitle">Terminales respondiendo en red</div>
+                        </div>
+                        <div class="kpi-icon-box">
+                            <i class="fa-solid fa-network-wired"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="kpi-card h-100">
+                    <div class="kpi-card-header">
+                        <div>
+                            <div class="kpi-title">Modo Tiempo Real</div>
+                            <div class="kpi-value"><?= $dispHybridOrPush ?></div>
+                            <div class="kpi-subtitle">Enlace PUSH / Híbrido activo</div>
+                        </div>
+                        <div class="kpi-icon-box">
+                            <i class="fa-solid fa-arrows-split-up-and-left"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="kpi-card h-100">
+                    <div class="kpi-card-header">
+                        <div>
+                            <div class="kpi-title">Eventos en Cola</div>
+                            <div class="kpi-value"><?= $dispPendientes ?></div>
+                            <div class="kpi-subtitle">Marcaciones por consolidar</div>
+                        </div>
+                        <div class="kpi-icon-box">
+                            <i class="fa-solid fa-hourglass-half"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ACTIONS TOOLBAR -->
+        <div class="actions-toolbar no-print mb-3">
             <div class="actions-toolbar-group">
+                <div>
+                    <span class="font-weight-bold text-dark d-block" style="font-size: 0.95rem;">
+                        <i class="fa-solid fa-server mr-2 text-primary"></i> Terminales Biométricas en Red
+                    </span>
+                    <div class="text-muted small" style="font-size: 0.8rem;">Gestión de dispositivos ZKTeco, conectividad IP y protocolos de comunicación.</div>
+                </div>
+            </div>
+            <div class="actions-toolbar-group flex-wrap">
                 <!-- Botón Principal: Sync Rápido Hoy -->
                 <button type="button" class="btn btn-primary btn-sm" onclick="syncAllDevices('today', this)">
                     <i class="fa-solid fa-bolt mr-1"></i> Sincronizar Hoy
@@ -101,11 +173,11 @@
         <!-- DEVICE CARDS -->
         <div class="row">
             <?php foreach ($dispositivos as $d): ?>
-                <div class="col-md-6 col-lg-4 mb-3" id="card-col-<?= $d['id'] ?>">
-                    <div class="card h-100" id="device-card-<?= $d['id'] ?>">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <h3 class="card-title font-weight-bold text-dark">
-                                <i class="fa-solid fa-fingerprint text-primary mr-2"></i>
+                <div class="col-md-6 col-lg-4 mb-4" id="card-col-<?= $d['id'] ?>">
+                    <div class="card h-100 shadow-sm border" id="device-card-<?= $d['id'] ?>">
+                        <div class="card-header d-flex justify-content-between align-items-center py-3">
+                            <h3 class="card-title font-weight-bold" style="font-size: 0.95rem; color: #0f172a;">
+                                <i class="fa-solid fa-network-wired mr-2" style="color: #1e40af;"></i>
                                 <?= htmlspecialchars($d['nombre']) ?>
                             </h3>
                             <div class="card-tools" id="device-badge-<?= $d['id'] ?>">
@@ -116,56 +188,117 @@
                                 <?php endif; ?>
                             </div>
                         </div>
-                        <div class="card-body py-3 d-flex flex-column justify-content-between">
-                            <ul class="list-group list-group-flush mb-3 small">
-                                <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-0 border-0 border-bottom">
-                                    <span class="text-secondary"><i class="fa-solid fa-network-wired mr-2 text-primary"></i> Dirección IP y Puerto:</span>
-                                    <span class="font-weight-bold font-monospace text-dark"><?= htmlspecialchars($d['ip']) ?>:<?= $d['puerto'] ?></span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-0 border-0 border-bottom">
-                                    <span class="text-secondary"><i class="fa-solid fa-shield-halved mr-2 text-secondary"></i> Protocolo y Clave:</span>
-                                    <span><span class="badge-pill-custom badge-pill-neutral"><?= $d['protocolo'] ?></span> (Clave: <?= $d['clave_comunicacion'] ?>)</span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-0 border-0 border-bottom">
-                                    <span class="text-secondary"><i class="fa-solid fa-location-dot text-danger mr-2"></i> Ubicación:</span>
-                                    <span class="text-dark font-weight-bold"><?= htmlspecialchars($d['ubicacion'] ?? 'Sede Principal') ?></span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-0 border-0">
-                                    <span class="text-secondary"><i class="fa-solid fa-clock mr-2 text-secondary"></i> Último Sync:</span>
-                                    <span class="text-muted font-monospace small" id="device-sync-<?= $d['id'] ?>"><?= $d['ultimo_sync'] ? substr($d['ultimo_sync'], 0, 16) : 'Nunca' ?></span>
-                                </li>
-                            </ul>
+                        <div class="card-body p-3 d-flex flex-column justify-content-between">
+                            <div class="d-flex flex-column mb-2" style="gap: 4px;">
+                                <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-color: #f1f5f9 !important;">
+                                    <span class="text-muted small font-weight-medium">
+                                        <i class="fa-solid fa-ethernet mr-2" style="color: #1e40af; width: 16px;"></i> Dirección IP y Puerto
+                                    </span>
+                                    <span class="font-weight-bold font-monospace text-dark" style="font-size: 0.9rem;">
+                                        <?= htmlspecialchars($d['ip']) ?>:<?= $d['puerto'] ?>
+                                    </span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-color: #f1f5f9 !important;">
+                                    <span class="text-muted small font-weight-medium">
+                                        <i class="fa-solid fa-shield-halved mr-2" style="color: #64748b; width: 16px;"></i> Protocolo / Clave
+                                    </span>
+                                    <span>
+                                        <span class="badge-pill-custom badge-pill-neutral font-weight-bold"><?= $d['protocolo'] ?></span>
+                                        <small class="text-muted ml-1 font-monospace">Clave: <?= $d['clave_comunicacion'] ?></small>
+                                    </span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-color: #f1f5f9 !important;">
+                                    <span class="text-muted small font-weight-medium">
+                                        <i class="fa-solid fa-arrows-split-up-and-left mr-2" style="color: #64748b; width: 16px;"></i> Modo de Sincronización
+                                    </span>
+                                    <span>
+                                        <?php if (($d['modo'] ?? 'PULL') === 'HYBRID'): ?>
+                                            <span class="badge-pill-custom badge-pill-justificado font-weight-bold" style="font-size: 0.72rem;"><i class="fa-solid fa-bolt mr-1"></i> HÍBRIDO (PUSH + PULL)</span>
+                                        <?php elseif (($d['modo'] ?? 'PULL') === 'PUSH'): ?>
+                                            <span class="badge-pill-custom badge-pill-presente font-weight-bold" style="font-size: 0.72rem;"><i class="fa-solid fa-cloud-arrow-up mr-1"></i> PUSH / ADMS</span>
+                                        <?php else: ?>
+                                            <span class="badge-pill-custom badge-pill-neutral font-weight-bold" style="font-size: 0.72rem;"><i class="fa-solid fa-download mr-1"></i> PULL (Sondeo)</span>
+                                        <?php endif; ?>
+                                    </span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-color: #f1f5f9 !important;">
+                                    <span class="text-muted small font-weight-medium">
+                                        <i class="fa-solid fa-location-dot mr-2" style="color: #64748b; width: 16px;"></i> Ubicación / Sede
+                                    </span>
+                                    <span class="font-weight-semibold text-dark" style="font-size: 0.85rem;">
+                                        <?= htmlspecialchars($d['ubicacion'] ?? 'Sede Principal') ?>
+                                    </span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-color: #f1f5f9 !important;">
+                                    <span class="text-muted small font-weight-medium">
+                                        <i class="fa-solid fa-gauge-high mr-2" style="color: #64748b; width: 16px;"></i> Latencia
+                                    </span>
+                                    <span class="font-monospace small font-weight-bold" id="device-latency-<?= $d['id'] ?>">
+                                        <?php if (!empty($d['ultima_latencia_ms'])): ?>
+                                            <?php $latClass = $d['ultima_latencia_ms'] < 200 ? 'presente' : ($d['ultima_latencia_ms'] < 1000 ? 'tardanza' : 'falta'); ?>
+                                            <span class="badge-pill-custom badge-pill-<?= $latClass ?> font-weight-bold" style="font-size: 0.72rem;">
+                                                <?= (int)$d['ultima_latencia_ms'] ?> ms
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="text-muted">-</span>
+                                        <?php endif; ?>
+                                    </span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-color: #f1f5f9 !important;">
+                                    <span class="text-muted small font-weight-medium">
+                                        <i class="fa-solid fa-layer-group mr-2" style="color: #64748b; width: 16px;"></i> Cola / Errores 24h
+                                    </span>
+                                    <span id="device-metrics-<?= $d['id'] ?>">
+                                        <?php if (($d['eventos_pendientes'] ?? 0) > 0): ?>
+                                            <span class="badge-pill-custom badge-pill-tardanza font-weight-bold" style="font-size: 0.72rem;"><i class="fa-solid fa-hourglass-half mr-1"></i><?= $d['eventos_pendientes'] ?> en cola</span>
+                                        <?php else: ?>
+                                            <span class="badge-pill-custom badge-pill-neutral" style="font-size: 0.72rem;"><i class="fa-solid fa-check text-success mr-1"></i>Al día</span>
+                                        <?php endif; ?>
+                                        <?php if (($d['errores_24h'] ?? 0) > 0): ?>
+                                            <span class="badge-pill-custom badge-pill-falta ml-1 font-weight-bold" style="font-size: 0.72rem;" title="<?= $d['errores_24h'] ?> fallos en 24h"><i class="fa-solid fa-triangle-exclamation mr-1"></i><?= $d['errores_24h'] ?> err</span>
+                                        <?php endif; ?>
+                                    </span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center py-2">
+                                    <span class="text-muted small font-weight-medium">
+                                        <i class="fa-solid fa-clock mr-2" style="color: #64748b; width: 16px;"></i> Última Sincronización
+                                    </span>
+                                    <span class="text-muted font-monospace small" id="device-sync-<?= $d['id'] ?>">
+                                        <?= $d['ultimo_sync'] ? substr($d['ultimo_sync'], 0, 16) : 'Nunca' ?>
+                                    </span>
+                                </div>
+                            </div>
 
                             <div id="device-error-<?= $d['id'] ?>">
                                 <?php if (!empty($d['ultimo_error'])): ?>
-                                    <div class="alert alert-danger p-2 small mb-3">
+                                    <div class="alert alert-danger p-2 small mb-3 rounded" style="font-size: 0.78rem;">
                                         <i class="fa-solid fa-triangle-exclamation mr-1"></i> <?= htmlspecialchars(mb_strimwidth($d['ultimo_error'], 0, 90, '...')) ?>
                                     </div>
                                 <?php endif; ?>
                             </div>
 
-                            <div class="d-flex justify-content-between align-items-center pt-2 border-top" style="gap: 5px;">
-                                <button type="button" class="btn btn-outline-primary btn-sm flex-grow-1" onclick="testConnection(<?= $d['id'] ?>, this)">
-                                    <i class="fa-solid fa-plug mr-1"></i> Probar Conexión
+                            <div class="d-flex justify-content-between align-items-center pt-3 border-top mt-2" style="border-color: #e2e8f0 !important; gap: 6px;">
+                                <button type="button" class="btn btn-outline-secondary btn-sm flex-grow-1" onclick="testConnection(<?= $d['id'] ?>, this)">
+                                    <i class="fa-solid fa-plug mr-1 text-primary"></i> Probar Conexión
                                 </button>
-                                <button type="button" class="btn btn-success btn-sm" onclick="syncDevice(<?= $d['id'] ?>, this, 'incremental')" title="Sincronizar marcaciones pendientes">
+                                <button type="button" class="btn btn-primary btn-sm px-3" onclick="syncDevice(<?= $d['id'] ?>, this, 'incremental')" title="Sincronizar marcaciones de hoy">
                                     <i class="fa-solid fa-arrows-rotate"></i>
                                 </button>
                                 
                                 <div class="btn-group">
-                                    <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" data-toggle="dropdown">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" data-toggle="dropdown" title="Más opciones">
                                         <i class="fa-solid fa-gear"></i>
                                     </button>
-                                    <div class="dropdown-menu dropdown-menu-right shadow border-0">
-                                        <a class="dropdown-item small" href="javascript:void(0)" onclick="syncDevice(<?= $d['id'] ?>, null, 'full')">
+                                    <div class="dropdown-menu dropdown-menu-right shadow-sm border-0">
+                                        <a class="dropdown-item py-2" href="javascript:void(0)" onclick="syncDevice(<?= $d['id'] ?>, null, 'full')">
                                             <i class="fa-solid fa-database mr-2 text-primary"></i> Sincronización Histórica
                                         </a>
-                                        <a class="dropdown-item small" href="javascript:void(0)" onclick="openEditDeviceModal(<?= htmlspecialchars(json_encode($d)) ?>)">
+                                        <a class="dropdown-item py-2" href="javascript:void(0)" onclick="openEditDeviceModal(<?= htmlspecialchars(json_encode($d)) ?>)">
                                             <i class="fa-solid fa-pen mr-2 text-secondary"></i> Editar Configuración
                                         </a>
                                         <?php if (($currentUser['rol'] ?? '') === 'ADMIN'): ?>
-                                            <div class="dropdown-divider"></div>
-                                            <a class="dropdown-item small text-danger" href="javascript:void(0)" onclick="confirmClearDeviceMemory(<?= $d['id'] ?>, '<?= htmlspecialchars($d['nombre']) ?>')">
+                                            <div class="dropdown-divider my-1"></div>
+                                            <a class="dropdown-item py-2 text-danger font-weight-bold" href="javascript:void(0)" onclick="confirmClearDeviceMemory(<?= $d['id'] ?>, '<?= htmlspecialchars($d['nombre']) ?>')">
                                                 <i class="fa-solid fa-broom mr-2"></i> Liberar Memoria
                                             </a>
                                         <?php endif; ?>
@@ -193,6 +326,8 @@
                             <th class="text-center">Fecha y Hora</th>
                             <th>Dispositivo</th>
                             <th class="text-center">Evento</th>
+                            <th class="text-center">Modo</th>
+                            <th class="text-center">Latencia</th>
                             <th class="text-center">Descargados</th>
                             <th class="text-center">Insertados</th>
                             <th class="text-center">Duplicados</th>
@@ -219,6 +354,18 @@
                                         };
                                     ?>
                                     <span class="badge-pill-custom badge-pill-neutral"><?= $eventoLabel ?></span>
+                                </td>
+                                <td class="text-center">
+                                    <?php if (($l['modo'] ?? '') === 'HYBRID'): ?>
+                                        <span class="badge-pill-custom badge-pill-justificado px-1 py-0 font-weight-bold" style="font-size: 0.72rem;">HYBRID</span>
+                                    <?php elseif (($l['modo'] ?? '') === 'PUSH'): ?>
+                                        <span class="badge-pill-custom badge-pill-presente px-1 py-0 font-weight-bold" style="font-size: 0.72rem;">PUSH</span>
+                                    <?php else: ?>
+                                        <span class="badge-pill-custom badge-pill-neutral px-1 py-0 font-weight-bold" style="font-size: 0.72rem;"><?= htmlspecialchars($l['modo'] ?? 'PULL') ?></span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="text-center font-monospace small">
+                                    <?= !empty($l['latencia_ms']) ? (int)$l['latencia_ms'] . ' ms' : '-' ?>
                                 </td>
                                 <td class="text-center font-weight-bold"><?= $l['total_descargados'] ?></td>
                                 <td class="text-center text-success font-weight-bold">+<?= $l['total_insertados'] ?></td>
@@ -247,73 +394,123 @@
 </section>
 
 <!-- MODAL CREAR Y EDITAR DISPOSITIVO -->
-<div class="modal fade" id="modalDispositivo" tabindex="-1">
-    <div class="modal-dialog">
-        <form method="POST" action="?route=dispositivos&action=guardar" class="modal-content">
+<div class="modal fade" id="modalDispositivo" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 580px;">
+        <form method="POST" action="?route=dispositivos&action=guardar" class="modal-content shadow-lg border-0 rounded-lg">
             <?= csrf_field() ?>
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title font-weight-bold" id="deviceModalTitle">Configurar Reloj Biométrico</h5>
-                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            <div class="modal-header">
+                <h5 class="modal-title font-weight-bold d-flex align-items-center">
+                    <i class="fa-solid fa-network-wired mr-2" style="color: #1e40af;"></i>
+                    <span id="deviceModalTitle">Configurar Reloj Biométrico</span>
+                </h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">&times;</button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body p-4">
                 <input type="hidden" name="id" id="dev_id">
                 
-                <div class="form-group">
-                    <label class="small font-weight-bold text-secondary">Nombre Descriptivo</label>
-                    <input type="text" name="nombre" id="dev_nombre" class="form-control form-control-sm" placeholder="Ej: Reloj Principal Recepción" required>
+                <div class="modal-section-title">
+                    <i class="fa-solid fa-server mr-2"></i> Identificación y Conexión de Red
+                </div>
+
+                <div class="form-group mb-3">
+                    <label class="modal-form-label">Nombre Descriptivo <span class="text-danger">*</span></label>
+                    <input type="text" name="nombre" id="dev_nombre" class="form-control" placeholder="Ej: Reloj Principal Recepción" style="height: 38px;" required>
                 </div>
 
                 <div class="row">
-                    <div class="col-8">
-                        <div class="form-group">
-                            <label class="small font-weight-bold text-secondary">Dirección IP Fija</label>
-                            <input type="text" name="ip" id="dev_ip" class="form-control form-control-sm font-monospace" placeholder="192.168.1.201" required>
+                    <div class="col-md-8">
+                        <div class="form-group mb-3">
+                            <label class="modal-form-label">Dirección IP Fija <span class="text-danger">*</span></label>
+                            <input type="text" name="ip" id="dev_ip" class="form-control font-monospace" placeholder="192.168.1.201" style="height: 38px;" required>
                         </div>
                     </div>
-                    <div class="col-4">
-                        <div class="form-group">
-                            <label class="small font-weight-bold text-secondary">Puerto</label>
-                            <input type="number" name="puerto" id="dev_puerto" class="form-control form-control-sm font-monospace" value="4370" required>
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label class="modal-form-label">Puerto <span class="text-danger">*</span></label>
+                            <input type="number" name="puerto" id="dev_puerto" class="form-control font-monospace" value="4370" style="height: 38px;" required>
                         </div>
                     </div>
                 </div>
 
                 <div class="row">
-                    <div class="col-6">
-                        <div class="form-group">
-                            <label class="small font-weight-bold text-secondary">Protocolo</label>
-                            <select name="protocolo" id="dev_protocolo" class="form-control form-control-sm">
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label class="modal-form-label">Protocolo de Red</label>
+                            <select name="protocolo" id="dev_protocolo" class="form-control" style="height: 38px;">
                                 <option value="TCP">TCP (Estándar)</option>
                                 <option value="UDP">UDP</option>
                             </select>
                         </div>
                     </div>
-                    <div class="col-6">
-                        <div class="form-group">
-                            <label class="small font-weight-bold text-secondary">Clave de Comunicación (ComKey)</label>
-                            <input type="number" name="clave_comunicacion" id="dev_clave" class="form-control form-control-sm" value="0">
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label class="modal-form-label">Clave de Comunicación (ComKey)</label>
+                            <input type="number" name="clave_comunicacion" id="dev_clave" class="form-control" value="0" style="height: 38px;">
                         </div>
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label class="small font-weight-bold text-secondary">Ubicación o Sede</label>
-                    <input type="text" name="ubicacion" id="dev_ubicacion" class="form-control form-control-sm" placeholder="Ej: Puerta Principal, Almacén...">
+                <div class="modal-section-title mt-3">
+                    <i class="fa-solid fa-location-dot mr-2"></i> Ubicación y Parámetros
                 </div>
 
-                <div class="form-group">
-                    <label class="small font-weight-bold text-secondary">Modelo</label>
-                    <input type="text" name="modelo" id="dev_modelo" class="form-control form-control-sm" placeholder="Ej: ZKTeco MB20, K40 o SilkBio">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label class="modal-form-label">Ubicación o Sede</label>
+                            <input type="text" name="ubicacion" id="dev_ubicacion" class="form-control" placeholder="Ej: Puerta Principal, Sede Central" style="height: 38px;">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label class="modal-form-label">Modelo del Dispositivo</label>
+                            <input type="text" name="modelo" id="dev_modelo" class="form-control" placeholder="Ej: ZKTeco MB20, SilkBio..." style="height: 38px;">
+                        </div>
+                    </div>
                 </div>
 
-                <div class="form-group custom-control custom-checkbox">
-                    <input class="custom-control-input" type="checkbox" name="activo" id="dev_activo" value="1" checked>
-                    <label class="custom-control-label small font-weight-bold" for="dev_activo">Dispositivo Activo para Sincronización</label>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label class="modal-form-label">
+                                <i class="fa-solid fa-arrows-split-up-and-left mr-1 text-primary"></i> Modo de Sincronización
+                            </label>
+                            <select name="modo" id="dev_modo" class="form-control" style="height: 38px;">
+                                <option value="HYBRID">HÍBRIDO (PUSH tiempo real + PULL respaldo)</option>
+                                <option value="PULL" selected>PULL (Sondeo por IP / pyzk)</option>
+                                <option value="PUSH">PUSH (Servidor Cloud ADMS exclusivo)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label class="modal-form-label">
+                                <i class="fa-solid fa-key mr-1 text-muted"></i> Token API (Autenticación PUSH)
+                            </label>
+                            <input type="text" name="api_token" id="dev_api_token" class="form-control font-monospace" placeholder="Automático si se deja vacío" style="height: 38px;">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-3 rounded border mt-2" style="background: #f8fafc; border-color: #e2e8f0 !important;">
+                    <div class="custom-control custom-switch">
+                        <input class="custom-control-input" type="checkbox" name="activo" id="dev_activo" value="1" checked>
+                        <label class="custom-control-label font-weight-bold" for="dev_activo" style="color: #334155; cursor: pointer; font-size: 0.88rem;">
+                            Dispositivo Activo para Sincronización
+                        </label>
+                        <small class="d-block text-muted mt-1" style="font-size: 0.78rem;">
+                            Si está deshabilitado, el sistema omitirá los sondeos automáticos de presencia y marcaciones de este reloj.
+                        </small>
+                    </div>
                 </div>
             </div>
-            <div class="modal-footer justify-content-between">
-                <button type="button" class="btn btn-default btn-sm" data-dismiss="modal">Cancelar</button>
-                <button type="submit" class="btn btn-primary btn-sm"><i class="fa-solid fa-floppy-disk mr-1"></i> Guardar Dispositivo</button>
+            <div class="modal-footer justify-content-between bg-light px-4 py-3" style="border-top: 1px solid #e2e8f0;">
+                <button type="button" class="btn btn-outline-secondary px-3" data-dismiss="modal">
+                    <i class="fa-solid fa-times mr-1"></i> Cancelar
+                </button>
+                <button type="submit" class="btn btn-primary px-4 font-weight-bold">
+                    <i class="fa-solid fa-floppy-disk mr-1"></i> Guardar Dispositivo
+                </button>
             </div>
         </form>
     </div>
@@ -339,7 +536,9 @@ function openNewDeviceModal() {
     document.getElementById('dev_ip').value = '';
     document.getElementById('dev_puerto').value = '4370';
     document.getElementById('dev_protocolo').value = 'TCP';
+    document.getElementById('dev_modo').value = 'PULL';
     document.getElementById('dev_clave').value = '0';
+    document.getElementById('dev_api_token').value = '';
     document.getElementById('dev_ubicacion').value = '';
     document.getElementById('dev_modelo').value = '';
     document.getElementById('dev_activo').checked = true;
@@ -353,18 +552,22 @@ function openEditDeviceModal(d) {
     document.getElementById('dev_ip').value = d.ip;
     document.getElementById('dev_puerto').value = d.puerto || 4370;
     document.getElementById('dev_protocolo').value = d.protocolo || 'TCP';
+    document.getElementById('dev_modo').value = d.modo || 'PULL';
     document.getElementById('dev_clave').value = d.clave_comunicacion || 0;
+    document.getElementById('dev_api_token').value = d.api_token || '';
     document.getElementById('dev_ubicacion').value = d.ubicacion || '';
     document.getElementById('dev_modelo').value = d.modelo || '';
     document.getElementById('dev_activo').checked = (parseInt(d.activo) === 1);
     $('#modalDispositivo').modal('show');
 }
 
-function updateDeviceCardUI(deviceId, status, lastSync, lastError) {
+function updateDeviceCardUI(deviceId, status, lastSync, lastError, latency = null, pendingEvents = null, errors24h = null) {
     const card = document.getElementById(`device-card-${deviceId}`);
     const badge = document.getElementById(`device-badge-${deviceId}`);
     const syncEl = document.getElementById(`device-sync-${deviceId}`);
     const errorEl = document.getElementById(`device-error-${deviceId}`);
+    const latencyEl = document.getElementById(`device-latency-${deviceId}`);
+    const metricsEl = document.getElementById(`device-metrics-${deviceId}`);
 
     if (card) {
         if (status === 'ONLINE') {
@@ -378,14 +581,36 @@ function updateDeviceCardUI(deviceId, status, lastSync, lastError) {
 
     if (badge) {
         if (status === 'ONLINE') {
-            badge.innerHTML = '<span class="badge badge-success px-2 py-1"><i class="fa-solid fa-signal mr-1"></i> EN LÍNEA</span>';
+            badge.innerHTML = '<span class="badge-pill-custom badge-pill-online"><i class="fa-solid fa-circle" style="font-size: 6px;"></i> En Línea</span>';
         } else {
-            badge.innerHTML = '<span class="badge badge-danger px-2 py-1"><i class="fa-solid fa-circle-xmark mr-1"></i> DESCONECTADO</span>';
+            badge.innerHTML = '<span class="badge-pill-custom badge-pill-offline"><i class="fa-solid fa-circle" style="font-size: 6px;"></i> Desconectado</span>';
         }
     }
 
     if (syncEl && lastSync) {
         syncEl.innerText = lastSync;
+    }
+
+    if (latencyEl && latency !== null) {
+        if (latency > 0) {
+            const latClass = latency < 200 ? 'presente' : (latency < 1000 ? 'tardanza' : 'falta');
+            latencyEl.innerHTML = `<span class="badge-pill-custom badge-pill-${latClass} font-weight-bold" style="font-size: 0.72rem;">${parseInt(latency)} ms</span>`;
+        } else {
+            latencyEl.innerHTML = '<span class="text-muted">-</span>';
+        }
+    }
+
+    if (metricsEl && pendingEvents !== null) {
+        let html = '';
+        if (pendingEvents > 0) {
+            html += `<span class="badge-pill-custom badge-pill-tardanza font-weight-bold" style="font-size: 0.72rem;"><i class="fa-solid fa-hourglass-half mr-1"></i>${pendingEvents} en cola</span>`;
+        } else {
+            html += `<span class="badge-pill-custom badge-pill-neutral" style="font-size: 0.72rem;"><i class="fa-solid fa-check text-success mr-1"></i>Al día</span>`;
+        }
+        if (errors24h > 0) {
+            html += `<span class="badge-pill-custom badge-pill-falta ml-1 font-weight-bold" style="font-size: 0.72rem;" title="${errors24h} fallos en 24h"><i class="fa-solid fa-triangle-exclamation mr-1"></i>${errors24h} err</span>`;
+        }
+        metricsEl.innerHTML = html;
     }
 
     if (errorEl) {
@@ -407,7 +632,15 @@ function testConnection(deviceId, btn) {
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Probando...';
     btn.disabled = true;
 
-    fetch(`?route=dispositivos&action=test&id=${deviceId}`, {
+    const fd = new FormData();
+    fd.append('id', deviceId);
+    if (window._csrfToken) {
+        fd.append('_csrf', window._csrfToken);
+    }
+
+    fetch('?route=dispositivos&action=test', {
+        method: 'POST',
+        body: fd,
         headers: { 'X-Requested-With': 'XMLHttpRequest' }
     })
     .then(async res => {
@@ -740,6 +973,35 @@ function openClearMemoryModal() {
         });
     }
 }
+
+// Telemetría en vivo: sondeo de estado de red y colas cada 20 segundos
+function pollDeviceHealth() {
+    fetch('?route=dispositivos&action=health_check', {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(res => res.ok ? res.json() : null)
+    .then(data => {
+        if (data && data.success && Array.isArray(data.dispositivos)) {
+            data.dispositivos.forEach(d => {
+                updateDeviceCardUI(
+                    d.id,
+                    d.estado_conexion,
+                    d.ultimo_sync ? d.ultimo_sync.substring(0, 16) : 'Nunca',
+                    d.ultimo_error,
+                    d.ultima_latencia_ms,
+                    d.eventos_pendientes,
+                    d.errores_24h
+                );
+            });
+        }
+    })
+    .catch(() => {});
+}
+
+// Iniciar sondeo automático tras cargar la página
+document.addEventListener('DOMContentLoaded', () => {
+    setInterval(pollDeviceHealth, 20000);
+});
 </script>
 
 <?php require_once APP_ROOT . '/views/layout/footer.php'; ?>

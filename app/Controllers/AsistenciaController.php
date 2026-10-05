@@ -1,9 +1,12 @@
 <?php
+declare(strict_types=1);
+
 namespace App\Controllers;
 
 use App\Database;
 use App\Services\AttendanceCalculator;
 use App\Services\EventStore;
+
 
 require_once __DIR__ . '/../Services/EventStore.php';
 
@@ -11,10 +14,76 @@ class AsistenciaController {
     public function index(): void {
         AuthController::checkAuth();
 
-        $fechaInicio = $_GET['fecha_inicio'] ?? date('Y-m-01');
-        $fechaFin = $_GET['fecha_fin'] ?? date('Y-m-d');
+        $userRole = AuthController::role();
+        $currentUser = AuthController::user();
+        $supervisorDeptoId = (int)($currentUser['departamento_id'] ?? 0);
+
+        $empleadoId = !empty($_GET['empleado_id']) ? (int)$_GET['empleado_id'] : (!empty($_GET['id_empleado']) ? (int)$_GET['id_empleado'] : null);
+        $defaultInicio = $empleadoId ? date('Y-m-01') : date('Y-m-d');
+        $fechaInicio = !empty($_GET['fecha_inicio']) ? trim($_GET['fecha_inicio']) : $defaultInicio;
+        $fechaFin = !empty($_GET['fecha_fin']) ? trim($_GET['fecha_fin']) : date('Y-m-d');
+        if ($fechaInicio > $fechaFin) {
+            $tmp = $fechaInicio;
+            $fechaInicio = $fechaFin;
+            $fechaFin = $tmp;
+        }
+
+        // Auto-calcular días faltantes o con marcaciones pendientes en asistencia_diaria para el rango solicitado (hasta 31 días)
+        try {
+            $db = Database::getInstance()->getConnection();
+            $dInicio = new \DateTime($fechaInicio);
+            $dFin = new \DateTime($fechaFin);
+            $diffDias = $dInicio->diff($dFin)->days;
+
+            if ($diffDias <= 31) {
+                $stmtCheck = $db->prepare("SELECT DISTINCT fecha FROM asistencia_diaria WHERE fecha BETWEEN :f1 AND :f2");
+                $stmtCheck->execute([':f1' => $fechaInicio, ':f2' => $fechaFin]);
+                $existingDates = $stmtCheck->fetchAll(\PDO::FETCH_COLUMN);
+                $existingSet = array_flip($existingDates);
+
+                $calc = null;
+                $period = new \DatePeriod($dInicio, new \DateInterval('P1D'), (clone $dFin)->modify('+1 day'));
+                foreach ($period as $dt) {
+                    $currDate = $dt->format('Y-m-d');
+                    $isDateToday = ($currDate === date('Y-m-d'));
+
+                    // Verificar si existen marcaciones sin procesar para este día
+                    $stmtUnproc = $db->prepare("SELECT 1 FROM marcaciones WHERE fecha_hora >= :d1 AND fecha_hora <= :d2 AND procesado = 0 LIMIT 1");
+                    $stmtUnproc->execute([':d1' => "$currDate 00:00:00", ':d2' => "$currDate 23:59:59"]);
+                    $hasUnprocessed = (bool)$stmtUnproc->fetchColumn();
+
+                    // Recalcular si no existe en asistencia_diaria, si tiene marcaciones pendientes de cálculo, o si es hoy
+                    if (!isset($existingSet[$currDate]) || $hasUnprocessed || $isDateToday) {
+                        $stmtMarc = $db->prepare("SELECT 1 FROM marcaciones WHERE fecha_hora >= :d1 AND fecha_hora <= :d2 LIMIT 1");
+                        $stmtMarc->execute([':d1' => "$currDate 00:00:00", ':d2' => "$currDate 23:59:59"]);
+                        if ($stmtMarc->fetchColumn() || $diffDias === 0 || !isset($existingSet[$currDate])) {
+                            if (!$calc) {
+                                $calc = new AttendanceCalculator(ATTENDANCE_DEBOUNCE_MINUTES);
+                            }
+                            $calc->processDate($currDate);
+                        }
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            error_log("Error auto-calculating missing attendance: " . $e->getMessage());
+        }
+
         $deptoId = !empty($_GET['departamento_id']) ? (int)$_GET['departamento_id'] : null;
-        $estado = !empty($_GET['estado']) ? trim($_GET['estado']) : null;
+        if ($userRole === 'SUPERVISOR' && $supervisorDeptoId > 0) {
+            $deptoId = $supervisorDeptoId;
+        }
+
+        // Estado por defecto:
+        // Si no se envió filtro de estado:
+        // - Si no hay empleado específico seleccionado: mostrar SOLO los que asistieron / marcaron presencia
+        // - Si hay empleado seleccionado: mostrar todos sus registros del período (incluyendo descansos y faltas)
+        if (isset($_GET['estado'])) {
+            $estado = trim($_GET['estado']);
+        } else {
+            $estado = $empleadoId ? 'TODOS' : 'ASISTIERON';
+        }
+
         $search = !empty($_GET['search']) ? trim($_GET['search']) : null;
 
         // Paginación
@@ -29,6 +98,11 @@ class AsistenciaController {
             ':fecha_fin'    => $fechaFin
         ];
 
+        if ($empleadoId) {
+            $where .= " AND a.id_empleado = :emp_id";
+            $params[':emp_id'] = $empleadoId;
+        }
+
         if ($deptoId) {
             $where .= " AND e.departamento_id = :depto_id";
             $params[':depto_id'] = $deptoId;
@@ -36,12 +110,26 @@ class AsistenciaController {
 
         if (!empty($estado) && strtolower($estado) !== 'todos') {
             $estadoUpper = strtoupper($estado);
-            if ($estadoUpper === 'FALTA') {
+            if ($estadoUpper === 'ASISTIERON') {
+                $where .= " AND (a.hora_entrada_real IS NOT NULL OR a.hora_salida_real IS NOT NULL OR a.estado IN ('PRESENTE', 'TARDANZA', 'SALIDA_SIN_MARCAR', 'ENTRADA_SIN_MARCAR', 'COMISION_SERVICIO'))";
+            } elseif ($estadoUpper === 'PRESENTE') {
+                $where .= " AND a.estado = 'PRESENTE' AND a.hora_entrada_real IS NOT NULL";
+            } elseif ($estadoUpper === 'PENDIENTE') {
+                $where .= " AND (a.estado = 'PENDIENTE' OR a.hora_entrada_real IS NULL) AND a.estado NOT IN ('FALTA', 'FALTA_INJUSTIFICADA', 'JUSTIFICADO', 'PERMISO', 'VACACIONES', 'DESCANSO', 'COMISION_SERVICIO')";
+            } elseif ($estadoUpper === 'FALTA') {
                 $where .= " AND (a.estado = 'FALTA' OR a.estado = 'FALTA_INJUSTIFICADA')";
             } elseif ($estadoUpper === 'JUSTIFICADO') {
-                $where .= " AND (a.estado = 'JUSTIFICADO' OR a.estado = 'PERMISO' OR a.estado = 'VACACIONES' OR a.estado = 'LICENCIA')";
+                $where .= " AND (a.estado = 'JUSTIFICADO' OR a.estado = 'PERMISO' OR a.estado = 'VACACIONES' OR a.estado = 'LICENCIA' OR a.estado = 'COMISION_SERVICIO')";
+            } elseif ($estadoUpper === 'COMISION_SERVICIO') {
+                $where .= " AND a.estado = 'COMISION_SERVICIO'";
+            } elseif ($estadoUpper === 'VACACIONES') {
+                $where .= " AND a.estado = 'VACACIONES'";
+            } elseif ($estadoUpper === 'SALIDA_SIN_MARCAR') {
+                $where .= " AND a.estado = 'SALIDA_SIN_MARCAR'";
+            } elseif ($estadoUpper === 'ENTRADA_SIN_MARCAR') {
+                $where .= " AND a.estado = 'ENTRADA_SIN_MARCAR'";
             } elseif ($estadoUpper === 'INCIDENCIAS') {
-                $where .= " AND (a.estado = 'TARDANZA' OR a.estado = 'FALTA' OR a.estado = 'FALTA_INJUSTIFICADA' OR a.estado = 'SALIDA_SIN_MARCAR')";
+                $where .= " AND (a.estado = 'TARDANZA' OR a.estado = 'FALTA' OR a.estado = 'FALTA_INJUSTIFICADA' OR a.estado = 'SALIDA_SIN_MARCAR' OR a.estado = 'ENTRADA_SIN_MARCAR')";
             } else {
                 $where .= " AND a.estado = :estado";
                 $params[':estado'] = $estadoUpper;
@@ -49,22 +137,37 @@ class AsistenciaController {
         }
 
         if ($search) {
-            $where .= " AND (e.nombres LIKE :search1 OR e.apellidos LIKE :search2 OR e.dni LIKE :search3 OR e.codigo_reloj LIKE :search4)";
+            $where .= " AND (e.nombres LIKE :search1 OR e.apellidos LIKE :search2 OR e.dni LIKE :search3 OR e.codigo_reloj LIKE :search4 OR CONCAT(e.apellidos, ' ', e.nombres) LIKE :search5 OR CONCAT(e.nombres, ' ', e.apellidos) LIKE :search6)";
             $params[':search1'] = "%$search%";
             $params[':search2'] = "%$search%";
             $params[':search3'] = "%$search%";
             $params[':search4'] = "%$search%";
+            $params[':search5'] = "%$search%";
+            $params[':search6'] = "%$search%";
+        }
+
+        // Obtener datos del empleado seleccionado (si aplica reporte individual)
+        $empleadoSeleccionado = null;
+        if ($empleadoId) {
+            $empleadoSeleccionado = Database::queryOne("
+                SELECT e.*, d.nombre as departamento_nombre, c.nombre as cargo_nombre, t.nombre as turno_nombre
+                FROM empleados e
+                LEFT JOIN departamentos d ON e.departamento_id = d.id
+                LEFT JOIN cargos c ON e.cargo_id = c.id
+                LEFT JOIN turnos t ON e.turno_id = t.id
+                WHERE e.id = ?
+            ", [$empleadoId]);
         }
 
         // 1. Agregación de KPIs directamente en MySQL para máxima velocidad
         $kpiSql = "
             SELECT 
                 COUNT(*) as total,
-                SUM(CASE WHEN a.estado = 'PRESENTE' THEN 1 ELSE 0 END) as presentes,
+                SUM(CASE WHEN a.estado = 'PRESENTE' AND a.hora_entrada_real IS NOT NULL THEN 1 ELSE 0 END) as presentes,
                 SUM(CASE WHEN a.estado = 'TARDANZA' THEN 1 ELSE 0 END) as tardanzas,
                 SUM(CASE WHEN a.estado = 'FALTA' OR a.estado = 'FALTA_INJUSTIFICADA' THEN 1 ELSE 0 END) as faltas,
-                SUM(CASE WHEN a.estado IN ('JUSTIFICADO', 'PERMISO', 'VACACIONES', 'LICENCIA') THEN 1 ELSE 0 END) as justificados,
-                SUM(CASE WHEN a.estado = 'SALIDA_SIN_MARCAR' THEN 1 ELSE 0 END) as sin_salida,
+                SUM(CASE WHEN a.estado IN ('JUSTIFICADO', 'PERMISO', 'VACACIONES', 'LICENCIA', 'COMISION_SERVICIO') THEN 1 ELSE 0 END) as justificados,
+                SUM(CASE WHEN a.estado = 'SALIDA_SIN_MARCAR' OR a.estado = 'ENTRADA_SIN_MARCAR' THEN 1 ELSE 0 END) as sin_salida,
                 SUM(a.minutos_tardanza) as total_minutos_tardanza,
                 SUM(a.minutos_trabajados) as total_minutos_trabajados,
                 SUM(a.minutos_extra) as total_minutos_extra
@@ -89,10 +192,12 @@ class AsistenciaController {
                 SELECT a.*, 
                        e.nombres, e.apellidos, e.dni, e.codigo_reloj,
                        d.nombre as departamento_nombre,
+                       c.nombre as cargo_nombre,
                        t.nombre as turno_nombre
                 FROM asistencia_diaria a
                 JOIN empleados e ON a.id_empleado = e.id
                 LEFT JOIN departamentos d ON e.departamento_id = d.id
+                LEFT JOIN cargos c ON e.cargo_id = c.id
                 LEFT JOIN turnos t ON a.id_turno = t.id
                 $where
                 ORDER BY a.fecha DESC, e.apellidos ASC, e.nombres ASC
@@ -109,10 +214,7 @@ class AsistenciaController {
             session_write_close(); // Liberar bloqueo de sesión durante la descarga de reportes pesados
 
             if ($exportType === 'excel' || $exportType === 'xls') {
-                $this->exportExcel($exportData, $fechaInicio, $fechaFin, $deptoNombre, $estado, $search);
-                return;
-            } elseif ($exportType === 'csv') {
-                $this->exportCSV($exportData, $fechaInicio, $fechaFin, $deptoNombre, $estado);
+                $this->exportExcel($exportData, $fechaInicio, $fechaFin, $deptoNombre, $estado, $search, $empleadoSeleccionado);
                 return;
             }
         }
@@ -133,15 +235,31 @@ class AsistenciaController {
         ";
 
         $asistencias = Database::query($sql, $params);
-        $departamentos = Database::query("SELECT * FROM departamentos WHERE activo = 1 ORDER BY nombre ASC");
-        $empleados = Database::query("SELECT id, codigo_reloj, dni, nombres, apellidos, departamento_id FROM empleados WHERE activo = 1 ORDER BY apellidos ASC, nombres ASC");
+        if ($userRole === 'SUPERVISOR' && $supervisorDeptoId > 0) {
+            $departamentos = Database::query("SELECT * FROM departamentos WHERE id = ?", [$supervisorDeptoId]);
+        } else {
+            $departamentos = Database::query("SELECT * FROM departamentos WHERE activo = 1 ORDER BY nombre ASC");
+        }
+        $empleados = Database::query("
+            SELECT e.id, e.codigo_reloj, e.dni, e.nombres, e.apellidos, e.departamento_id,
+                   d.nombre as departamento_nombre,
+                   t.nombre as turno_nombre, t.hora_entrada, t.hora_salida, t.tolerancia_minutos
+            FROM empleados e
+            LEFT JOIN departamentos d ON e.departamento_id = d.id
+            LEFT JOIN turnos t ON e.turno_id = t.id
+            WHERE e.activo = 1
+            ORDER BY e.apellidos ASC, e.nombres ASC
+        ");
 
         require_once APP_ROOT . '/views/asistencia/index.php';
     }
 
     public function recalcular(): void {
         AuthController::checkAuth();
-        AuthController::requireRole(['ADMIN', 'RRHH'], 'asistencia');
+        if (!AuthController::hasPermission('asistencia') && !in_array(AuthController::role(), ['ADMIN', 'RRHH', 'SUPERVISOR', 'ASISTENTE'], true)) {
+            header("Location: ?route=asistencia&msg=acceso_denegado");
+            exit;
+        }
         \App\Security\Csrf::validate();
 
         $fechaInicio = $_POST['fecha_inicio'] ?? date('Y-m-d');
@@ -239,7 +357,7 @@ class AsistenciaController {
             $actual = Database::queryOne("
                 SELECT a.*, e.nombres, e.apellidos, e.dni, e.codigo_reloj,
                        t.hora_entrada as turno_hora_entrada, t.hora_salida as turno_hora_salida,
-                       t.tolerancia_minutos, t.tolerancia_falta_minutos, t.minutos_refrigerio
+                       t.tolerancia_minutos, t.tolerancia_falta_minutos, t.minutos_refrigerio, t.es_nocturno
                 FROM asistencia_diaria a
                 JOIN empleados e ON a.id_empleado = e.id
                 LEFT JOIN turnos t ON a.id_turno = t.id
@@ -272,6 +390,30 @@ class AsistenciaController {
                 $horaSalidaReal = "$fecha $timePart";
             }
 
+            // Formatear Timestamps de Refrigerio Real Oficial
+            $horaInicioRefInput = trim($_POST['hora_inicio_refrigerio_real'] ?? '');
+            $horaFinRefInput = trim($_POST['hora_fin_refrigerio_real'] ?? '');
+
+            $horaInicioRefReal = null;
+            if (!empty($horaInicioRefInput)) {
+                $timePart = strlen($horaInicioRefInput) === 5 ? "$horaInicioRefInput:00" : $horaInicioRefInput;
+                $horaInicioRefReal = "$fecha $timePart";
+            } elseif (isset($_POST['hora_inicio_refrigerio_real']) && $horaInicioRefInput === '') {
+                $horaInicioRefReal = null;
+            } else {
+                $horaInicioRefReal = $actual['hora_inicio_refrigerio_real'] ?? null;
+            }
+
+            $horaFinRefReal = null;
+            if (!empty($horaFinRefInput)) {
+                $timePart = strlen($horaFinRefInput) === 5 ? "$horaFinRefInput:00" : $horaFinRefInput;
+                $horaFinRefReal = "$fecha $timePart";
+            } elseif (isset($_POST['hora_fin_refrigerio_real']) && $horaFinRefInput === '') {
+                $horaFinRefReal = null;
+            } else {
+                $horaFinRefReal = $actual['hora_fin_refrigerio_real'] ?? null;
+            }
+
             // Recálculo Inteligente de Métricas si no fueron forzadas
             $tolerancia = (int)($actual['tolerancia_minutos'] ?? 10);
             $toleranciaFalta = (int)($actual['tolerancia_falta_minutos'] ?? 60);
@@ -300,12 +442,37 @@ class AsistenciaController {
             if ($horaEntradaReal && $horaSalidaReal) {
                 $dtEntryReal = new \DateTime($horaEntradaReal);
                 $dtExitReal = new \DateTime($horaSalidaReal);
-                $diffSec = $dtExitReal->getTimestamp() - $dtEntryReal->getTimestamp();
+                $dtProgEntry = !empty($actual['hora_entrada_programada']) ? new \DateTime("$fecha {$actual['hora_entrada_programada']}") : new \DateTime("$fecha 08:00:00");
+                $dtEffectiveEntry = ($dtEntryReal < $dtProgEntry) ? $dtProgEntry : $dtEntryReal;
+                $diffSec = $dtExitReal->getTimestamp() - $dtEffectiveEntry->getTimestamp();
 
                 if ($diffSec > 0) {
                     $minBrutos = (int)floor($diffSec / 60);
-                    $minRef = ($minBrutos >= 300) ? (int)($actual['minutos_refrigerio'] ?? 60) : 0;
-                    $minutosTrabajados = max(0, $minBrutos - $minRef);
+                    $dayOfWeek = (int)(new \DateTime($fecha))->format('N');
+
+                    if ($dayOfWeek === 6) {
+                        // Sábado sin refrigerio: Horas trabajadas = Permanencia bruta
+                        $minutosTrabajados = $minBrutos;
+                    } else {
+                        // Lunes a Viernes: HORAS TRABAJADAS CON REGLAS DE REFRIGERIO
+                        // Regla 1: Si solo marcó salida de refrigerio y NO retorno -> Descuento de 1 hora (60 min)
+                        // Regla 2: En cualquier otro caso -> sí o sí descuento automático obligatorio de 45 min (o tiempo tomado si superó 45 min)
+                        if ($horaInicioRefReal && !$horaFinRefReal) {
+                            $minRefDeducir = 60; // 1 hora de descuento por omisión de retorno
+                        } elseif ($horaInicioRefReal && $horaFinRefReal) {
+                            $dtRefSal = new \DateTime($horaInicioRefReal);
+                            $dtRefEnt = new \DateTime($horaFinRefReal);
+                            $minRefTomados = 0;
+                            if ($dtRefEnt > $dtRefSal) {
+                                $minRefTomados = (int)floor(($dtRefEnt->getTimestamp() - $dtRefSal->getTimestamp()) / 60);
+                            }
+                            $minRefDeducir = max(45, $minRefTomados);
+                        } else {
+                            $minRefDeducir = 45; // sí o sí 45 min automático obligatorio
+                        }
+
+                        $minutosTrabajados = max(0, $minBrutos - $minRefDeducir);
+                    }
                 }
 
                 if (!empty($actual['hora_salida_programada'])) {
@@ -324,19 +491,30 @@ class AsistenciaController {
                         $minutosSalidaTemprana = (int)floor($diffEarlySec / 60);
                     }
                 }
+            } else {
+                // Sin marcación de Entrada o sin Salida General: no se pueden computar horas trabajadas
+                $minutosTrabajados = 0;
+                $minutosExtra = 0;
+                if ($horaEntradaReal && !$horaSalidaReal && $estado === 'PRESENTE') {
+                    $estado = 'SALIDA_SIN_MARCAR';
+                } elseif (!$horaEntradaReal && $horaSalidaReal && $estado === 'PRESENTE') {
+                    $estado = 'ENTRADA_SIN_MARCAR';
+                }
             }
 
             $currentUser = AuthController::user();
             $usuario = $currentUser['nombre'] ?? ($currentUser['usuario'] ?? 'Administrador');
 
             Database::transaction(function() use (
-                $id, $actual, $horaEntradaReal, $horaSalidaReal, $estado, $observaciones,
+                $id, $actual, $horaEntradaReal, $horaSalidaReal, $horaInicioRefReal, $horaFinRefReal, $estado, $observaciones,
                 $minutosTardanza, $minutosTrabajados, $minutosExtra, $minutosSalidaTemprana, $usuario
             ) {
                 Database::execute("
                     UPDATE asistencia_diaria 
                     SET hora_entrada_real = :ent_real,
                         hora_salida_real = :sal_real,
+                        hora_inicio_refrigerio_real = :ref_sal,
+                        hora_fin_refrigerio_real = :ref_ent,
                         estado = :estado, 
                         observaciones = :obs,
                         minutos_tardanza = :tardanza,
@@ -349,14 +527,142 @@ class AsistenciaController {
                 ", [
                     ':ent_real'   => $horaEntradaReal,
                     ':sal_real'   => $horaSalidaReal,
+                    ':ref_sal'    => $horaInicioRefReal,
+                    ':ref_ent'    => $horaFinRefReal,
                     ':estado'     => $estado,
-                    ':obs'        => $observaciones ?: 'Corrección de horario efectuada por el Administrador',
+                    ':obs'        => !empty($observaciones) ? $observaciones : null,
                     ':tardanza'   => $minutosTardanza,
                     ':trabajados' => $minutosTrabajados,
                     ':extra'      => $minutosExtra,
                     ':temprana'   => $minutosSalidaTemprana,
                     ':id'         => $id
                 ]);
+
+                // Sincronización oficial bidireccional automática con la tabla marcaciones
+                $empId = (int)$actual['id_empleado'];
+                $codReloj = (string)($actual['codigo_reloj'] ?? $empId);
+                $fecha = $actual['fecha'];
+
+                // 1. Sincronizar Entrada Oficial en marcaciones
+                $mEntrada = null;
+                if (!empty($horaEntradaReal)) {
+                    $mEntrada = Database::queryOne("
+                        SELECT id FROM marcaciones 
+                        WHERE (id_empleado = :emp_id OR codigo_reloj = :cod_reloj)
+                          AND tipo = 'entrada'
+                          AND DATE(fecha_hora) = :fecha
+                        ORDER BY id ASC LIMIT 1
+                    ", [':emp_id' => $empId, ':cod_reloj' => $codReloj, ':fecha' => $fecha]);
+
+                    if (!$mEntrada) {
+                        $mEntrada = Database::queryOne("
+                            SELECT id FROM marcaciones 
+                            WHERE (id_empleado = :emp_id OR codigo_reloj = :cod_reloj)
+                              AND DATE(fecha_hora) = :fecha
+                            ORDER BY fecha_hora ASC LIMIT 1
+                        ", [':emp_id' => $empId, ':cod_reloj' => $codReloj, ':fecha' => $fecha]);
+                    }
+
+                    if ($mEntrada) {
+                        Database::execute("
+                            UPDATE marcaciones 
+                            SET fecha_hora = :fhora, tipo = 'entrada', procesado = 1 
+                            WHERE id = :mid
+                        ", [':fhora' => $horaEntradaReal, ':mid' => $mEntrada['id']]);
+                    } else {
+                        Database::execute("
+                            INSERT INTO marcaciones 
+                            (id_empleado, codigo_reloj, id_dispositivo, fecha_hora, tipo, tipo_verificacion, procesado, creado_en)
+                            VALUES (?, ?, 1, ?, 'entrada', 'ADMIN_OFICIAL', 1, NOW())
+                        ", [$empId, $codReloj, $horaEntradaReal]);
+                    }
+                }
+
+                // 2. Sincronizar Salida Oficial en marcaciones
+                if (!empty($horaSalidaReal)) {
+                    $mSalida = Database::queryOne("
+                        SELECT id FROM marcaciones 
+                        WHERE (id_empleado = :emp_id OR codigo_reloj = :cod_reloj)
+                          AND tipo = 'salida'
+                          AND (DATE(fecha_hora) = :fecha OR DATE(fecha_hora) = DATE_ADD(:fecha2, INTERVAL 1 DAY))
+                        ORDER BY id DESC LIMIT 1
+                    ", [':emp_id' => $empId, ':cod_reloj' => $codReloj, ':fecha' => $fecha, ':fecha2' => $fecha]);
+
+                    if (!$mSalida) {
+                        $excludeEntId = !empty($mEntrada['id']) ? "AND id != " . (int)$mEntrada['id'] : "";
+                        $mSalida = Database::queryOne("
+                            SELECT id FROM marcaciones 
+                            WHERE (id_empleado = :emp_id OR codigo_reloj = :cod_reloj)
+                              AND (DATE(fecha_hora) = :fecha OR DATE(fecha_hora) = DATE_ADD(:fecha2, INTERVAL 1 DAY))
+                              $excludeEntId
+                            ORDER BY fecha_hora DESC LIMIT 1
+                        ", [':emp_id' => $empId, ':cod_reloj' => $codReloj, ':fecha' => $fecha, ':fecha2' => $fecha]);
+                    }
+
+                    if ($mSalida) {
+                        Database::execute("
+                            UPDATE marcaciones 
+                            SET fecha_hora = :fhora, tipo = 'salida', procesado = 1 
+                            WHERE id = :mid
+                        ", [':fhora' => $horaSalidaReal, ':mid' => $mSalida['id']]);
+                    } else {
+                        Database::execute("
+                            INSERT INTO marcaciones 
+                            (id_empleado, codigo_reloj, id_dispositivo, fecha_hora, tipo, tipo_verificacion, procesado, creado_en)
+                            VALUES (?, ?, 1, ?, 'salida', 'ADMIN_OFICIAL', 1, NOW())
+                        ", [$empId, $codReloj, $horaSalidaReal]);
+                    }
+                }
+
+                // 3. Sincronizar Salida a Refrigerio en marcaciones
+                if (!empty($horaInicioRefrigerioReal)) {
+                    $mRefSal = Database::queryOne("
+                        SELECT id FROM marcaciones 
+                        WHERE (id_empleado = :emp_id OR codigo_reloj = :cod_reloj)
+                          AND (tipo = 'refrigerio_salida' OR (tipo LIKE '%refrigerio%' AND TIME(fecha_hora) <= '13:30:00'))
+                          AND DATE(fecha_hora) = :fecha
+                        ORDER BY id ASC LIMIT 1
+                    ", [':emp_id' => $empId, ':cod_reloj' => $codReloj, ':fecha' => $fecha]);
+
+                    if ($mRefSal) {
+                        Database::execute("
+                            UPDATE marcaciones 
+                            SET fecha_hora = :fhora, tipo = 'refrigerio_salida', procesado = 1 
+                            WHERE id = :mid
+                        ", [':fhora' => $horaInicioRefrigerioReal, ':mid' => $mRefSal['id']]);
+                    } else {
+                        Database::execute("
+                            INSERT INTO marcaciones 
+                            (id_empleado, codigo_reloj, id_dispositivo, fecha_hora, tipo, tipo_verificacion, procesado, creado_en)
+                            VALUES (?, ?, 1, ?, 'refrigerio_salida', 'ADMIN_OFICIAL', 1, NOW())
+                        ", [$empId, $codReloj, $horaInicioRefrigerioReal]);
+                    }
+                }
+
+                // 4. Sincronizar Retorno de Refrigerio en marcaciones
+                if (!empty($horaFinRefrigerioReal)) {
+                    $mRefEnt = Database::queryOne("
+                        SELECT id FROM marcaciones 
+                        WHERE (id_empleado = :emp_id OR codigo_reloj = :cod_reloj)
+                          AND (tipo = 'refrigerio_entrada' OR (tipo LIKE '%refrigerio%' AND TIME(fecha_hora) > '13:30:00'))
+                          AND DATE(fecha_hora) = :fecha
+                        ORDER BY id DESC LIMIT 1
+                    ", [':emp_id' => $empId, ':cod_reloj' => $codReloj, ':fecha' => $fecha]);
+
+                    if ($mRefEnt) {
+                        Database::execute("
+                            UPDATE marcaciones 
+                            SET fecha_hora = :fhora, tipo = 'refrigerio_entrada', procesado = 1 
+                            WHERE id = :mid
+                        ", [':fhora' => $horaFinRefrigerioReal, ':mid' => $mRefEnt['id']]);
+                    } else {
+                        Database::execute("
+                            INSERT INTO marcaciones 
+                            (id_empleado, codigo_reloj, id_dispositivo, fecha_hora, tipo, tipo_verificacion, procesado, creado_en)
+                            VALUES (?, ?, 1, ?, 'refrigerio_entrada', 'ADMIN_OFICIAL', 1, NOW())
+                        ", [$empId, $codReloj, $horaFinRefrigerioReal]);
+                    }
+                }
 
                 // Event Sourcing: Registrar evento inmutable de modificación administrativa de horario
                 try {
@@ -421,13 +727,14 @@ class AsistenciaController {
      */
     public function justificarAdmin(): void {
         AuthController::checkAuth();
-        AuthController::requireRole('ADMIN', 'asistencia');
+        AuthController::requireRole(['ADMIN', 'RRHH'], 'asistencia');
         \App\Csrf::validateRequest();
 
         $idEmpleado = (int)($_POST['id_empleado'] ?? 0);
         $fechaInicio = $_POST['fecha_inicio'] ?? date('Y-m-d');
         $fechaFin = $_POST['fecha_fin'] ?? $fechaInicio;
         $tipo = $_POST['tipo'] ?? 'TARDANZA';
+        $comisionDestino = trim($_POST['comision_destino'] ?? '');
         $motivo = trim($_POST['motivo'] ?? 'Justificación autorizada por la Administración');
 
         $isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') 
@@ -458,20 +765,21 @@ class AsistenciaController {
             }
 
             $currentUser = AuthController::user();
-            $usuario = $currentUser['nombre'] ?? ($currentUser['usuario'] ?? 'Administrador');
+            $usuario = $currentUser['nombre'] ?? ($currentUser['usuario'] ?? 'Recursos Humanos');
 
-            Database::transaction(function() use ($idEmpleado, $fechaInicio, $fechaFin, $tipo, $motivo, $emp, $usuario) {
+            Database::transaction(function() use ($idEmpleado, $fechaInicio, $fechaFin, $tipo, $comisionDestino, $motivo, $emp, $usuario, $currentUser) {
                 // 1. Insertar en tabla justificaciones con estado APROBADO
                 Database::execute("
                     INSERT INTO justificaciones 
-                    (id_empleado, tipo, fecha_inicio, fecha_fin, motivo, estado, aprobado_por, fecha_resolucion, creado_en)
-                    VALUES (?, ?, ?, ?, ?, 'APROBADO', ?, NOW(), NOW())
-                ", [$idEmpleado, $tipo, $fechaInicio, $fechaFin, $motivo, $usuario]);
+                    (id_empleado, tipo, fecha_inicio, fecha_fin, motivo, comision_destino, estado, aprobado_por, fecha_resolucion, creado_en)
+                    VALUES (?, ?, ?, ?, ?, ?, 'APROBADO', ?, NOW(), NOW())
+                ", [$idEmpleado, $tipo, $fechaInicio, $fechaFin, $motivo, ($tipo === 'COMISION_SERVICIO' ? $comisionDestino : null), $usuario]);
 
                 // 2. Determinar estado correspondiente en asistencia_diaria
                 $estadoAsistencia = match($tipo) {
+                    'COMISION_SERVICIO' => 'COMISION_SERVICIO',
                     'VACACIONES' => 'VACACIONES',
-                    'PERMISO_MEDICO', 'COMISION_SERVICIO', 'LICENCIA_MATERNIDAD_PATERNIDAD', 'PERMISO' => 'PERMISO',
+                    'PERMISO_MEDICO', 'LICENCIA_MATERNIDAD_PATERNIDAD', 'PERMISO' => 'PERMISO',
                     default => 'JUSTIFICADO'
                 };
 
@@ -484,6 +792,47 @@ class AsistenciaController {
 
                 foreach ($period as $dt) {
                     $dStr = $dt->format('Y-m-d');
+                    $dayOfWeek = (int)$dt->format('N');
+                    $isSaturday = ($dayOfWeek === 6);
+
+                    // Determinar marcaciones y horas automáticas según el tipo de justificación
+                    $hEnt = null;
+                    $hSal = null;
+                    $hRefSal = null;
+                    $hRefEnt = null;
+                    $minTrab = 0;
+                    $obsFinal = $motivo;
+                    $destGuardar = null;
+
+                    if ($tipo === 'COMISION_SERVICIO') {
+                        $destGuardar = $comisionDestino ?: null;
+                        if ($isSaturday) {
+                            $hEnt = "$dStr 08:00:00";
+                            $hSal = "$dStr 13:00:00";
+                            $minTrab = 300; // 5 horas en sábado
+                        } else {
+                            // Lunes a Viernes: 08:00 a 17:00, refrigerio 13:00 a 13:45
+                            $hEnt = "$dStr 08:00:00";
+                            $hRefSal = "$dStr 13:00:00";
+                            $hRefEnt = "$dStr 13:45:00";
+                            $hSal = "$dStr 17:00:00";
+                            $minTrab = 495; // 8h 15m netas laboradas (8.25 hrs normales de jornada)
+                        }
+                        $obsFinal = "Comisión de Servicio" . ($comisionDestino ? " en $comisionDestino" : "") . ": $motivo";
+                    } elseif ($tipo === 'VACACIONES') {
+                        if ($isSaturday) {
+                            $hEnt = "$dStr 08:00:00";
+                            $hSal = "$dStr 13:00:00";
+                            $minTrab = 300;
+                        } else {
+                            $hEnt = "$dStr 08:00:00";
+                            $hRefSal = "$dStr 13:00:00";
+                            $hRefEnt = "$dStr 13:45:00";
+                            $hSal = "$dStr 17:00:00";
+                            $minTrab = 495;
+                        }
+                        $obsFinal = "Vacaciones autorizadas (marcación automática oficial de jornada cumplida)" . ($motivo ? " - $motivo" : "");
+                    }
                     
                     // Buscar si ya existe registro para ese día
                     $existing = Database::queryOne("SELECT id, estado, minutos_tardanza FROM asistencia_diaria WHERE id_empleado = ? AND fecha = ?", [$idEmpleado, $dStr]);
@@ -491,25 +840,99 @@ class AsistenciaController {
                     if ($existing) {
                         Database::execute("
                             UPDATE asistencia_diaria 
-                            SET estado = :estado,
+                            SET hora_entrada_real = :ent_real,
+                                hora_salida_real = :sal_real,
+                                hora_inicio_refrigerio_real = :ref_sal,
+                                hora_fin_refrigerio_real = :ref_ent,
+                                minutos_trabajados = :trabajados,
                                 minutos_tardanza = 0,
+                                minutos_extra = 0,
+                                minutos_salida_temprana = 0,
+                                estado = :estado,
+                                comision_destino = :comision_dest,
                                 observaciones = :obs,
                                 manual = 1,
                                 procesado_en = NOW()
                             WHERE id = :id
                         ", [
-                            ':estado' => $estadoAsistencia,
-                            ':obs'    => "Justificado por Administración: $motivo",
-                            ':id'     => $existing['id']
+                            ':ent_real'      => $hEnt,
+                            ':sal_real'      => $hSal,
+                            ':ref_sal'       => $hRefSal,
+                            ':ref_ent'       => $hRefEnt,
+                            ':trabajados'    => $minTrab,
+                            ':estado'        => $estadoAsistencia,
+                            ':comision_dest' => $destGuardar,
+                            ':obs'           => $obsFinal,
+                            ':id'            => $existing['id']
                         ]);
                     } else {
                         // Obtener turno del empleado para guardar la referencia
                         Database::execute("
                             INSERT INTO asistencia_diaria 
-                            (id_empleado, id_turno, fecha, estado, observaciones, manual, procesado_en)
-                            VALUES (?, ?, ?, ?, ?, 1, NOW())
-                            ON DUPLICATE KEY UPDATE estado = VALUES(estado), observaciones = VALUES(observaciones), manual = 1
-                        ", [$idEmpleado, $emp['turno_id'] ?: 1, $dStr, $estadoAsistencia, "Justificado por Administración: $motivo"]);
+                            (id_empleado, id_turno, fecha, hora_entrada_programada, hora_salida_programada,
+                             hora_entrada_real, hora_salida_real, hora_inicio_refrigerio_real, hora_fin_refrigerio_real,
+                             minutos_tardanza, minutos_trabajados, minutos_extra, minutos_salida_temprana,
+                             estado, observaciones, comision_destino, manual, procesado_en)
+                            VALUES (?, ?, ?, '08:00:00', '17:00:00', ?, ?, ?, ?, 0, ?, 0, 0, ?, ?, ?, 1, NOW())
+                            ON DUPLICATE KEY UPDATE 
+                             hora_entrada_real = VALUES(hora_entrada_real),
+                             hora_salida_real = VALUES(hora_salida_real),
+                             hora_inicio_refrigerio_real = VALUES(hora_inicio_refrigerio_real),
+                             hora_fin_refrigerio_real = VALUES(hora_fin_refrigerio_real),
+                             minutos_trabajados = VALUES(minutos_trabajados),
+                             minutos_tardanza = 0,
+                             estado = VALUES(estado),
+                             observaciones = VALUES(observaciones),
+                             comision_destino = VALUES(comision_destino),
+                             manual = 1
+                        ", [
+                            $idEmpleado, $emp['turno_id'] ?: 1, $dStr,
+                            $hEnt, $hSal, $hRefSal, $hRefEnt,
+                            $minTrab, $estadoAsistencia, $obsFinal,
+                            $destGuardar
+                        ]);
+                    }
+
+                    // Sincronizar automáticamente en la tabla marcaciones para visualización y auditoría
+                    if ($hEnt) {
+                        $codReloj = (string)($emp['codigo_reloj'] ?? $idEmpleado);
+                        // Entrada
+                        Database::execute("
+                            INSERT INTO marcaciones 
+                            (id_empleado, codigo_reloj, id_dispositivo, fecha_hora, tipo, tipo_verificacion, procesado, creado_en)
+                            VALUES (?, ?, 1, ?, 'entrada', ?, 1, NOW())
+                            ON DUPLICATE KEY UPDATE tipo_verificacion = VALUES(tipo_verificacion), procesado = 1
+                        ", [$idEmpleado, $codReloj, $hEnt, $tipo]);
+
+                        // Salida Refrigerio
+                        if ($hRefSal) {
+                            Database::execute("
+                                INSERT INTO marcaciones 
+                                (id_empleado, codigo_reloj, id_dispositivo, fecha_hora, tipo, tipo_verificacion, procesado, creado_en)
+                                VALUES (?, ?, 1, ?, 'refrigerio_salida', ?, 1, NOW())
+                                ON DUPLICATE KEY UPDATE tipo_verificacion = VALUES(tipo_verificacion), procesado = 1
+                            ", [$idEmpleado, $codReloj, $hRefSal, $tipo]);
+                        }
+
+                        // Retorno Refrigerio
+                        if ($hRefEnt) {
+                            Database::execute("
+                                INSERT INTO marcaciones 
+                                (id_empleado, codigo_reloj, id_dispositivo, fecha_hora, tipo, tipo_verificacion, procesado, creado_en)
+                                VALUES (?, ?, 1, ?, 'refrigerio_entrada', ?, 1, NOW())
+                                ON DUPLICATE KEY UPDATE tipo_verificacion = VALUES(tipo_verificacion), procesado = 1
+                            ", [$idEmpleado, $codReloj, $hRefEnt, $tipo]);
+                        }
+
+                        // Salida Final
+                        if ($hSal) {
+                            Database::execute("
+                                INSERT INTO marcaciones 
+                                (id_empleado, codigo_reloj, id_dispositivo, fecha_hora, tipo, tipo_verificacion, procesado, creado_en)
+                                VALUES (?, ?, 1, ?, 'salida', ?, 1, NOW())
+                                ON DUPLICATE KEY UPDATE tipo_verificacion = VALUES(tipo_verificacion), procesado = 1
+                            ", [$idEmpleado, $codReloj, $hSal, $tipo]);
+                        }
                     }
 
                     // Event Sourcing
@@ -519,13 +942,17 @@ class AsistenciaController {
                             "emp_{$idEmpleado}_{$dStr}",
                             'JUSTIFICACION_APLICADA',
                             [
-                                'id_empleado'       => $idEmpleado,
-                                'empleado_nombre'   => "{$emp['apellidos']} {$emp['nombres']}",
-                                'fecha'             => $dStr,
-                                'tipo_justificacion'=> $tipo,
-                                'estado_aplicado'   => $estadoAsistencia,
-                                'motivo'            => $motivo,
-                                'aprobado_por'      => $usuario
+                                'id_empleado'        => $idEmpleado,
+                                'empleado_nombre'    => "{$emp['apellidos']} {$emp['nombres']}",
+                                'fecha'              => $dStr,
+                                'tipo_justificacion' => $tipo,
+                                'comision_destino'   => $destGuardar,
+                                'estado_aplicado'    => $estadoAsistencia,
+                                'horas_marcadas'     => $hEnt ? "$hEnt a $hSal" : 'Sin horas',
+                                'minutos_trabajados' => $minTrab,
+                                'motivo'             => $obsFinal,
+                                'aprobado_por'       => $usuario,
+                                'rol_usuario'        => $currentUser['rol'] ?? 'RRHH'
                             ],
                             $usuario
                         );
@@ -559,6 +986,7 @@ class AsistenciaController {
 
     public function historialEventos(): void {
         AuthController::checkAuth();
+        AuthController::requireRole(['ADMIN', 'RRHH'], 'asistencia');
         session_write_close(); // Liberar bloqueo de sesión para consultas AJAX concurrentes
 
         $empId = (int)($_GET['id_empleado'] ?? 0);
@@ -595,6 +1023,7 @@ class AsistenciaController {
         echo json_encode([
             'success' => true,
             'stream_id' => $streamId,
+            'fecha' => $fecha,
             'asistencia' => $asistencia,
             'eventos' => $eventos,
             'marcaciones_crudas' => $marcacionesCrudas
@@ -602,8 +1031,13 @@ class AsistenciaController {
         exit;
     }
 
-    private function exportExcel(array $data, string $start, string $end, ?string $deptoNombre = null, ?string $estado = null, ?string $search = null): void {
-        $filename = "Reporte_Asistencia_{$start}_al_{$end}.xls";
+    private function exportExcel(array $data, string $start, string $end, ?string $deptoNombre = null, ?string $estado = null, ?string $search = null, ?array $empleado = null): void {
+        if ($empleado) {
+            $safeName = preg_replace('/[^A-Za-z0-9_\-]/', '_', $empleado['apellidos'] . '_' . $empleado['nombres']);
+            $filename = "Reporte_Individual_{$safeName}_{$start}_al_{$end}.xls";
+        } else {
+            $filename = "Reporte_Asistencia_{$start}_al_{$end}.xls";
+        }
         header("Content-Type: application/vnd.ms-excel; charset=utf-8");
         header("Content-Disposition: attachment; filename=\"$filename\"");
         header("Pragma: no-cache");
@@ -626,20 +1060,21 @@ class AsistenciaController {
                 $totalTardanzas++;
                 $sumMinTardanza += (int)$r['minutos_tardanza'];
             } elseif ($st === 'FALTA' || $st === 'FALTA_INJUSTIFICADA') $totalFaltas++;
-            elseif (in_array($st, ['JUSTIFICADO', 'PERMISO', 'VACACIONES'], true)) $totalJustificados++;
+            elseif (in_array($st, ['JUSTIFICADO', 'PERMISO', 'VACACIONES', 'COMISION_SERVICIO'], true)) $totalJustificados++;
             elseif ($st === 'SALIDA_SIN_MARCAR') $totalSinSalida++;
 
             $sumMinTrabajados += (int)$r['minutos_trabajados'];
-            $sumMinExtra += (int)$r['minutos_extra'];
+            $sumMinExtra += (int)($r['minutos_extra'] ?? 0);
         }
 
-        $horasTrabajadasTotales = sprintf('%dh %02dm', floor($sumMinTrabajados / 60), $sumMinTrabajados % 60);
-        $horasExtrasTotales = sprintf('%dh %02dm', floor($sumMinExtra / 60), $sumMinExtra % 60);
+        $horasTrabajadasTotales = sprintf('%dh %02dm (%s hrs)', floor($sumMinTrabajados / 60), $sumMinTrabajados % 60, number_format($sumMinTrabajados / 60, 2));
+        $horasExtraTotales = sprintf('+%dh %02dm (+%s hrs)', floor($sumMinExtra / 60), $sumMinExtra % 60, number_format($sumMinExtra / 60, 2));
         $horasTardanzaTotales = sprintf('%dh %02dm', floor($sumMinTardanza / 60), $sumMinTardanza % 60);
         $tasaPuntualidad = $totalRegistros > 0 ? round(($totalPresentes / $totalRegistros) * 100, 1) : 0;
         $generadoEl = date('d/m/Y H:i:s');
         $usuario = AuthController::user()['nombre'] ?? 'Administrador';
 
+        $colspanMain = $empleado ? 15 : 19;
         ?>
         <!DOCTYPE html>
         <html lang="es">
@@ -666,40 +1101,63 @@ class AsistenciaController {
         <body>
             <table>
                 <tr>
-                    <td colspan="12" class="title-main">JUNTA DE USUARIOS DEL SECTOR HIDRÁULICO MENOR SAN LORENZO (JUSHSAL)</td>
+                    <td colspan="<?= $colspanMain ?>" class="title-main">JUNTA DE USUARIOS DEL SECTOR HIDRÁULICO MENOR SAN LORENZO (JUSHSAL)</td>
                 </tr>
                 <tr>
-                    <td colspan="12" class="title-sub">SISTEMA INTEGRADO DE CONTROL DE ASISTENCIA Y PERSONAL - REPORTE CONSOLIDADO OFICIAL</td>
+                    <td colspan="<?= $colspanMain ?>" class="title-sub"><?= $empleado ? 'FICHA / REPORTE INDIVIDUAL DE ASISTENCIA LABORAL' : 'SISTEMA INTEGRADO DE CONTROL DE ASISTENCIA Y PERSONAL - REPORTE CONSOLIDADO OFICIAL' ?></td>
                 </tr>
-                <tr><td colspan="12"></td></tr>
+                <tr><td colspan="<?= $colspanMain ?>"></td></tr>
+
+                <?php if ($empleado): ?>
+                <tr>
+                    <td colspan="2" class="meta-header">Trabajador:</td>
+                    <td colspan="4" style="font-weight: bold; font-size: 11pt; color: #1e3a8a;"><?= htmlspecialchars($empleado['apellidos'] . ' ' . $empleado['nombres']) ?></td>
+                    <td colspan="2" class="meta-header">DNI:</td>
+                    <td colspan="2" style="mso-number-format:'\@'; font-weight: bold;"><?= htmlspecialchars($empleado['dni']) ?></td>
+                    <td colspan="2" class="meta-header">Cód. Reloj:</td>
+                    <td colspan="<?= $colspanMain - 12 ?>" style="mso-number-format:'\@'; font-weight: bold;"><?= htmlspecialchars($empleado['codigo_reloj']) ?></td>
+                </tr>
+                <tr>
+                    <td colspan="2" class="meta-header">Área / Depto:</td>
+                    <td colspan="4"><?= htmlspecialchars($empleado['departamento_nombre'] ?? 'Sin Área') ?></td>
+                    <td colspan="2" class="meta-header">Cargo:</td>
+                    <td colspan="2"><?= htmlspecialchars($empleado['cargo_nombre'] ?? 'Personal') ?></td>
+                    <td colspan="2" class="meta-header">Turno:</td>
+                    <td colspan="<?= $colspanMain - 12 ?>"><?= htmlspecialchars($empleado['turno_nombre'] ?? 'Turno Regular') ?></td>
+                </tr>
+                <?php endif; ?>
+
                 <tr>
                     <td colspan="2" class="meta-header">Período Consultado:</td>
                     <td colspan="4"><?= date('d/m/Y', strtotime($start)) ?> al <?= date('d/m/Y', strtotime($end)) ?></td>
                     <td colspan="2" class="meta-header">Generado por:</td>
-                    <td colspan="4"><?= htmlspecialchars($usuario) ?></td>
+                    <td colspan="<?= $colspanMain - 8 ?>"><?= htmlspecialchars($usuario) ?> (<?= $generadoEl ?>)</td>
                 </tr>
+                <?php if (!$empleado): ?>
                 <tr>
                     <td colspan="2" class="meta-header">Área / Departamento:</td>
                     <td colspan="4"><?= htmlspecialchars($deptoNombre ?: 'Todos los Departamentos') ?></td>
-                    <td colspan="2" class="meta-header">Fecha de Emisión:</td>
-                    <td colspan="4"><?= $generadoEl ?></td>
+                    <td colspan="2" class="meta-header">Estado Filtro:</td>
+                    <td colspan="<?= $colspanMain - 8 ?>"><?= htmlspecialchars($estado ?: 'Todos') ?></td>
                 </tr>
-                <tr><td colspan="12"></td></tr>
+                <?php endif; ?>
+                <tr><td colspan="<?= $colspanMain ?>"></td></tr>
             </table>
 
             <!-- RESUMEN DE INDICADORES -->
-            <table class="summary-table" style="width: 80%; margin-bottom: 15px;">
+            <table class="summary-table" style="width: 95%; margin-bottom: 15px;">
                 <tr style="background-color: #E2E8F0; font-weight: bold;">
-                    <td colspan="7" class="text-center">INDICADORES GENERALES DE ASISTENCIA DEL PERÍODO</td>
+                    <td colspan="8" class="text-center">INDICADORES GENERALES DE ASISTENCIA DEL PERÍODO</td>
                 </tr>
                 <tr class="text-center">
-                    <td style="background-color: #F8FAFC;">Total Evaluados</td>
+                    <td style="background-color: #F8FAFC;">Días / Reg. Evaluados</td>
                     <td style="background-color: #ECFDF5;">Presentes</td>
                     <td style="background-color: #FFFBEB;">Tardanzas</td>
                     <td style="background-color: #FEF2F2;">Faltas</td>
                     <td style="background-color: #EFF6FF;">Justificados</td>
                     <td style="background-color: #ECFDF5;">% Puntualidad</td>
-                    <td style="background-color: #EFF6FF;">Horas Extras Totales</td>
+                    <td style="background-color: #ECFDF5;">Horas Trabajadas Netas</td>
+                    <td style="background-color: #F0FDF4;">Horas Extras Totales</td>
                 </tr>
                 <tr class="text-center" style="font-weight: bold; font-size: 11pt;">
                     <td><?= $totalRegistros ?></td>
@@ -708,7 +1166,8 @@ class AsistenciaController {
                     <td style="color: #991B1B;"><?= $totalFaltas ?></td>
                     <td style="color: #1E40AF;"><?= $totalJustificados ?></td>
                     <td style="color: #065F46;"><?= $tasaPuntualidad ?>%</td>
-                    <td style="color: #1E40AF;"><?= $horasExtrasTotales ?></td>
+                    <td style="color: #065F46; font-weight: bold;"><?= $horasTrabajadasTotales ?></td>
+                    <td style="color: #047857; font-weight: bold;"><?= $horasExtraTotales ?></td>
                 </tr>
             </table>
 
@@ -718,17 +1177,23 @@ class AsistenciaController {
                     <tr>
                         <th class="th-col" style="width: 35px;">#</th>
                         <th class="th-col" style="width: 85px;">Fecha</th>
-                        <th class="th-col" style="width: 85px;">DNI</th>
-                        <th class="th-col" style="width: 80px;">Cód. Reloj</th>
-                        <th class="th-col" style="width: 220px;">Apellidos y Nombres</th>
-                        <th class="th-col" style="width: 140px;">Departamento</th>
+                        <?php if (!$empleado): ?>
+                            <th class="th-col" style="width: 85px;">DNI</th>
+                            <th class="th-col" style="width: 80px;">Cód. Reloj</th>
+                            <th class="th-col" style="width: 220px;">Apellidos y Nombres</th>
+                            <th class="th-col" style="width: 140px;">Departamento</th>
+                        <?php endif; ?>
                         <th class="th-col" style="width: 70px;">Prog. Ent.</th>
                         <th class="th-col" style="width: 70px;">Prog. Sal.</th>
                         <th class="th-col" style="width: 70px;">Real Ent.</th>
+                        <th class="th-col" style="width: 75px;">Sal. Ref.</th>
+                        <th class="th-col" style="width: 75px;">Ret. Ref.</th>
                         <th class="th-col" style="width: 70px;">Real Sal.</th>
                         <th class="th-col" style="width: 80px;">Tardanza</th>
-                        <th class="th-col" style="width: 80px;">Trabajado</th>
-                        <th class="th-col" style="width: 80px;">H. Extra</th>
+                        <th class="th-col" style="width: 95px;">H. Trabajadas</th>
+                        <th class="th-col" style="width: 75px;">H. Decimal</th>
+                        <th class="th-col" style="width: 85px;">H. Extras</th>
+                        <th class="th-col" style="width: 75px;">H. Ext Dec</th>
                         <th class="th-col" style="width: 100px;">Estado</th>
                         <th class="th-col" style="width: 180px;">Observaciones</th>
                     </tr>
@@ -742,28 +1207,38 @@ class AsistenciaController {
                             $st === 'PRESENTE' => 'bg-presente',
                             $st === 'TARDANZA' => 'bg-tardanza',
                             $st === 'FALTA' || $st === 'FALTA_INJUSTIFICADA' => 'bg-falta',
-                            in_array($st, ['JUSTIFICADO', 'PERMISO', 'VACACIONES'], true) => 'bg-justificado',
+                            in_array($st, ['JUSTIFICADO', 'PERMISO', 'VACACIONES', 'COMISION_SERVICIO'], true) => 'bg-justificado',
                             default => 'bg-descanso'
                         };
                         $minTrab = (int)$r['minutos_trabajados'];
                         $strTrabajado = sprintf('%02dh %02dm', floor($minTrab / 60), $minTrab % 60);
+                        $decTrabajado = number_format($minTrab / 60, 2);
+                        $minExtra = (int)($r['minutos_extra'] ?? 0);
+                        $strExtra = $minExtra > 0 ? sprintf('+%02dh %02dm', floor($minExtra / 60), $minExtra % 60) : '-';
+                        $decExtra = $minExtra > 0 ? ('+' . number_format($minExtra / 60, 2)) : '-';
                         $minTard = (int)$r['minutos_tardanza'];
-                        $minExt = (int)$r['minutos_extra'];
+                        $strTard = $minTard >= 60 ? sprintf('+%dh %02dm', floor($minTard / 60), $minTard % 60) : "+{$minTard} min";
                     ?>
                     <tr>
                         <td class="text-center"><?= $i++ ?></td>
                         <td class="text-center"><?= date('d/m/Y', strtotime($r['fecha'])) ?></td>
-                        <td class="text-center" style="mso-number-format:'\@';"><?= htmlspecialchars($r['dni'] ?? '-') ?></td>
-                        <td class="text-center" style="mso-number-format:'\@';"><?= htmlspecialchars($r['codigo_reloj'] ?? '-') ?></td>
-                        <td><?= htmlspecialchars($r['apellidos'] . ' ' . $r['nombres']) ?></td>
-                        <td><?= htmlspecialchars($r['departamento_nombre'] ?? 'Sin Área') ?></td>
+                        <?php if (!$empleado): ?>
+                            <td class="text-center" style="mso-number-format:'\@';"><?= htmlspecialchars($r['dni'] ?? '-') ?></td>
+                            <td class="text-center" style="mso-number-format:'\@';"><?= htmlspecialchars($r['codigo_reloj'] ?? '-') ?></td>
+                            <td><?= htmlspecialchars($r['apellidos'] . ' ' . $r['nombres']) ?></td>
+                            <td><?= htmlspecialchars($r['departamento_nombre'] ?? 'Sin Área') ?></td>
+                        <?php endif; ?>
                         <td class="text-center"><?= $r['hora_entrada_programada'] ? substr($r['hora_entrada_programada'], 0, 5) : '--:--' ?></td>
                         <td class="text-center"><?= $r['hora_salida_programada'] ? substr($r['hora_salida_programada'], 0, 5) : '--:--' ?></td>
                         <td class="text-center" style="font-weight: bold;"><?= $r['hora_entrada_real'] ? substr($r['hora_entrada_real'], 11, 5) : '--:--' ?></td>
+                        <td class="text-center"><?= $r['hora_inicio_refrigerio_real'] ? substr($r['hora_inicio_refrigerio_real'], 11, 5) : '--:--' ?></td>
+                        <td class="text-center"><?= $r['hora_fin_refrigerio_real'] ? substr($r['hora_fin_refrigerio_real'], 11, 5) : '--:--' ?></td>
                         <td class="text-center" style="font-weight: bold;"><?= $r['hora_salida_real'] ? substr($r['hora_salida_real'], 11, 5) : '--:--' ?></td>
-                        <td class="text-center <?= $minTard > 0 ? 'bg-tardanza' : '' ?>"><?= $minTard > 0 ? "+{$minTard} min" : '-' ?></td>
-                        <td class="text-center"><?= $strTrabajado ?></td>
-                        <td class="text-center <?= $minExt > 0 ? 'bg-presente' : '' ?>"><?= $minExt > 0 ? "+{$minExt} min" : '-' ?></td>
+                        <td class="text-center <?= $minTard > 0 ? 'bg-tardanza' : '' ?>"><?= $minTard > 0 ? $strTard : '-' ?></td>
+                        <td class="text-center font-weight-bold" style="color: #065F46;"><?= $strTrabajado ?></td>
+                        <td class="text-center font-weight-bold" style="color: #1E40AF;"><?= $decTrabajado ?></td>
+                        <td class="text-center font-weight-bold" style="color: #047857;"><?= $strExtra ?></td>
+                        <td class="text-center font-weight-bold" style="color: #047857;"><?= $decExtra ?></td>
                         <td class="text-center <?= $classBg ?>"><?= $st ?></td>
                         <td><?= htmlspecialchars($r['observaciones'] ?? '') ?></td>
                     </tr>
@@ -773,87 +1248,6 @@ class AsistenciaController {
         </body>
         </html>
         <?php
-        exit;
-    }
-
-    private function exportCSV(array $data, string $start, string $end, ?string $deptoNombre = null, ?string $estado = null): void {
-        $filename = "Reporte_Asistencia_{$start}_al_{$end}.csv";
-        header("Content-Type: text/csv; charset=utf-8");
-        header("Content-Disposition: attachment; filename=\"$filename\"");
-        header("Pragma: no-cache");
-        header("Expires: 0");
-
-        $output = fopen('php://output', 'w');
-        fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF)); // BOM UTF-8
-
-        $delimiter = ";";
-
-        // Encabezado institucional
-        fputcsv($output, ['JUNTA DE USUARIOS DEL SECTOR HIDRAULICO MENOR SAN LORENZO (JUSHSAL)'], $delimiter);
-        fputcsv($output, ['REPORTE CONSOLIDADO OFICIAL DE ASISTENCIA LABORAL'], $delimiter);
-        fputcsv($output, ['Periodo:', "Del $start al $end"], $delimiter);
-        fputcsv($output, ['Area / Departamento:', $deptoNombre ?: 'Todos los Departamentos'], $delimiter);
-        fputcsv($output, ['Fecha de Emision:', date('d/m/Y H:i:s')], $delimiter);
-        fputcsv($output, [], $delimiter);
-
-        // Cabeceras de columnas
-        fputcsv($output, [
-            'N°', 'Fecha', 'DNI', 'Codigo Reloj', 'Apellidos y Nombres', 'Departamento / Area',
-            'Turno Asignado', 'Entrada Programada', 'Salida Programada', 'Entrada Real', 'Salida Real',
-            'Minutos Tardanza', 'Tiempo Tardanza', 'Tiempo Trabajado', 'Minutos Trabajados',
-            'Minutos Horas Extras', 'Horas Extras', 'Estado Asistencia', 'Observaciones / Sustento'
-        ], $delimiter);
-
-        $i = 1;
-        $totalRegistros = count($data);
-        $sumMinTardanza = 0;
-        $sumMinTrabajados = 0;
-        $sumMinExtra = 0;
-
-        foreach ($data as $r) {
-            $minTrab = (int)$r['minutos_trabajados'];
-            $strTrabajado = sprintf('%02dh %02dm', floor($minTrab / 60), $minTrab % 60);
-            $minTard = (int)$r['minutos_tardanza'];
-            $strTardanza = sprintf('%02dh %02dm', floor($minTard / 60), $minTard % 60);
-            $minExt = (int)$r['minutos_extra'];
-            $strExtra = sprintf('%02dh %02dm', floor($minExt / 60), $minExt % 60);
-
-            $sumMinTardanza += $minTard;
-            $sumMinTrabajados += $minTrab;
-            $sumMinExtra += $minExt;
-
-            fputcsv($output, [
-                $i++,
-                date('d/m/Y', strtotime($r['fecha'])),
-                '="' . ($r['dni'] ?? '') . '"',
-                '="' . ($r['codigo_reloj'] ?? '') . '"',
-                $r['apellidos'] . ' ' . $r['nombres'],
-                $r['departamento_nombre'] ?? 'Sin Area',
-                $r['turno_nombre'] ?? 'Sin Turno',
-                $r['hora_entrada_programada'] ? substr($r['hora_entrada_programada'], 0, 5) : '--:--',
-                $r['hora_salida_programada'] ? substr($r['hora_salida_programada'], 0, 5) : '--:--',
-                $r['hora_entrada_real'] ? substr($r['hora_entrada_real'], 11, 5) : '--:--',
-                $r['hora_salida_real'] ? substr($r['hora_salida_real'], 11, 5) : '--:--',
-                $minTard,
-                $strTardanza,
-                $strTrabajado,
-                $minTrab,
-                $minExt,
-                $strExtra,
-                $r['estado'],
-                $r['observaciones'] ?? ''
-            ], $delimiter);
-        }
-
-        // Fila de totales
-        fputcsv($output, [], $delimiter);
-        $horasTardanzaTotales = sprintf('%02dh %02dm', floor($sumMinTardanza / 60), $sumMinTardanza % 60);
-        $horasTrabajadasTotales = sprintf('%02dh %02dm', floor($sumMinTrabajados / 60), $sumMinTrabajados % 60);
-        $horasExtrasTotales = sprintf('%02dh %02dm', floor($sumMinExtra / 60), $sumMinExtra % 60);
-
-        fputcsv($output, ['TOTALES GENERALES:', '', '', '', '', '', '', '', '', '', '', $sumMinTardanza, $horasTardanzaTotales, $horasTrabajadasTotales, $sumMinTrabajados, $sumMinExtra, $horasExtrasTotales, $totalRegistros . ' registros', ''], $delimiter);
-
-        fclose($output);
         exit;
     }
 }

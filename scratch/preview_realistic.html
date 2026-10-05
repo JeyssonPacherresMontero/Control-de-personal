@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Realistic Hands Preview</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f1f5f9; padding: 25px; }
+        
+        /* Clean neutral container (NOT skin-colored) */
+        .hand-selector-wrapper {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 18px;
+            max-width: 800px;
+            margin: 0 auto;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+        }
+        .hand-box {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 14px;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+        .hand-box:hover {
+            border-color: #cbd5e1;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+        }
+        
+        /* Realistic Hand Stage */
+        .hand-stage {
+            position: relative;
+            width: 100%;
+            max-width: 270px;
+            margin: 0 auto 12px auto;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #ffffff;
+        }
+        .hand-img {
+            width: 100%;
+            height: auto;
+            display: block;
+            border-radius: 10px;
+            user-select: none;
+            -webkit-user-drag: none;
+        }
+        
+        /* Touch Hotspot Target */
+        .finger-hotspot-btn {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.92);
+            border: 2px solid #64748b;
+            color: #1e293b;
+            font-weight: 800;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.25);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 10;
+        }
+        .finger-hotspot-btn:hover {
+            background: #dbeafe;
+            border-color: #2563eb;
+            color: #1d4ed8;
+            transform: translate(-50%, -50%) scale(1.18);
+            box-shadow: 0 0 14px rgba(37, 99, 235, 0.6);
+        }
+        .finger-hotspot-btn.is-active {
+            background: #16a34a !important;
+            border-color: #ffffff !important;
+            color: #ffffff !important;
+            transform: translate(-50%, -50%) scale(1.22);
+            box-shadow: 0 0 16px rgba(22, 163, 74, 0.85);
+            animation: pulse-node 1.8s infinite;
+        }
+        @keyframes pulse-node {
+            0% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(22, 163, 74, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
+        }
+        
+        /* Chip buttons */
+        .finger-btn-chip {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            padding: 6px 10px;
+            margin-bottom: 5px;
+            font-size: 0.81rem;
+            font-weight: 600;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+            background: #f8fafc;
+            color: #334155;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-align: left;
+        }
+        .finger-btn-chip:hover {
+            background: #f1f5f9;
+            border-color: #cbd5e1;
+            color: #0f172a;
+        }
+        .finger-btn-chip.is-active {
+            background: #16a34a !important;
+            border-color: #15803d !important;
+            color: #ffffff !important;
+            box-shadow: 0 2px 6px rgba(22, 163, 74, 0.35);
+        }
+        .finger-btn-chip.is-active .chip-badge {
+            background: #ffffff !important;
+            color: #15803d !important;
+            font-weight: 800;
+        }
+        .chip-badge {
+            font-size: 0.70rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: #e2e8f0;
+            color: #475569;
+            font-family: monospace;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+    <div class="hand-selector-wrapper">
+        <div style="display:flex; gap:20px;">
+            <!-- Left Hand -->
+            <div style="flex:1;">
+                <div class="hand-box">
+                    <h5 style="margin:0 0 10px 0; color:#0284c7; font-size:0.92rem;"><i class="fa-solid fa-hand mr-1"></i> Mano Izquierda</h5>
+                    <div class="hand-stage">
+                        <img src="../public/img/hand_left.jpg" class="hand-img" alt="Mano Izquierda Realista">
+                        <div class="finger-hotspot-btn" style="left: 17%; top: 32%;" title="Meñique Izquierdo (ID 9)">9</div>
+                        <div class="finger-hotspot-btn" style="left: 33%; top: 14%;" title="Anular Izquierdo (ID 8)">8</div>
+                        <div class="finger-hotspot-btn" style="left: 49%; top: 8%;" title="Medio Izquierdo (ID 7)">7</div>
+                        <div class="finger-hotspot-btn" style="left: 66%; top: 15%;" title="Índice Izquierdo (ID 6)">6</div>
+                        <div class="finger-hotspot-btn" style="left: 88%; top: 51%;" title="Pulgar Izquierdo (ID 5)">5</div>
+                    </div>
+                    <div>
+                        <button type="button" class="finger-btn-chip"><span><i class="fa-solid fa-fingerprint mr-1"></i> Pulgar Izquierdo</span><span class="chip-badge">ID 5</span></button>
+                        <button type="button" class="finger-btn-chip"><span><i class="fa-solid fa-fingerprint mr-1"></i> Índice Izquierdo</span><span class="chip-badge">ID 6</span></button>
+                        <button type="button" class="finger-btn-chip"><span><i class="fa-solid fa-fingerprint mr-1"></i> Medio Izquierdo</span><span class="chip-badge">ID 7</span></button>
+                        <button type="button" class="finger-btn-chip"><span><i class="fa-solid fa-fingerprint mr-1"></i> Anular Izquierdo</span><span class="chip-badge">ID 8</span></button>
+                        <button type="button" class="finger-btn-chip"><span><i class="fa-solid fa-fingerprint mr-1"></i> Meñique Izquierdo</span><span class="chip-badge">ID 9</span></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Hand -->
+            <div style="flex:1;">
+                <div class="hand-box">
+                    <h5 style="margin:0 0 10px 0; color:#2563eb; font-size:0.92rem;"><i class="fa-solid fa-hand mr-1" style="transform: scaleX(-1);"></i> Mano Derecha</h5>
+                    <div class="hand-stage">
+                        <img src="../public/img/hand_right.jpg" class="hand-img" alt="Mano Derecha Realista">
+                        <div class="finger-hotspot-btn" style="left: 12%; top: 51%;" title="Pulgar Derecho (ID 0)">0</div>
+                        <div class="finger-hotspot-btn is-active" style="left: 34%; top: 15%;" title="Índice Derecho (ID 1 - Sugerido)">1</div>
+                        <div class="finger-hotspot-btn" style="left: 51%; top: 8%;" title="Medio Derecho (ID 2)">2</div>
+                        <div class="finger-hotspot-btn" style="left: 67%; top: 14%;" title="Anular Derecho (ID 3)">3</div>
+                        <div class="finger-hotspot-btn" style="left: 83%; top: 32%;" title="Meñique Derecho (ID 4)">4</div>
+                    </div>
+                    <div>
+                        <button type="button" class="finger-btn-chip"><span><i class="fa-solid fa-fingerprint mr-1"></i> Pulgar Derecho</span><span class="chip-badge">ID 0</span></button>
+                        <button type="button" class="finger-btn-chip is-active"><span><i class="fa-solid fa-fingerprint mr-1"></i> Índice Derecho <small style="color:#16a34a; font-weight:bold;">(Sugerido)</small></span><span class="chip-badge">ID 1</span></button>
+                        <button type="button" class="finger-btn-chip"><span><i class="fa-solid fa-fingerprint mr-1"></i> Medio Derecho</span><span class="chip-badge">ID 2</span></button>
+                        <button type="button" class="finger-btn-chip"><span><i class="fa-solid fa-fingerprint mr-1"></i> Anular Derecho</span><span class="chip-badge">ID 3</span></button>
+                        <button type="button" class="finger-btn-chip"><span><i class="fa-solid fa-fingerprint mr-1"></i> Meñique Derecho</span><span class="chip-badge">ID 4</span></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

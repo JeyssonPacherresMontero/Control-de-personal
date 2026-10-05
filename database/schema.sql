@@ -49,12 +49,14 @@ CREATE TABLE IF NOT EXISTS `turnos` (
     `nombre` VARCHAR(100) NOT NULL,
     `hora_entrada` TIME NOT NULL,
     `hora_salida` TIME NOT NULL,
+    `hora_entrada_sabado` TIME NULL DEFAULT '08:00:00' COMMENT 'Hora de entrada específica para los sábados',
+    `hora_salida_sabado` TIME NULL DEFAULT '13:00:00' COMMENT 'Hora de salida específica para los sábados (sin refrigerio)',
     `tolerancia_minutos` INT DEFAULT 10 COMMENT 'Minutos de gracia antes de considerar tardanza',
     `tolerancia_falta_minutos` INT DEFAULT 60 COMMENT 'Minutos después de los cuales se considera inasistencia/falta',
     `hora_inicio_refrigerio` TIME NULL,
     `hora_fin_refrigerio` TIME NULL,
-    `minutos_refrigerio` INT DEFAULT 60,
-    `dias_laborables` VARCHAR(50) DEFAULT '1,2,3,4,5' COMMENT '1=Lunes, 7=Domingo separados por comas',
+    `minutos_refrigerio` INT DEFAULT 45,
+    `dias_laborables` VARCHAR(50) DEFAULT '1,2,3,4,5,6' COMMENT '1=Lunes, 7=Domingo separados por comas',
     `es_nocturno` TINYINT(1) DEFAULT 0 COMMENT '1 si la jornada cruza la medianoche',
     `activo` TINYINT(1) DEFAULT 1,
     `creado_en` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -74,6 +76,10 @@ CREATE TABLE IF NOT EXISTS `empleados` (
     `turno_id` INT NULL,
     `fecha_ingreso` DATE NULL,
     `foto` VARCHAR(255) NULL,
+    `dedo_reloj` INT DEFAULT 2 COMMENT 'Dedo principal (1 a 10)',
+    `dedo_nombre` VARCHAR(60) DEFAULT 'Índice Mano Derecha' COMMENT 'Nombre legible del dedo principal',
+    `dedos_reloj` VARCHAR(255) DEFAULT '2' COMMENT 'Lista de IDs de dedos seleccionados (1 a 10) separados por comas',
+    `dedos_nombre` TEXT NULL COMMENT 'Nombres de los dedos seleccionados separados por comas',
     `activo` TINYINT(1) DEFAULT 1,
     `creado_en` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `actualizado_en` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -91,7 +97,9 @@ CREATE TABLE IF NOT EXISTS `dispositivos` (
     `ip` VARCHAR(45) NOT NULL COMMENT 'IPv4 o IPv6 fija del biométrico',
     `puerto` INT DEFAULT 4370 COMMENT 'Puerto estándar ZKTeco (4370)',
     `protocolo` ENUM('TCP', 'UDP') DEFAULT 'TCP',
+    `modo` ENUM('PULL', 'PUSH', 'HYBRID') NOT NULL DEFAULT 'PULL' COMMENT 'Modo de comunicación: PULL, PUSH o HÍBRIDO',
     `clave_comunicacion` INT DEFAULT 0 COMMENT 'ComKey configurada en el reloj (por defecto 0)',
+    `api_token` VARCHAR(64) NULL COMMENT 'Token secreto de autenticación para Push Listener / ADMS',
     `ubicacion` VARCHAR(150) NULL COMMENT 'Ej: Puerta Principal, Almacén, Sede Norte',
     `modelo` VARCHAR(50) NULL,
     `numero_serie` VARCHAR(100) NULL,
@@ -116,15 +124,21 @@ CREATE TABLE IF NOT EXISTS `marcaciones` (
     `tipo` ENUM('entrada', 'salida', 'refrigerio_salida', 'refrigerio_entrada', 'desconocido') DEFAULT 'desconocido',
     `tipo_verificacion` VARCHAR(30) DEFAULT 'huella' COMMENT 'huella, facial, tarjeta, clave',
     `uid_dispositivo` BIGINT NULL COMMENT 'Número de registro interno del reloj ZKTeco',
+    `idempotency_key` VARCHAR(64) NULL COMMENT 'SHA-256(serial + user_id + timestamp + punch + verify) para cero duplicados',
+    `origen` ENUM('PULL', 'PUSH', 'LIVE_CAPTURE', 'MANUAL') NOT NULL DEFAULT 'PULL' COMMENT 'Fuente del evento de marcación',
     `procesado` TINYINT(1) DEFAULT 0 COMMENT '0: Pendiente de cálculo, 1: Procesado en asistencia_diaria',
     `creado_en` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT `fk_marcaciones_empleado` FOREIGN KEY (`id_empleado`) REFERENCES `empleados` (`id`) ON DELETE CASCADE,
     CONSTRAINT `fk_marcaciones_dispositivo` FOREIGN KEY (`id_dispositivo`) REFERENCES `dispositivos` (`id`) ON DELETE RESTRICT,
-    -- Clave Única para evitar duplicados en re-intentos de sincronización
+    -- Clave Única compuesta tradicional
     UNIQUE KEY `uniq_marcacion` (`codigo_reloj`, `fecha_hora`, `id_dispositivo`),
+    -- Clave Única de Idempotencia Criptográfica
+    UNIQUE KEY `uniq_idempotency` (`idempotency_key`),
+    INDEX `idx_marcaciones_emp_fecha` (`id_empleado`, `fecha_hora`),
     INDEX `idx_marcaciones_fecha_hora` (`fecha_hora`),
     INDEX `idx_marcaciones_procesado` (`procesado`),
-    INDEX `idx_marcaciones_codigo_reloj` (`codigo_reloj`)
+    INDEX `idx_marcaciones_codigo_reloj` (`codigo_reloj`),
+    INDEX `idx_marcaciones_origen` (`origen`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 8. TABLA: ASISTENCIA DIARIA CONSOLIDADA (CALCULADA)
@@ -143,8 +157,9 @@ CREATE TABLE IF NOT EXISTS `asistencia_diaria` (
     `minutos_trabajados` INT DEFAULT 0 COMMENT 'Tiempo efectivo laborado en minutos',
     `minutos_extra` INT DEFAULT 0 COMMENT 'Minutos laborados por encima de la jornada oficial',
     `minutos_salida_temprana` INT DEFAULT 0 COMMENT 'Minutos que se retiró antes del horario de salida',
-    `estado` ENUM('PRESENTE', 'TARDANZA', 'FALTA', 'FALTA_INJUSTIFICADA', 'JUSTIFICADO', 'PERMISO', 'VACACIONES', 'DESCANSO', 'SALIDA_SIN_MARCAR') DEFAULT 'PRESENTE',
+    `estado` ENUM('PRESENTE', 'TARDANZA', 'FALTA', 'FALTA_INJUSTIFICADA', 'JUSTIFICADO', 'PERMISO', 'VACACIONES', 'DESCANSO', 'SALIDA_SIN_MARCAR', 'ENTRADA_SIN_MARCAR', 'PENDIENTE', 'COMISION_SERVICIO') DEFAULT 'PRESENTE',
     `observaciones` TEXT NULL,
+    `comision_destino` VARCHAR(150) NULL COMMENT 'Nombre de la Comisión de Usuarios de JUSHSAL o sede externa',
     `manual` TINYINT(1) DEFAULT 0 COMMENT '1 si fue modificado o creado manualmente por RRHH',
     `procesado_en` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT `fk_asistencia_empleado` FOREIGN KEY (`id_empleado`) REFERENCES `empleados` (`id`) ON DELETE CASCADE,
@@ -164,12 +179,14 @@ CREATE TABLE IF NOT EXISTS `justificaciones` (
     `hora_inicio` TIME NULL,
     `hora_fin` TIME NULL,
     `motivo` TEXT NOT NULL,
+    `comision_destino` VARCHAR(150) NULL COMMENT 'Nombre de la Comisión de Usuarios de JUSHSAL en caso de COMISION_SERVICIO',
     `archivo_adjunto` VARCHAR(255) NULL,
     `estado` ENUM('PENDIENTE', 'APROBADO', 'RECHAZADO') DEFAULT 'PENDIENTE',
     `aprobado_por` VARCHAR(100) NULL,
     `fecha_resolucion` DATETIME NULL,
     `creado_en` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT `fk_justificaciones_empleado` FOREIGN KEY (`id_empleado`) REFERENCES `empleados` (`id`) ON DELETE CASCADE,
+    INDEX `idx_justificaciones_emp_rango` (`id_empleado`, `fecha_inicio`, `fecha_fin`, `estado`),
     INDEX `idx_justificaciones_fechas` (`fecha_inicio`, `fecha_fin`),
     INDEX `idx_justificaciones_estado` (`estado`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -189,15 +206,41 @@ CREATE TABLE IF NOT EXISTS `log_sincronizacion` (
     `id_dispositivo` INT NULL,
     `fecha_hora` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `tipo_evento` ENUM('SYNC_AUTO', 'SYNC_MANUAL', 'TEST_CONEXION', 'CLEAR_ATTENDANCE', 'SYNC_USERS', 'ERROR') NOT NULL,
+    `modo` ENUM('PULL', 'PUSH', 'HYBRID') NOT NULL DEFAULT 'PULL',
     `total_descargados` INT DEFAULT 0,
     `total_insertados` INT DEFAULT 0,
     `total_duplicados` INT DEFAULT 0,
+    `total_fallidos` INT DEFAULT 0,
     `estado` ENUM('EXITO', 'ERROR', 'ADVERTENCIA') NOT NULL,
     `mensaje` TEXT NULL,
     `duracion_segundos` DECIMAL(6, 2) DEFAULT 0.00,
+    `latencia_ms` INT DEFAULT 0,
     CONSTRAINT `fk_logs_dispositivo` FOREIGN KEY (`id_dispositivo`) REFERENCES `dispositivos` (`id`) ON DELETE SET NULL,
     INDEX `idx_logs_fecha` (`fecha_hora`),
     INDEX `idx_logs_estado` (`estado`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 11.1 TABLA: COLA LÓGICA DE EVENTOS DE ASISTENCIA (RESILIENCIA Y BUFFER)
+CREATE TABLE IF NOT EXISTS `cola_eventos_asistencia` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `id_dispositivo` INT NOT NULL,
+    `device_serial` VARCHAR(100) NULL,
+    `user_id` VARCHAR(32) NOT NULL,
+    `timestamp` DATETIME NOT NULL,
+    `punch_type` VARCHAR(30) NOT NULL DEFAULT 'entrada',
+    `verify_type` VARCHAR(30) NOT NULL DEFAULT 'huella',
+    `uid_dispositivo` BIGINT NULL,
+    `origen` ENUM('PUSH', 'PULL', 'LIVE_CAPTURE', 'MANUAL') NOT NULL DEFAULT 'PULL',
+    `idempotency_key` VARCHAR(64) NOT NULL,
+    `estado` ENUM('PENDING', 'PROCESSING', 'PROCESSED', 'FAILED', 'RETRY') NOT NULL DEFAULT 'PENDING',
+    `intentos` INT NOT NULL DEFAULT 0,
+    `ultimo_error` TEXT NULL,
+    `creado_en` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `actualizado_en` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT `fk_cola_dispositivo` FOREIGN KEY (`id_dispositivo`) REFERENCES `dispositivos` (`id`) ON DELETE CASCADE,
+    UNIQUE KEY `uniq_cola_idempotency` (`idempotency_key`),
+    INDEX `idx_cola_estado_intentos` (`estado`, `intentos`),
+    INDEX `idx_cola_dispositivo` (`id_dispositivo`, `creado_en`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 12. TABLA: USUARIOS DEL SISTEMA WEB (ADMINISTRADORES / RRHH)
@@ -208,10 +251,13 @@ CREATE TABLE IF NOT EXISTS `usuarios_sistema` (
     `nombre_completo` VARCHAR(120) NOT NULL,
     `email` VARCHAR(100) NULL,
     `rol` ENUM('ADMIN', 'RRHH', 'SUPERVISOR', 'CONSULTA') DEFAULT 'RRHH',
+    `departamento_id` INT NULL,
     `permisos` TEXT NULL COMMENT 'JSON array de módulos permitidos en el menú',
     `activo` TINYINT(1) DEFAULT 1,
+    `permisos_version` INT DEFAULT 1,
     `ultimo_login` DATETIME NULL,
-    `creado_en` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    `creado_en` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT `fk_usuarios_departamento` FOREIGN KEY (`departamento_id`) REFERENCES `departamentos` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 13. TABLA: EVENT STORE (EVENT SOURCING PARA MARCACIONES Y ASISTENCIA)
@@ -226,6 +272,7 @@ CREATE TABLE IF NOT EXISTS `eventos_asistencia` (
     `created_by` VARCHAR(100) NOT NULL DEFAULT 'SYSTEM' COMMENT 'Usuario que originó el evento o subsistema',
     `ip_address` VARCHAR(45) NULL COMMENT 'IP de origen del cliente o dispositivo biométrico',
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY `uniq_stream_version` (`aggregate_type`, `aggregate_id`, `version`),
     INDEX `idx_events_aggregate` (`aggregate_type`, `aggregate_id`),
     INDEX `idx_events_type` (`event_type`),
     INDEX `idx_events_created_at` (`created_at`)
@@ -254,7 +301,8 @@ CREATE TABLE IF NOT EXISTS `login_intentos` (
     `intentos` INT DEFAULT 1,
     `ultimo_intento` DATETIME NOT NULL,
     `bloqueado_hasta` DATETIME NULL,
-    UNIQUE KEY `uniq_login_ip` (`ip`),
+    INDEX `idx_login_ip_usuario` (`ip`, `usuario`),
+    INDEX `idx_login_ip` (`ip`),
     INDEX `idx_login_usuario` (`usuario`),
     INDEX `idx_login_bloqueo` (`bloqueado_hasta`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

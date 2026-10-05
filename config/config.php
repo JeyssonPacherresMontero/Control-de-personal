@@ -1,10 +1,13 @@
 <?php
+declare(strict_types=1);
+
 /**
  * ==========================================================
  * SISTEMA DE CONTROL DE PERSONAL Y ASISTENCIA - ZKTECO
  * Archivo Principal de Configuración
  * ==========================================================
  */
+
 
 // Cargar variables de entorno desde archivo .env si existe
 $envFile = __DIR__ . '/../.env';
@@ -51,6 +54,7 @@ define('APP_URL', $_ENV['APP_URL'] ?? 'http://localhost:8080/control_personal');
 define('APP_ROOT', dirname(__DIR__));
 define('ATTENDANCE_DEBOUNCE_MINUTES', (int)($_ENV['ATTENDANCE_DEBOUNCE_MINUTES'] ?? 3));
 define('APP_DEBUG', filter_var($_ENV['APP_DEBUG'] ?? false, FILTER_VALIDATE_BOOLEAN));
+define('API_SECRET_KEY', $_ENV['API_SECRET_KEY'] ?? 'zk_push_secret_key_8e94a1b89df50c3a218f4a');
 
 // Manejo Global de Errores y Excepciones para Producción
 if (!defined('APP_ERROR_HANDLER_REGISTERED')) {

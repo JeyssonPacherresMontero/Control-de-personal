@@ -7,13 +7,9 @@ namespace App;
  * Módulo de Protección Anti-CSRF (Cross-Site Request Forgery)
  * ==========================================================
  */
-class Csrf {
+class Csrf extends \App\Security\Csrf {
     public static function getToken(): string {
-        return \App\Security\Csrf::token();
-    }
-
-    public static function field(): string {
-        return \App\Security\Csrf::field();
+        return self::token();
     }
 
     public static function verify(?string $token = null): bool {
@@ -24,11 +20,11 @@ class Csrf {
                   ?? $_SERVER['HTTP_X_XSRF_TOKEN'] 
                   ?? '';
         }
-        $sessionToken = \App\Security\Csrf::token();
+        $sessionToken = self::token();
         return !empty($token) && hash_equals($sessionToken, (string)$token);
     }
 
     public static function validateRequest(): void {
-        \App\Security\Csrf::validate();
+        self::validate();
     }
 }

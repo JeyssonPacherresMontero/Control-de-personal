@@ -1,18 +1,22 @@
-=== Iniciando sincronizaciÃ³n [INCREMENTAL (PENDIENTES) - 2026-09-09 09:28:35] ===
-2026-09-09 09:28:36,638 [INFO] [SyncEngine] Iniciando ciclo de sincronización para 1 dispositivo(s)...
-2026-09-09 09:28:36,638 [INFO] [SyncEngine] ==> Iniciando sincronización (INCREMENTAL) con biométrico #1 [Reloj Principal - Entrada] en 192.168.1.201:4370 (TCP)
-2026-09-09 09:28:36,772 [INFO] [ZKService] Conexión exitosa con dispositivo 192.168.1.201:4370
-2026-09-09 09:28:36,805 [INFO] [ZKService] Hora del reloj 192.168.1.201 sincronizada a: 2026-09-09 09:28:36.773014
-2026-09-09 09:28:37,528 [INFO] [SyncEngine] Sincronizados/actualizados 75 empleados desde el biométrico.
-2026-09-09 09:29:55,061 [INFO] [ZKService] Se descargaron 66309 registros brutos de 192.168.1.201
-2026-09-09 09:30:03,393 [INFO] [SyncEngine] Sincronización (INCREMENTAL): 66309 en reloj, 118 evaluados, 94 nuevos insertados, 24 ya existentes.
-2026-09-09 09:30:16,758 [WARNING] [ZKService] Error al desconectar de 192.168.1.201: [WinError 10054] Se ha forzado la interrupción de una conexión existente por el host remoto
-2026-09-09 09:30:16,767 [INFO] [SyncEngine] Ejecutando motor de cálculo de asistencia diaria...
-2026-09-09 09:30:18,623 [INFO] [SyncEngine] Cálculo completado: Procesando asistencia para la fecha: 2026-09-09...
-Completado: 75 empleados evaluados.
-  - Presentes:   13
-  - Tardanzas:   9
-  - Faltas:      53
-  - Justificados: 0
-  - Sin salida:  0
-2026-09-09 09:30:18,623 [INFO] [SyncEngine] Ciclo de sincronización finalizado exitosamente.
+=== Iniciando sincronizaciÃ³n [INCREMENTAL (PENDIENTES) - 2026-10-05 09:31:03] ===
+2026-10-05 09:31:03,437 [INFO] [SyncEngine] Iniciando ciclo de sincronización (INCREMENTAL (7 DÍAS)) para 1 dispositivo(s)...
+2026-10-05 09:31:03,439 [INFO] [SyncEngine] ==> Iniciando sincronización (INCREMENTAL (7 DÍAS)) con biométrico #1 [Reloj Principal - Entrada] en 192.168.1.201:4370 (TCP)
+2026-10-05 09:31:03,439 [INFO] [ZKService] Intentando conectar a 192.168.1.201:4370 (Intento 1/4)...
+2026-10-05 09:31:03,502 [INFO] [ZKService] Conexión exitosa con dispositivo 192.168.1.201:4370 (Latencia: 62.3ms)
+2026-10-05 09:31:03,537 [INFO] [ZKService] Hora del reloj 192.168.1.201 sincronizada a: 2026-10-05 09:31:03.524330 (America/Lima)
+2026-10-05 09:31:04,266 [INFO] [SyncEngine] Sincronizados/actualizados 75 empleados desde el biométrico.
+2026-10-05 09:32:01,971 [INFO] [ZKService] Se descargaron 67115 registros brutos de 192.168.1.201
+2026-10-05 09:32:02,385 [INFO] [SyncEngine] 
+[2026-10-05 09:32:02]
+DEVICE: Reloj Principal - Entrada (ID: #1)
+IP: 192.168.1.201:4370
+MODE: PULL
+ACTION: GET_ATTENDANCE
+RESULT: SUCCESS
+RECORDS: 67115
+NEW: 0
+DUPLICATED: 205
+TIME: 58.95s (Latency: 62.3ms)
+2026-10-05 09:32:02,429 [INFO] [ZKService] Desconectado de 192.168.1.201:4370
+2026-10-05 09:32:02,439 [INFO] [SyncEngine] No hubo marcaciones nuevas insertadas en este ciclo.
+2026-10-05 09:32:02,439 [INFO] [SyncEngine] Ciclo de sincronización finalizado exitosamente.

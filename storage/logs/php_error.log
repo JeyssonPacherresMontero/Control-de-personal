@@ -59,3 +59,264 @@ Stack trace:
 #3 {main}
 
 
+[11-Sep-2026 08:51:02 America/Lima] [2026-09-11 08:51:02] Uncaught Exception: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'u.permisos_version' in 'field list' in C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php:36
+Stack trace:
+#0 C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php(36): PDO->prepare('\n            SE...')
+#1 C:\Users\JEYSSON\Downloads\Control de personal\app\Controllers\UsuariosController.php(11): App\Database::query('\n            SE...')
+#2 C:\Users\JEYSSON\Downloads\Control de personal\public\index.php(198): App\Controllers\UsuariosController->index()
+#3 {main}
+
+
+[11-Sep-2026 08:51:08 America/Lima] [2026-09-11 08:51:08] Uncaught Exception: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'u.permisos_version' in 'field list' in C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php:36
+Stack trace:
+#0 C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php(36): PDO->prepare('\n            SE...')
+#1 C:\Users\JEYSSON\Downloads\Control de personal\app\Controllers\UsuariosController.php(11): App\Database::query('\n            SE...')
+#2 C:\Users\JEYSSON\Downloads\Control de personal\public\index.php(198): App\Controllers\UsuariosController->index()
+#3 {main}
+
+
+[11-Sep-2026 08:51:12 America/Lima] [2026-09-11 08:51:12] Uncaught Exception: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'u.permisos_version' in 'field list' in C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php:36
+Stack trace:
+#0 C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php(36): PDO->prepare('\n            SE...')
+#1 C:\Users\JEYSSON\Downloads\Control de personal\app\Controllers\UsuariosController.php(11): App\Database::query('\n            SE...')
+#2 C:\Users\JEYSSON\Downloads\Control de personal\public\index.php(198): App\Controllers\UsuariosController->index()
+#3 {main}
+
+
+[11-Sep-2026 11:27:15 America/Lima] [2026-09-11 11:27:15] Uncaught Exception: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'tipo_documento' in 'field list' in C:\Users\JEYSSON\Downloads\Control de personal\test_biometria.php:82
+Stack trace:
+#0 C:\Users\JEYSSON\Downloads\Control de personal\test_biometria.php(82): PDO->prepare('INSERT INTO emp...')
+#1 {main}
+
+
+[14-Sep-2026 09:57:49 America/Lima] [2026-09-14 09:57:49] Uncaught Exception: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'u.departamento_id' in 'field list' in C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php:36
+Stack trace:
+#0 C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php(36): PDO->prepare('\n            SE...')
+#1 C:\Users\JEYSSON\Downloads\Control de personal\app\Controllers\UsuariosController.php(13): App\Database::query('\n            SE...')
+#2 C:\Users\JEYSSON\Downloads\Control de personal\public\index.php(250): App\Controllers\UsuariosController->index()
+#3 {main}
+
+
+[14-Sep-2026 10:03:34 America/Lima] [2026-09-14 10:03:34] Uncaught Exception: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'u.departamento_id' in 'field list' in C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php:36
+Stack trace:
+#0 C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php(36): PDO->prepare('\n            SE...')
+#1 C:\Users\JEYSSON\Downloads\Control de personal\app\Controllers\UsuariosController.php(13): App\Database::query('\n            SE...')
+#2 C:\Users\JEYSSON\Downloads\Control de personal\public\index.php(250): App\Controllers\UsuariosController->index()
+#3 {main}
+
+
+[14-Sep-2026 10:08:09 America/Lima] [2026-09-14 10:08:09] Uncaught Exception: Call to undefined method App\Database::pdo() in C:\Users\JEYSSON\.gemini\antigravity\brain\1384771b-24d5-4984-b89a-3f15a14c2bad\scratch\test_migration.php:4
+Stack trace:
+#0 {main}
+
+
+[14-Sep-2026 10:08:27 America/Lima] PHP Warning:  file_get_contents(C:\Users\JEYSSON\.gemini\antigravity\brain\1384771b-24d5-4984-b89a-3f15a14c2bad\scratch/../../../../Downloads/Control de personal/database/migrations/006_add_supervisor_depto.sql): Failed to open stream: No such file or directory in C:\Users\JEYSSON\.gemini\antigravity\brain\1384771b-24d5-4984-b89a-3f15a14c2bad\scratch\test_migration.php on line 10
+[14-Sep-2026 10:08:27 America/Lima] [2026-09-14 10:08:27] Uncaught Exception: PDO::exec(): Argument #1 ($statement) cannot be empty in C:\Users\JEYSSON\.gemini\antigravity\brain\1384771b-24d5-4984-b89a-3f15a14c2bad\scratch\test_migration.php:13
+Stack trace:
+#0 C:\Users\JEYSSON\.gemini\antigravity\brain\1384771b-24d5-4984-b89a-3f15a14c2bad\scratch\test_migration.php(13): PDO->exec('')
+#1 {main}
+
+
+[14-Sep-2026 10:24:40 America/Lima] PHP Warning:  Undefined array key "REQUEST_METHOD" in C:\Users\JEYSSON\Downloads\Control de personal\app\Security\Csrf.php on line 21
+[14-Sep-2026 10:24:40 America/Lima] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\JEYSSON\.gemini\antigravity\brain\1384771b-24d5-4984-b89a-3f15a14c2bad\scratch\test_user_actions.php:13) in C:\Users\JEYSSON\Downloads\Control de personal\app\Controllers\UsuariosController.php on line 351
+[14-Sep-2026 10:25:31 America/Lima] PHP Warning:  Undefined array key "REQUEST_METHOD" in C:\Users\JEYSSON\Downloads\Control de personal\app\Security\Csrf.php on line 21
+[14-Sep-2026 10:25:31 America/Lima] PHP Warning:  Undefined array key "REQUEST_METHOD" in C:\Users\JEYSSON\Downloads\Control de personal\app\Security\Csrf.php on line 21
+[14-Sep-2026 10:25:31 America/Lima] PHP Warning:  Undefined array key "REQUEST_METHOD" in C:\Users\JEYSSON\Downloads\Control de personal\app\Security\Csrf.php on line 21
+[14-Sep-2026 10:25:32 America/Lima] PHP Warning:  Undefined array key "REQUEST_METHOD" in C:\Users\JEYSSON\Downloads\Control de personal\app\Security\Csrf.php on line 21
+[14-Sep-2026 10:25:32 America/Lima] PHP Warning:  Undefined array key "REQUEST_METHOD" in C:\Users\JEYSSON\Downloads\Control de personal\app\Security\Csrf.php on line 21
+[14-Sep-2026 10:25:32 America/Lima] [2026-09-14 10:25:32] [SECURITY AUDIT] Usuario 'test_senior_user' (ID: 10) ELIMINADO DEFINITIVAMENTE por el Administrador '' (ID: 1)
+[14-Sep-2026 10:27:31 America/Lima] [2026-09-14 10:27:31] [SECURITY AUDIT] Usuario 'DAVID' (ID: 7) ELIMINADO DEFINITIVAMENTE por el Administrador 'admin' (ID: 1)
+[14-Sep-2026 10:28:10 America/Lima] [2026-09-14 10:28:10] [SECURITY AUDIT] Usuario 'Jeysson' (ID: 6) ELIMINADO DEFINITIVAMENTE por el Administrador 'admin' (ID: 1)
+[14-Sep-2026 10:56:56 America/Lima] PHP Warning:  Cannot modify header information - headers already sent by (output started at C:\Users\JEYSSON\.gemini\antigravity\brain\1384771b-24d5-4984-b89a-3f15a14c2bad\scratch\test_trend.php:11) in C:\Users\JEYSSON\Downloads\Control de personal\app\Controllers\DashboardController.php on line 355
+[14-Sep-2026 12:15:08 America/Lima] PHP Warning:  Undefined variable $asistencias in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[14-Sep-2026 12:15:08 America/Lima] PHP Warning:  foreach() argument must be of type array|object, null given in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[14-Sep-2026 12:15:23 America/Lima] PHP Warning:  Undefined variable $asistencias in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[14-Sep-2026 12:15:23 America/Lima] PHP Warning:  foreach() argument must be of type array|object, null given in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[14-Sep-2026 12:15:27 America/Lima] PHP Warning:  Undefined variable $asistencias in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[14-Sep-2026 12:15:27 America/Lima] PHP Warning:  foreach() argument must be of type array|object, null given in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[14-Sep-2026 12:15:59 America/Lima] PHP Warning:  Undefined variable $asistencias in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[14-Sep-2026 12:15:59 America/Lima] PHP Warning:  foreach() argument must be of type array|object, null given in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[14-Sep-2026 12:16:09 America/Lima] PHP Warning:  Undefined variable $asistencias in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[14-Sep-2026 12:16:09 America/Lima] PHP Warning:  foreach() argument must be of type array|object, null given in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[14-Sep-2026 12:16:09 America/Lima] PHP Warning:  Undefined variable $asistencias in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[14-Sep-2026 12:16:09 America/Lima] PHP Warning:  foreach() argument must be of type array|object, null given in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[14-Sep-2026 12:29:28 America/Lima] PHP Warning:  Undefined variable $asistencias in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[14-Sep-2026 12:29:28 America/Lima] PHP Warning:  foreach() argument must be of type array|object, null given in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[14-Sep-2026 12:30:48 America/Lima] PHP Warning:  Undefined variable $asistencias in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[14-Sep-2026 12:30:48 America/Lima] PHP Warning:  foreach() argument must be of type array|object, null given in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[14-Sep-2026 12:34:30 America/Lima] PHP Warning:  Undefined variable $asistencias in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[14-Sep-2026 12:34:30 America/Lima] PHP Warning:  foreach() argument must be of type array|object, null given in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[14-Sep-2026 12:34:41 America/Lima] PHP Warning:  Undefined variable $asistencias in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[14-Sep-2026 12:34:41 America/Lima] PHP Warning:  foreach() argument must be of type array|object, null given in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[14-Sep-2026 12:56:42 America/Lima] PHP Warning:  Undefined variable $asistencias in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[14-Sep-2026 12:56:42 America/Lima] PHP Warning:  foreach() argument must be of type array|object, null given in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[14-Sep-2026 12:56:54 America/Lima] PHP Warning:  Undefined variable $asistencias in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[14-Sep-2026 12:56:54 America/Lima] PHP Warning:  foreach() argument must be of type array|object, null given in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[16-Sep-2026 08:48:33 America/Lima] [CRITICAL] Database connection error: SQLSTATE[HY000] [2002] No se puede establecer una conexión ya que el equipo de destino denegó expresamente dicha conexión
+[16-Sep-2026 08:49:54 America/Lima] PHP Warning:  Undefined variable $asistencias in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[16-Sep-2026 08:49:54 America/Lima] PHP Warning:  foreach() argument must be of type array|object, null given in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[16-Sep-2026 08:53:07 America/Lima] PHP Warning:  Undefined variable $asistencias in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[16-Sep-2026 08:53:07 America/Lima] PHP Warning:  foreach() argument must be of type array|object, null given in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[16-Sep-2026 08:53:16 America/Lima] PHP Warning:  Undefined variable $asistencias in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[16-Sep-2026 08:53:16 America/Lima] PHP Warning:  foreach() argument must be of type array|object, null given in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[16-Sep-2026 08:54:30 America/Lima] PHP Warning:  Undefined variable $asistencias in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[16-Sep-2026 08:54:30 America/Lima] PHP Warning:  foreach() argument must be of type array|object, null given in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[16-Sep-2026 08:54:32 America/Lima] PHP Warning:  Undefined variable $asistencias in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[16-Sep-2026 08:54:32 America/Lima] PHP Warning:  foreach() argument must be of type array|object, null given in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[16-Sep-2026 08:54:34 America/Lima] PHP Warning:  Undefined variable $asistencias in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[16-Sep-2026 08:54:34 America/Lima] PHP Warning:  foreach() argument must be of type array|object, null given in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[16-Sep-2026 08:54:40 America/Lima] PHP Warning:  Undefined variable $asistencias in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[16-Sep-2026 08:54:40 America/Lima] PHP Warning:  foreach() argument must be of type array|object, null given in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[16-Sep-2026 08:54:51 America/Lima] PHP Warning:  Undefined variable $asistencias in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[16-Sep-2026 08:54:51 America/Lima] PHP Warning:  foreach() argument must be of type array|object, null given in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[16-Sep-2026 08:54:54 America/Lima] PHP Warning:  Undefined variable $asistencias in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[16-Sep-2026 08:54:54 America/Lima] PHP Warning:  foreach() argument must be of type array|object, null given in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[16-Sep-2026 08:58:50 America/Lima] PHP Warning:  Undefined variable $asistencias in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[16-Sep-2026 08:58:50 America/Lima] PHP Warning:  foreach() argument must be of type array|object, null given in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[16-Sep-2026 09:00:53 America/Lima] PHP Warning:  Undefined variable $asistencias in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[16-Sep-2026 09:00:53 America/Lima] PHP Warning:  foreach() argument must be of type array|object, null given in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php on line 299
+[18-Sep-2026 09:39:46 America/Lima] [2026-09-18 09:39:46] Uncaught Exception: Call to undefined method App\Database::getInstance() in C:\Users\JEYSSON\.gemini\antigravity\brain\c65deae2-6c80-4765-b4c0-3d1c2a3936c7\scratch\check_status_17.php:6
+Stack trace:
+#0 {main}
+
+
+[18-Sep-2026 09:44:32 America/Lima] Error auto-calculating missing attendance: Call to undefined method App\Database::getInstance()
+[18-Sep-2026 09:44:45 America/Lima] Error auto-calculating missing attendance: Call to undefined method App\Database::getInstance()
+[18-Sep-2026 09:54:29 America/Lima] Error auto-calculating missing attendance: Call to undefined method App\Database::getInstance()
+[18-Sep-2026 09:54:40 America/Lima] Error auto-calculating missing attendance: Call to undefined method App\Database::getInstance()
+[18-Sep-2026 09:54:50 America/Lima] Error auto-calculating missing attendance: Call to undefined method App\Database::getInstance()
+[18-Sep-2026 10:08:21 America/Lima] Error auto-calculating missing attendance: Call to undefined method App\Database::getInstance()
+[18-Sep-2026 10:19:43 America/Lima] Error auto-calculating missing attendance: Call to undefined method App\Database::getInstance()
+[18-Sep-2026 10:42:14 America/Lima] PHP Fatal error:  Uncaught Error: Call to undefined method App\Database::getInstance() in Command line code:1
+Stack trace:
+#0 {main}
+  thrown in Command line code on line 1
+[18-Sep-2026 10:42:45 America/Lima] [2026-09-18 10:42:45] Uncaught Exception: Call to undefined method App\Database::getInstance() in C:\Users\JEYSSON\.gemini\antigravity\brain\58a94ef7-559e-441a-9427-ec682159a0fa\scratch\system_audit.php:12
+Stack trace:
+#0 {main}
+
+
+[18-Sep-2026 10:53:17 America/Lima] PHP Warning:  require(app/Security/RateLimiter.php): Failed to open stream: No such file or directory in C:\Users\JEYSSON\.gemini\antigravity\brain\58a94ef7-559e-441a-9427-ec682159a0fa\scratch\verify_modules.php on line 8
+[18-Sep-2026 10:53:17 America/Lima] [2026-09-18 10:53:17] Uncaught Exception: Failed opening required 'app/Security/RateLimiter.php' (include_path='C:\xampp\php\PEAR') in C:\Users\JEYSSON\.gemini\antigravity\brain\58a94ef7-559e-441a-9427-ec682159a0fa\scratch\verify_modules.php:8
+Stack trace:
+#0 {main}
+
+
+[18-Sep-2026 10:53:35 America/Lima] PHP Warning:  require(app/EventStore.php): Failed to open stream: No such file or directory in C:\Users\JEYSSON\.gemini\antigravity\brain\58a94ef7-559e-441a-9427-ec682159a0fa\scratch\verify_modules.php on line 9
+[18-Sep-2026 10:53:35 America/Lima] [2026-09-18 10:53:35] Uncaught Exception: Failed opening required 'app/EventStore.php' (include_path='C:\xampp\php\PEAR') in C:\Users\JEYSSON\.gemini\antigravity\brain\58a94ef7-559e-441a-9427-ec682159a0fa\scratch\verify_modules.php:9
+Stack trace:
+#0 {main}
+
+
+[18-Sep-2026 10:53:52 America/Lima] [2026-09-18 10:53:52] Uncaught Exception: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'a.empleado_id' in 'on clause' in C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php:66
+Stack trace:
+#0 C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php(66): PDO->prepare('SELECT a.*, e.n...')
+#1 C:\Users\JEYSSON\.gemini\antigravity\brain\58a94ef7-559e-441a-9427-ec682159a0fa\scratch\verify_modules.php(42): App\Database::query('SELECT a.*, e.n...', Array)
+#2 {main}
+
+
+[18-Sep-2026 11:36:40 America/Lima] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'payload' in 'field list' in C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php:66
+Stack trace:
+#0 C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php(66): PDO->prepare('SELECT id, aggr...')
+#1 Command line code(1): App\Database::query('SELECT id, aggr...')
+#2 {main}
+  thrown in C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php on line 66
+[18-Sep-2026 11:36:52 America/Lima] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'creado_en' in 'field list' in C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php:66
+Stack trace:
+#0 C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php(66): PDO->prepare('SELECT id, aggr...')
+#1 Command line code(1): App\Database::query('SELECT id, aggr...')
+#2 {main}
+  thrown in C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php on line 66
+[18-Sep-2026 11:37:12 America/Lima] [2026-09-18 11:37:12] Uncaught Exception: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'payload' in 'field list' in C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php:66
+Stack trace:
+#0 C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php(66): PDO->prepare('SELECT id, aggr...')
+#1 C:\Users\JEYSSON\.gemini\antigravity\brain\58a94ef7-559e-441a-9427-ec682159a0fa\scratch\check_events.php(5): App\Database::query('SELECT id, aggr...')
+#2 {main}
+
+
+[18-Sep-2026 11:37:41 America/Lima] [2026-09-18 11:37:41] Uncaught Exception: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'recorded_at' in 'field list' in C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php:66
+Stack trace:
+#0 C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php(66): PDO->prepare('SELECT id, aggr...')
+#1 C:\Users\JEYSSON\.gemini\antigravity\brain\58a94ef7-559e-441a-9427-ec682159a0fa\scratch\check_events.php(5): App\Database::query('SELECT id, aggr...')
+#2 {main}
+
+
+[18-Sep-2026 11:39:58 America/Lima] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'control_personal.event_store' doesn't exist in C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php:66
+Stack trace:
+#0 C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php(66): PDO->prepare('SELECT id, stre...')
+#1 Command line code(1): App\Database::query('SELECT id, stre...')
+#2 {main}
+  thrown in C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php on line 66
+[18-Sep-2026 11:40:23 America/Lima] [2026-09-18 11:40:23] Uncaught Exception: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'control_personal.event_store' doesn't exist in C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php:66
+Stack trace:
+#0 C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php(66): PDO->prepare('SELECT * FROM e...')
+#1 C:\Users\JEYSSON\.gemini\antigravity\brain\58a94ef7-559e-441a-9427-ec682159a0fa\scratch\inspect_modifications.php(6): App\Database::query('SELECT * FROM e...')
+#2 {main}
+
+
+[21-Sep-2026 10:05:39 America/Lima] PHP Warning:  require_once(c:/Users/JEYSSON/Downloads/Control de personal/config/database.php): Failed to open stream: No such file or directory in C:\Users\JEYSSON\.gemini\antigravity\brain\2739ee80-07bb-484a-98ad-30590c47ffe1\scratch\test_calculations.php on line 4
+[21-Sep-2026 10:05:39 America/Lima] [2026-09-21 10:05:39] Uncaught Exception: Failed opening required 'c:/Users/JEYSSON/Downloads/Control de personal/config/database.php' (include_path='C:\xampp\php\PEAR') in C:\Users\JEYSSON\.gemini\antigravity\brain\2739ee80-07bb-484a-98ad-30590c47ffe1\scratch\test_calculations.php:4
+Stack trace:
+#0 {main}
+
+
+[21-Sep-2026 10:08:26 America/Lima] PHP Warning:  require_once(c:/Users/JEYSSON/Downloads/Control de personal/config/database.php): Failed to open stream: No such file or directory in C:\Users\JEYSSON\.gemini\antigravity\brain\2739ee80-07bb-484a-98ad-30590c47ffe1\scratch\test_calculations.php on line 7
+[21-Sep-2026 10:08:26 America/Lima] [2026-09-21 10:08:26] Uncaught Exception: Failed opening required 'c:/Users/JEYSSON/Downloads/Control de personal/config/database.php' (include_path='C:\xampp\php\PEAR') in C:\Users\JEYSSON\.gemini\antigravity\brain\2739ee80-07bb-484a-98ad-30590c47ffe1\scratch\test_calculations.php:7
+Stack trace:
+#0 {main}
+
+
+[21-Sep-2026 10:09:01 America/Lima] [2026-09-21 10:09:01] Uncaught Exception: Method App\Services\AttendanceCalculator::processMarksForDay() does not exist in C:\Users\JEYSSON\.gemini\antigravity\brain\2739ee80-07bb-484a-98ad-30590c47ffe1\scratch\test_calculations.php:14
+Stack trace:
+#0 C:\Users\JEYSSON\.gemini\antigravity\brain\2739ee80-07bb-484a-98ad-30590c47ffe1\scratch\test_calculations.php(14): ReflectionClass->getMethod('processMarksFor...')
+#1 {main}
+
+
+[21-Sep-2026 10:11:04 America/Lima] [2026-09-21 10:11:04] Uncaught Exception: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'cargo' in 'field list' in C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php:72
+Stack trace:
+#0 C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php(72): PDO->prepare('SELECT id, dni,...')
+#1 C:\Users\JEYSSON\.gemini\antigravity\brain\2739ee80-07bb-484a-98ad-30590c47ffe1\scratch\test_employee_report.php(8): App\Database::queryOne('SELECT id, dni,...')
+#2 {main}
+
+
+[23-Sep-2026 15:56:57 America/Lima] [2026-09-23 15:56:57] Uncaught Exception: Method App\Services\AttendanceCalculator::calculateDailyAttendance() does not exist in C:\Users\JEYSSON\Downloads\Control de personal\tests\test_calculator.php:256
+Stack trace:
+#0 C:\Users\JEYSSON\Downloads\Control de personal\tests\test_calculator.php(256): ReflectionClass->getMethod('calculateDailyA...')
+#1 {main}
+
+
+[25-Sep-2026 12:43:59 America/Lima] [2026-09-25 12:43:59] [SECURITY AUDIT] Usuario 'test_operador_1790358239' (ID: 12) ELIMINADO DEFINITIVAMENTE por el Administrador 'admin' (ID: 1)
+[28-Sep-2026 09:55:23 America/Lima] PHP Warning:  session_set_cookie_params(): Session cookie parameters cannot be changed after headers have already been sent in C:\Users\JEYSSON\Downloads\Control de personal\config\config.php on line 234
+[28-Sep-2026 09:55:23 America/Lima] PHP Warning:  session_name(): Session name cannot be changed after headers have already been sent in C:\Users\JEYSSON\Downloads\Control de personal\config\config.php on line 242
+[28-Sep-2026 09:55:23 America/Lima] PHP Warning:  session_start(): Session cannot be started after headers have already been sent in C:\Users\JEYSSON\Downloads\Control de personal\config\config.php on line 243
+[28-Sep-2026 09:55:23 America/Lima] PHP Warning:  require_once(config/database.php): Failed to open stream: No such file or directory in Command line code on line 1
+[28-Sep-2026 09:55:23 America/Lima] PHP Fatal error:  Uncaught Error: Failed opening required 'config/database.php' (include_path='C:\xampp\php\PEAR') in Command line code:1
+Stack trace:
+#0 {main}
+  thrown in Command line code on line 1
+[28-Sep-2026 09:55:42 America/Lima] PHP Warning:  require_once(config/database.php): Failed to open stream: No such file or directory in Command line code on line 1
+[28-Sep-2026 09:55:42 America/Lima] PHP Fatal error:  Uncaught Error: Failed opening required 'config/database.php' (include_path='C:\xampp\php\PEAR') in Command line code:1
+Stack trace:
+#0 {main}
+  thrown in Command line code on line 1
+[28-Sep-2026 10:06:10 America/Lima] PHP Warning:  require_once(C:\Users\JEYSSON\Downloads\Control de personal/config/database.php): Failed to open stream: No such file or directory in C:\Users\JEYSSON\Downloads\Control de personal\scratch_health_test.php on line 3
+[28-Sep-2026 10:06:10 America/Lima] [2026-09-28 10:06:10] Uncaught Exception: Failed opening required 'C:\Users\JEYSSON\Downloads\Control de personal/config/database.php' (include_path='C:\xampp\php\PEAR') in C:\Users\JEYSSON\Downloads\Control de personal\scratch_health_test.php:3
+Stack trace:
+#0 {main}
+
+
+[28-Sep-2026 10:53:59 America/Lima] PHP Fatal error:  Maximum execution time of 120 seconds exceeded in C:\Users\JEYSSON\Downloads\Control de personal\app\Services\PythonRunner.php on line 154
+[30-Sep-2026 10:48:22 America/Lima] [CRITICAL] Database connection error: SQLSTATE[HY000] [2002] No se puede establecer una conexión ya que el equipo de destino denegó expresamente dicha conexión
+[01-Oct-2026 14:40:04 America/Lima] [CRITICAL] Database connection error: SQLSTATE[HY000] [2002] No se puede establecer una conexión ya que el equipo de destino denegó expresamente dicha conexión
+[05-Oct-2026 10:33:07 America/Lima] PHP Fatal error:  Uncaught Error: Class "app\Database" not found in Command line code:1
+Stack trace:
+#0 {main}
+  thrown in Command line code on line 1
+[05-Oct-2026 10:33:24 America/Lima] PHP Fatal error:  Uncaught Error: Class "Database" not found in Command line code:1
+Stack trace:
+#0 {main}
+  thrown in Command line code on line 1
+[05-Oct-2026 10:33:36 America/Lima] PHP Fatal error:  Uncaught Error: Class "Database" not found in Command line code:1
+Stack trace:
+#0 {main}
+  thrown in Command line code on line 1

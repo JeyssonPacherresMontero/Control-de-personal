@@ -1,9 +1,12 @@
 <?php
+declare(strict_types=1);
+
 namespace App\Controllers;
 
 use App\Database;
 use App\Services\AttendanceCalculator;
 use App\Services\EventStore;
+
 
 require_once __DIR__ . '/../Services/EventStore.php';
 
@@ -11,11 +14,32 @@ class MarcacionesController {
     public function index(): void {
         AuthController::checkAuth();
 
-        $fechaInicio = $_GET['fecha_inicio'] ?? ($_GET['fecha'] ?? date('Y-m-01'));
-        $fechaFin = $_GET['fecha_fin'] ?? ($_GET['fecha'] ?? date('Y-m-d'));
+        $userRole = AuthController::role();
+        $currentUser = AuthController::user();
+        $supervisorDeptoId = (int)($currentUser['departamento_id'] ?? 0);
+
+        $fechaInicio = !empty($_GET['fecha_inicio']) ? trim($_GET['fecha_inicio']) : (!empty($_GET['fecha']) ? trim($_GET['fecha']) : date('Y-m-01'));
+        $fechaFin = !empty($_GET['fecha_fin']) ? trim($_GET['fecha_fin']) : (!empty($_GET['fecha']) ? trim($_GET['fecha']) : date('Y-m-d'));
+        if ($fechaInicio > $fechaFin) {
+            $tmp = $fechaInicio;
+            $fechaInicio = $fechaFin;
+            $fechaFin = $tmp;
+        }
+
+        $departamentoId = !empty($_GET['departamento_id']) ? (int)$_GET['departamento_id'] : null;
         $dispositivoId = !empty($_GET['dispositivo_id']) ? (int)$_GET['dispositivo_id'] : null;
         $tipo = !empty($_GET['tipo']) ? trim($_GET['tipo']) : null;
         $search = !empty($_GET['search']) ? trim($_GET['search']) : null;
+
+        // Auto-vincular marcaciones huérfanas en segundo plano si existen empleados coincidentes
+        try {
+            Database::execute("
+                UPDATE marcaciones m 
+                JOIN empleados e ON (m.codigo_reloj = e.codigo_reloj OR TRIM(LEADING '0' FROM m.codigo_reloj) = TRIM(LEADING '0' FROM e.codigo_reloj))
+                SET m.id_empleado = e.id 
+                WHERE m.id_empleado IS NULL
+            ");
+        } catch (\Throwable $e) {}
 
         // Paginación
         $page = max(1, (int)($_GET['page'] ?? 1));
@@ -31,6 +55,14 @@ class MarcacionesController {
             ':dt_fin'    => $dtFin
         ];
 
+        if ($userRole === 'SUPERVISOR' && $supervisorDeptoId > 0) {
+            $where .= " AND e.departamento_id = :sup_depto";
+            $params[':sup_depto'] = $supervisorDeptoId;
+        } elseif ($departamentoId) {
+            $where .= " AND e.departamento_id = :depto_id";
+            $params[':depto_id'] = $departamentoId;
+        }
+
         if ($dispositivoId) {
             $where .= " AND m.id_dispositivo = :disp_id";
             $params[':disp_id'] = $dispositivoId;
@@ -40,6 +72,18 @@ class MarcacionesController {
             $tipoLower = strtolower($tipo);
             if ($tipoLower === 'refrigerio' || $tipoLower === 'refrigerios') {
                 $where .= " AND (LOWER(m.tipo) LIKE '%refrigerio%' OR LOWER(m.tipo) LIKE '%break%')";
+            } elseif ($tipoLower === 'refrigerio_salida') {
+                $where .= " AND (LOWER(m.tipo) = 'refrigerio_salida' OR (LOWER(m.tipo) LIKE '%refrigerio%' AND TIME(m.fecha_hora) <= '13:30:00'))";
+            } elseif ($tipoLower === 'refrigerio_entrada') {
+                $where .= " AND (LOWER(m.tipo) = 'refrigerio_entrada' OR (LOWER(m.tipo) LIKE '%refrigerio%' AND TIME(m.fecha_hora) > '13:30:00'))";
+            } elseif ($tipoLower === 'comision_servicio' || $tipoLower === 'comision') {
+                $where .= " AND (LOWER(m.tipo) = 'comision_servicio' OR UPPER(m.tipo_verificacion) = 'COMISION_SERVICIO')";
+            } elseif ($tipoLower === 'vacaciones') {
+                $where .= " AND (LOWER(m.tipo) = 'vacaciones' OR UPPER(m.tipo_verificacion) = 'VACACIONES')";
+            } elseif ($tipoLower === 'sin_vincular') {
+                $where .= " AND m.id_empleado IS NULL";
+            } elseif ($tipoLower === 'otros' || $tipoLower === 'desconocido') {
+                $where .= " AND (LOWER(m.tipo) NOT IN ('entrada', 'salida', 'comision_servicio', 'vacaciones') AND LOWER(m.tipo) NOT LIKE '%refrigerio%' AND LOWER(m.tipo) NOT LIKE '%break%')";
             } else {
                 $where .= " AND LOWER(m.tipo) = :tipo";
                 $params[':tipo'] = $tipoLower;
@@ -47,11 +91,13 @@ class MarcacionesController {
         }
 
         if ($search) {
-            $where .= " AND (e.nombres LIKE :s1 OR e.apellidos LIKE :s2 OR e.dni LIKE :s3 OR m.codigo_reloj LIKE :s4)";
+            $where .= " AND (e.nombres LIKE :s1 OR e.apellidos LIKE :s2 OR e.dni LIKE :s3 OR m.codigo_reloj LIKE :s4 OR CONCAT(e.apellidos, ' ', e.nombres) LIKE :s5 OR CONCAT(e.nombres, ' ', e.apellidos) LIKE :s6)";
             $params[':s1'] = "%$search%";
             $params[':s2'] = "%$search%";
             $params[':s3'] = "%$search%";
             $params[':s4'] = "%$search%";
+            $params[':s5'] = "%$search%";
+            $params[':s6'] = "%$search%";
         }
 
         // 1. Agregación de KPIs directamente en SQL para máxima velocidad
@@ -61,14 +107,19 @@ class MarcacionesController {
                 SUM(CASE WHEN LOWER(m.tipo) = 'entrada' THEN 1 ELSE 0 END) as entradas,
                 SUM(CASE WHEN LOWER(m.tipo) = 'salida' THEN 1 ELSE 0 END) as salidas,
                 SUM(CASE WHEN LOWER(m.tipo) LIKE '%refrigerio%' OR LOWER(m.tipo) LIKE '%break%' THEN 1 ELSE 0 END) as refrigerios,
-                SUM(CASE WHEN LOWER(m.tipo) NOT IN ('entrada', 'salida') AND LOWER(m.tipo) NOT LIKE '%refrigerio%' AND LOWER(m.tipo) NOT LIKE '%break%' THEN 1 ELSE 0 END) as otros,
+                SUM(CASE WHEN LOWER(m.tipo) = 'refrigerio_salida' OR (LOWER(m.tipo) LIKE '%refrigerio%' AND TIME(m.fecha_hora) <= '13:30:00') THEN 1 ELSE 0 END) as ref_salida,
+                SUM(CASE WHEN LOWER(m.tipo) = 'refrigerio_entrada' OR (LOWER(m.tipo) LIKE '%refrigerio%' AND TIME(m.fecha_hora) > '13:30:00') THEN 1 ELSE 0 END) as ref_entrada,
+                SUM(CASE WHEN UPPER(m.tipo_verificacion) = 'COMISION_SERVICIO' OR LOWER(m.tipo) = 'comision_servicio' THEN 1 ELSE 0 END) as comisiones,
+                SUM(CASE WHEN UPPER(m.tipo_verificacion) = 'VACACIONES' OR LOWER(m.tipo) = 'vacaciones' THEN 1 ELSE 0 END) as vacaciones,
+                SUM(CASE WHEN m.id_empleado IS NULL THEN 1 ELSE 0 END) as sin_vincular,
                 SUM(CASE WHEN m.procesado = 1 THEN 1 ELSE 0 END) as procesados
             FROM marcaciones m
             LEFT JOIN empleados e ON m.id_empleado = e.id
             $where
         ";
         $kpis = Database::queryOne($kpiSql, $params) ?: [
-            'total' => 0, 'entradas' => 0, 'salidas' => 0, 'refrigerios' => 0, 'otros' => 0, 'procesados' => 0
+            'total' => 0, 'entradas' => 0, 'salidas' => 0, 'refrigerios' => 0, 'ref_salida' => 0, 'ref_entrada' => 0,
+            'comisiones' => 0, 'vacaciones' => 0, 'sin_vincular' => 0, 'procesados' => 0
         ];
         $totalRecords = (int)($kpis['total'] ?? 0);
         $totalPages = $totalRecords > 0 ? (int)ceil($totalRecords / $perPage) : 1;
@@ -78,9 +129,11 @@ class MarcacionesController {
             $exportSql = "
                 SELECT m.*, 
                        e.nombres, e.apellidos, e.dni,
+                       dep.nombre as departamento_nombre,
                        d.nombre as dispositivo_nombre, d.ip as dispositivo_ip
                 FROM marcaciones m
                 LEFT JOIN empleados e ON m.id_empleado = e.id
+                LEFT JOIN departamentos dep ON e.departamento_id = dep.id
                 LEFT JOIN dispositivos d ON m.id_dispositivo = d.id
                 $where
                 ORDER BY m.fecha_hora DESC
@@ -99,9 +152,6 @@ class MarcacionesController {
             if ($exportType === 'excel' || $exportType === 'xls') {
                 $this->exportExcel($exportData, $fechaInicio, $fechaFin, $dispositivoNombre, $tipo, $search);
                 return;
-            } elseif ($exportType === 'csv') {
-                $this->exportCSV($exportData, $fechaInicio, $fechaFin, $dispositivoNombre, $tipo);
-                return;
             }
         }
 
@@ -109,9 +159,11 @@ class MarcacionesController {
         $sql = "
             SELECT m.*, 
                    e.nombres, e.apellidos, e.dni,
+                   dep.nombre as departamento_nombre,
                    d.nombre as dispositivo_nombre, d.ip as dispositivo_ip
             FROM marcaciones m
             LEFT JOIN empleados e ON m.id_empleado = e.id
+            LEFT JOIN departamentos dep ON e.departamento_id = dep.id
             LEFT JOIN dispositivos d ON m.id_dispositivo = d.id
             $where
             ORDER BY m.fecha_hora DESC
@@ -120,7 +172,8 @@ class MarcacionesController {
 
         $marcaciones = Database::query($sql, $params);
         $dispositivos = Database::query("SELECT * FROM dispositivos ORDER BY nombre ASC");
-        $empleados = Database::query("SELECT id, codigo_reloj, dni, nombres, apellidos FROM empleados WHERE activo = 1 ORDER BY apellidos ASC");
+        $departamentos = Database::query("SELECT * FROM departamentos ORDER BY nombre ASC");
+        $empleados = Database::query("SELECT e.id, e.codigo_reloj, e.dni, e.nombres, e.apellidos, d.nombre as departamento_nombre FROM empleados e LEFT JOIN departamentos d ON e.departamento_id = d.id WHERE e.activo = 1 ORDER BY e.apellidos ASC");
 
         require_once APP_ROOT . '/views/marcaciones/index.php';
     }
@@ -232,10 +285,11 @@ class MarcacionesController {
                         <th class="th-col" style="width: 80px;">Hora</th>
                         <th class="th-col" style="width: 90px;">Cód. Reloj</th>
                         <th class="th-col" style="width: 90px;">DNI</th>
-                        <th class="th-col" style="width: 220px;">Apellidos y Nombres</th>
+                        <th class="th-col" style="width: 200px;">Apellidos y Nombres</th>
+                        <th class="th-col" style="width: 140px;">Área / Departamento</th>
                         <th class="th-col" style="width: 140px;">Terminal Biométrico</th>
-                        <th class="th-col" style="width: 100px;">Tipo Evento</th>
-                        <th class="th-col" style="width: 110px;">Método Verif.</th>
+                        <th class="th-col" style="width: 120px;">Tipo Evento</th>
+                        <th class="th-col" style="width: 120px;">Método Verif.</th>
                         <th class="th-col" style="width: 90px;">Estado</th>
                     </tr>
                 </thead>
@@ -244,21 +298,37 @@ class MarcacionesController {
                     $i = 1;
                     foreach ($data as $m): 
                         $t = strtolower($m['tipo'] ?? '');
+                        $verifRaw = strtoupper($m['tipo_verificacion'] ?? 'HUELLA');
                         $classBg = match(true) {
                             $t === 'entrada' => 'bg-entrada',
                             $t === 'salida' => 'bg-salida',
+                            $t === 'refrigerio_salida' => 'bg-refrigerio',
+                            $t === 'refrigerio_entrada' => 'bg-entrada',
                             str_contains($t, 'refrigerio') => 'bg-refrigerio',
+                            $t === 'comision_servicio' || $verifRaw === 'COMISION_SERVICIO' => 'bg-salida',
+                            $t === 'vacaciones' || $verifRaw === 'VACACIONES' => 'bg-entrada',
                             default => 'bg-otro'
                         };
                         $tipoLabel = match(true) {
                             $t === 'entrada' => 'ENTRADA',
                             $t === 'salida' => 'SALIDA',
+                            $t === 'refrigerio_salida' => 'SALIDA A REFRIGERIO',
+                            $t === 'refrigerio_entrada' => 'RETORNO DE REFRIGERIO',
                             str_contains($t, 'refrigerio') => 'REFRIGERIO',
+                            $t === 'comision_servicio' || $verifRaw === 'COMISION_SERVICIO' => 'COMISIÓN DE SERVICIO',
+                            $t === 'vacaciones' || $verifRaw === 'VACACIONES' => 'VACACIONES',
                             default => strtoupper($m['tipo'] ?? 'MARCACIÓN')
                         };
                         $fechaPart = substr($m['fecha_hora'], 0, 10);
                         $horaPart = substr($m['fecha_hora'], 11, 8);
-                        $verif = strtoupper($m['tipo_verificacion'] ?? 'HUELLA');
+                        $verifLabel = match(true) {
+                            $verifRaw === 'COMISION_SERVICIO' => 'COMISIÓN OFICIAL',
+                            $verifRaw === 'VACACIONES' => 'VACACIONES OFICIAL',
+                            $verifRaw === 'ADMIN_OFICIAL' => 'EDICIÓN ADMIN',
+                            $verifRaw === 'MANUAL_RRHH' => 'MANUAL RRHH',
+                            $verifRaw === 'MANUAL_ADMIN' => 'MANUAL ADMIN',
+                            default => $verifRaw
+                        };
                     ?>
                     <tr>
                         <td class="text-center"><?= $i++ ?></td>
@@ -267,9 +337,10 @@ class MarcacionesController {
                         <td class="text-center" style="mso-number-format:'\@';"><?= htmlspecialchars($m['codigo_reloj']) ?></td>
                         <td class="text-center" style="mso-number-format:'\@';"><?= htmlspecialchars($m['dni'] ?? '-') ?></td>
                         <td><?= htmlspecialchars(!empty($m['nombres']) ? $m['apellidos'] . ' ' . $m['nombres'] : 'Sin vincular') ?></td>
+                        <td><?= htmlspecialchars($m['departamento_nombre'] ?? 'Sin Área') ?></td>
                         <td><?= htmlspecialchars($m['dispositivo_nombre'] ?? 'Desconocido') ?></td>
                         <td class="text-center <?= $classBg ?>"><?= $tipoLabel ?></td>
-                        <td class="text-center"><?= htmlspecialchars($verif) ?></td>
+                        <td class="text-center"><?= htmlspecialchars($verifLabel) ?></td>
                         <td class="text-center <?= $m['procesado'] ? 'badge-proc' : 'badge-pend' ?>">
                             <?= $m['procesado'] ? 'PROCESADO' : 'PENDIENTE' ?>
                         </td>
@@ -283,69 +354,6 @@ class MarcacionesController {
         exit;
     }
 
-    private function exportCSV(array $data, string $start, string $end, ?string $dispositivoNombre = null, ?string $tipo = null): void {
-        $filename = "Reporte_Marcaciones_{$start}_al_{$end}.csv";
-        header("Content-Type: text/csv; charset=utf-8");
-        header("Content-Disposition: attachment; filename=\"$filename\"");
-        header("Pragma: no-cache");
-        header("Expires: 0");
-
-        $output = fopen('php://output', 'w');
-        fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF)); // BOM UTF-8
-
-        $delimiter = ";";
-
-        // Encabezado institucional
-        fputcsv($output, ['JUNTA DE USUARIOS DEL SECTOR HIDRAULICO MENOR SAN LORENZO (JUSHSAL)'], $delimiter);
-        fputcsv($output, ['REPORTE OFICIAL DE MARCACIONES CRUDAS DE BIOMETRICOS'], $delimiter);
-        fputcsv($output, ['Periodo:', "Del $start al $end"], $delimiter);
-        fputcsv($output, ['Terminal / Filtro:', $dispositivoNombre ?: 'Todos los Relojes'], $delimiter);
-        fputcsv($output, ['Fecha de Emision:', date('d/m/Y H:i:s')], $delimiter);
-        fputcsv($output, [], $delimiter);
-
-        // Cabeceras de columnas
-        fputcsv($output, [
-            '#', 'Fecha', 'Hora', 'Cod. Reloj', 'DNI', 'Apellidos y Nombres', 
-            'Terminal Biometrico', 'Tipo Evento', 'Metodo Verificacion', 'Estado'
-        ], $delimiter);
-
-        $i = 1;
-        $totalRegistros = count($data);
-
-        foreach ($data as $m) {
-            $fechaPart = substr($m['fecha_hora'], 0, 10);
-            $horaPart = substr($m['fecha_hora'], 11, 8);
-            $t = strtolower($m['tipo'] ?? '');
-            $tipoStr = match(true) {
-                $t === 'entrada' => 'ENTRADA',
-                $t === 'salida' => 'SALIDA',
-                str_contains($t, 'refrigerio') => 'REFRIGERIO',
-                default => strtoupper($m['tipo'] ?? 'MARCACION')
-            };
-            $verifStr = strtoupper($m['tipo_verificacion'] ?? 'HUELLA');
-
-            fputcsv($output, [
-                $i++,
-                date('d/m/Y', strtotime($fechaPart)),
-                $horaPart,
-                '="' . $m['codigo_reloj'] . '"',
-                '="' . ($m['dni'] ?? '') . '"',
-                !empty($m['nombres']) ? $m['apellidos'] . ' ' . $m['nombres'] : 'Sin vincular',
-                $m['dispositivo_nombre'] ?? 'Desconocido',
-                $tipoStr,
-                $verifStr,
-                $m['procesado'] ? 'Procesado' : 'Pendiente'
-            ], $delimiter);
-        }
-
-        // Fila de totales
-        fputcsv($output, [], $delimiter);
-        fputcsv($output, ['TOTAL GENERAL DE MARCACIONES:', $totalRegistros . ' registros'], $delimiter);
-
-        fclose($output);
-        exit;
-    }
-
     public function guardarManual(): void {
         AuthController::checkAuth();
         AuthController::requireRole(['ADMIN', 'RRHH'], 'marcaciones');
@@ -355,6 +363,7 @@ class MarcacionesController {
         $fechaHora = trim($_POST['fecha_hora'] ?? '');
         $tipo = $_POST['tipo'] ?? 'entrada';
         $idDispositivo = (int)($_POST['id_dispositivo'] ?? 1);
+        $motivo = trim($_POST['motivo'] ?? 'Marcación registrada manualmente');
 
         if ($idEmpleado <= 0 || empty($fechaHora)) {
             header('Location: ?route=marcaciones&error=campos_requeridos');
@@ -365,18 +374,35 @@ class MarcacionesController {
             $emp = Database::queryOne("SELECT codigo_reloj FROM empleados WHERE id = ?", [$idEmpleado]);
             $codigoReloj = $emp ? $emp['codigo_reloj'] : (string)$idEmpleado;
 
-            // Inserción de marcación manual
+            $userRole = AuthController::role();
+            $verifTipo = ($userRole === 'ADMIN') ? 'MANUAL_ADMIN' : 'MANUAL_RRHH';
+
+            // Obtener dispositivo y serie
+            $disp = Database::queryOne("SELECT nombre, ip, numero_serie FROM dispositivos WHERE id = ?", [$idDispositivo]);
+            $deviceSerial = !empty($disp['numero_serie']) ? strtoupper(trim($disp['numero_serie'])) : "DEV_{$idDispositivo}";
+
+            // Normalización idéntica para idempotency_key
+            $normUser = ltrim(trim((string)$codigoReloj), '0');
+            if ($normUser === '') $normUser = '0';
+            $normTime = substr(trim($fechaHora), 0, 19);
+            $normPunch = strtolower(trim($tipo));
+            $normVerify = strtolower(trim($verifTipo));
+            $idempotencyKey = hash('sha256', "{$deviceSerial}|{$normUser}|{$normTime}|{$normPunch}|{$normVerify}");
+
+            // Inserción de marcación manual con clave de idempotencia y origen
             Database::execute("
                 INSERT INTO marcaciones 
-                (id_empleado, codigo_reloj, id_dispositivo, fecha_hora, tipo, tipo_verificacion, procesado)
-                VALUES (?, ?, ?, ?, ?, 'MANUAL_RRHH', 0)
-                ON DUPLICATE KEY UPDATE tipo = VALUES(tipo)
-            ", [$idEmpleado, $codigoReloj, $idDispositivo, $fechaHora, $tipo]);
+                (id_empleado, codigo_reloj, id_dispositivo, fecha_hora, tipo, tipo_verificacion, idempotency_key, origen, procesado)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'MANUAL', 0)
+                ON DUPLICATE KEY UPDATE 
+                    tipo = VALUES(tipo), 
+                    tipo_verificacion = VALUES(tipo_verificacion),
+                    idempotency_key = VALUES(idempotency_key),
+                    origen = 'MANUAL'
+            ", [$idEmpleado, $codigoReloj, $idDispositivo, $fechaHora, $tipo, $verifTipo, $idempotencyKey]);
 
-            // Obtener dispositivo
-            $disp = Database::queryOne("SELECT nombre, ip FROM dispositivos WHERE id = ?", [$idDispositivo]);
             $currentUser = AuthController::user();
-            $usuario = $currentUser['usuario'] ?? 'RRHH';
+            $usuario = $currentUser['nombre'] ?? ($currentUser['usuario'] ?? 'RRHH');
 
             // Event Sourcing: Registrar evento inmutable
             try {
@@ -392,8 +418,10 @@ class MarcacionesController {
                         'dispositivo_ip'      => $disp['ip'] ?? '127.0.0.1',
                         'fecha_hora'          => $fechaHora,
                         'tipo'                => $tipo,
-                        'tipo_verificacion'   => 'MANUAL_RRHH',
-                        'motivo'              => 'Marcación manual registrada en panel web por ' . $usuario
+                        'tipo_verificacion'   => $verifTipo,
+                        'motivo'              => $motivo,
+                        'registrado_por'      => $usuario,
+                        'rol'                 => $userRole
                     ],
                     $usuario
                 );
