@@ -1,7 +1,22 @@
-=== Iniciando sincronizaciÃ³n [INCREMENTAL (PENDIENTES) - 2026-09-25 13:10:34] ===
-2026-09-25 13:10:34,560 [INFO] [SyncEngine] Iniciando ciclo de sincronización (INCREMENTAL (7 DÍAS)) para 2 dispositivo(s)...
-2026-09-25 13:10:34,560 [INFO] [SyncEngine] ==> Iniciando sincronización (INCREMENTAL (7 DÍAS)) con biométrico #1 [Reloj Principal - Entrada] en 192.168.1.201:4370 (TCP)
-2026-09-25 13:10:34,615 [INFO] [ZKService] Conexión exitosa con dispositivo 192.168.1.201:4370
-2026-09-25 13:10:34,645 [ERROR] [ZKService] Error al sincronizar hora en 192.168.1.201: 'No time zone found with key America/Lima'
-2026-09-25 13:10:34,646 [WARNING] [SyncEngine] No se pudo sincronizar la hora con 192.168.1.201: 'No time zone found with key America/Lima'
-2026-09-25 13:10:35,331 [INFO] [SyncEngine] Sincronizados/actualizados 75 empleados desde el biométrico.
+=== Iniciando sincronizaciÃ³n [INCREMENTAL (PENDIENTES) - 2026-10-05 09:31:03] ===
+2026-10-05 09:31:03,437 [INFO] [SyncEngine] Iniciando ciclo de sincronización (INCREMENTAL (7 DÍAS)) para 1 dispositivo(s)...
+2026-10-05 09:31:03,439 [INFO] [SyncEngine] ==> Iniciando sincronización (INCREMENTAL (7 DÍAS)) con biométrico #1 [Reloj Principal - Entrada] en 192.168.1.201:4370 (TCP)
+2026-10-05 09:31:03,439 [INFO] [ZKService] Intentando conectar a 192.168.1.201:4370 (Intento 1/4)...
+2026-10-05 09:31:03,502 [INFO] [ZKService] Conexión exitosa con dispositivo 192.168.1.201:4370 (Latencia: 62.3ms)
+2026-10-05 09:31:03,537 [INFO] [ZKService] Hora del reloj 192.168.1.201 sincronizada a: 2026-10-05 09:31:03.524330 (America/Lima)
+2026-10-05 09:31:04,266 [INFO] [SyncEngine] Sincronizados/actualizados 75 empleados desde el biométrico.
+2026-10-05 09:32:01,971 [INFO] [ZKService] Se descargaron 67115 registros brutos de 192.168.1.201
+2026-10-05 09:32:02,385 [INFO] [SyncEngine] 
+[2026-10-05 09:32:02]
+DEVICE: Reloj Principal - Entrada (ID: #1)
+IP: 192.168.1.201:4370
+MODE: PULL
+ACTION: GET_ATTENDANCE
+RESULT: SUCCESS
+RECORDS: 67115
+NEW: 0
+DUPLICATED: 205
+TIME: 58.95s (Latency: 62.3ms)
+2026-10-05 09:32:02,429 [INFO] [ZKService] Desconectado de 192.168.1.201:4370
+2026-10-05 09:32:02,439 [INFO] [SyncEngine] No hubo marcaciones nuevas insertadas en este ciclo.
+2026-10-05 09:32:02,439 [INFO] [SyncEngine] Ciclo de sincronización finalizado exitosamente.

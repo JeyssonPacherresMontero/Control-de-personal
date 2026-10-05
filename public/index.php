@@ -28,9 +28,6 @@ require_once __DIR__ . '/../app/Database.php';
 require_once __DIR__ . '/../app/Security/Csrf.php';
 require_once __DIR__ . '/../app/Services/AttendanceCalculator.php';
 
-// Validar CSRF en toda petición POST, antes de llegar a cualquier controlador
-\App\Security\Csrf::validate();
-
 // Cargar Controladores
 require_once __DIR__ . '/../app/Controllers/AuthController.php';
 require_once __DIR__ . '/../app/Controllers/DashboardController.php';
@@ -41,6 +38,7 @@ require_once __DIR__ . '/../app/Controllers/EmpleadosController.php';
 require_once __DIR__ . '/../app/Controllers/TurnosController.php';
 require_once __DIR__ . '/../app/Controllers/JustificacionesController.php';
 require_once __DIR__ . '/../app/Controllers/UsuariosController.php';
+require_once __DIR__ . '/../app/Controllers/ApiController.php';
 
 use App\Controllers\AuthController;
 use App\Controllers\DashboardController;
@@ -51,10 +49,17 @@ use App\Controllers\EmpleadosController;
 use App\Controllers\TurnosController;
 use App\Controllers\JustificacionesController;
 use App\Controllers\UsuariosController;
+use App\Controllers\ApiController;
 use App\Security\Csrf;
 
 $route = $_GET['route'] ?? AuthController::getFirstAccessibleRoute();
 $action = $_GET['action'] ?? 'index';
+
+// Excluir endpoints de API de validación CSRF (se autentican mediante X-API-KEY criptográfico)
+$isApiRoute = str_starts_with((string)$route, 'api_') || str_starts_with((string)$route, 'api/');
+if (!$isApiRoute) {
+    \App\Security\Csrf::validate();
+}
 
 // Helper para exigir método POST en acciones con efectos secundarios (anti-CSRF por GET)
 $requirePost = function(string $fallbackRoute = 'dashboard') {
@@ -75,6 +80,11 @@ $requirePost = function(string $fallbackRoute = 'dashboard') {
 };
 
 switch ($route) {
+    case 'api_attendance_sync':
+    case 'api/attendance/sync':
+        (new ApiController())->syncAttendance();
+        break;
+
     case 'login':
         (new AuthController())->login();
         break;
@@ -111,7 +121,7 @@ switch ($route) {
         $controller = new AsistenciaController();
         if ($action === 'recalcular') {
             $requirePost('asistencia');
-            AuthController::requireRole(['ADMIN', 'RRHH'], 'asistencia');
+            AuthController::requireRole(['ADMIN', 'RRHH', 'SUPERVISOR', 'ASISTENTE'], 'asistencia');
             $controller->recalcular();
         } elseif ($action === 'editar') {
             $requirePost('asistencia');
@@ -179,6 +189,8 @@ switch ($route) {
             } elseif ($action === 'test') {
                 $requirePost('dispositivos');
                 $controller->testConexion();
+            } elseif ($action === 'health_check') {
+                $controller->healthCheck();
             } else {
                 $controller->index();
             }

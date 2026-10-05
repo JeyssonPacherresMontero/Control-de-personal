@@ -42,14 +42,86 @@
             </div>
         <?php endif; endif; ?>
 
-        <!-- ACTIONS TOOLBAR -->
-        <div class="actions-toolbar no-print">
-            <div class="actions-toolbar-group">
-                <h5 class="text-dark font-weight-bold mb-0" style="font-size: 1.05rem;">
-                    <i class="fa-solid fa-business-time mr-2 text-primary"></i> Horarios Laborales Registrados
-                </h5>
+        <?php
+            $turnosTotal = count($turnos);
+            $turnosActivos = 0;
+            $totalColaboradores = 0;
+            $turnosConRefrigerio = 0;
+            foreach ($turnos as $t) {
+                if (!empty($t['activo'])) $turnosActivos++;
+                $totalColaboradores += (int)($t['total_empleados'] ?? 0);
+                if (!empty($t['minutos_refrigerio']) && (int)$t['minutos_refrigerio'] > 0) $turnosConRefrigerio++;
+            }
+        ?>
+
+        <!-- KPI SUMMARY CARDS (PANTALLA) -->
+        <div class="row no-print mb-2">
+            <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="kpi-card h-100">
+                    <div class="kpi-card-header">
+                        <div>
+                            <div class="kpi-title">Total Turnos</div>
+                            <div class="kpi-value"><?= $turnosTotal ?></div>
+                            <div class="kpi-subtitle"><b><?= $turnosActivos ?></b> horarios activos</div>
+                        </div>
+                        <div class="kpi-icon-box">
+                            <i class="fa-solid fa-business-time"></i>
+                        </div>
+                    </div>
+                </div>
             </div>
+            <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="kpi-card h-100">
+                    <div class="kpi-card-header">
+                        <div>
+                            <div class="kpi-title">Horarios Activos</div>
+                            <div class="kpi-value"><?= $turnosActivos ?></div>
+                            <div class="kpi-subtitle">Disponibles para asignación</div>
+                        </div>
+                        <div class="kpi-icon-box">
+                            <i class="fa-solid fa-calendar-check"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="kpi-card h-100">
+                    <div class="kpi-card-header">
+                        <div>
+                            <div class="kpi-title">Colaboradores Asignados</div>
+                            <div class="kpi-value"><?= $totalColaboradores ?></div>
+                            <div class="kpi-subtitle">Personal con horario activo</div>
+                        </div>
+                        <div class="kpi-icon-box">
+                            <i class="fa-solid fa-users"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="kpi-card h-100">
+                    <div class="kpi-card-header">
+                        <div>
+                            <div class="kpi-title">Refrigerio Programado</div>
+                            <div class="kpi-value"><?= $turnosConRefrigerio ?></div>
+                            <div class="kpi-subtitle">Turnos con control de almuerzo</div>
+                        </div>
+                        <div class="kpi-icon-box">
+                            <i class="fa-solid fa-utensils"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ACTIONS TOOLBAR -->
+        <div class="actions-toolbar no-print mb-3">
             <div class="actions-toolbar-group">
+                <span class="font-weight-bold text-dark" style="font-size: 0.95rem;">
+                    <i class="fa-solid fa-business-time mr-2 text-primary"></i> Horarios Laborales Registrados
+                </span>
+            </div>
+            <div class="actions-toolbar-group flex-wrap">
                 <button class="btn btn-primary btn-sm" onclick="openNewTurnoModal()">
                     <i class="fa-solid fa-plus mr-1"></i> Crear Nuevo Turno
                 </button>

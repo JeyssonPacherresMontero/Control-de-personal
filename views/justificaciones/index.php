@@ -106,19 +106,28 @@
             </div>
         </div>
 
-        <!-- FILTER AND ACTIONS CARD -->
+        <!-- ACTIONS TOOLBAR -->
+        <div class="actions-toolbar no-print mb-3">
+            <div class="actions-toolbar-group">
+                <span class="font-weight-bold text-dark" style="font-size: 0.95rem;">
+                    <i class="fa-solid fa-file-signature mr-2 text-primary"></i> Operaciones y Registro de Permisos
+                </span>
+            </div>
+            <div class="actions-toolbar-group flex-wrap">
+                <?php if (in_array($userRole, ['ADMIN', 'RRHH', 'SUPERVISOR'], true)): ?>
+                    <button class="btn btn-primary btn-sm" data-toggle="modal" data-target="#modalJustificacion">
+                        <i class="fa-solid fa-plus mr-1"></i> Registrar Justificación
+                    </button>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <!-- FILTER CARD -->
         <div class="card mb-4 no-print">
-            <div class="card-header d-flex align-items-center justify-content-between flex-wrap" style="padding: 0.85rem 1.25rem;">
+            <div class="card-header py-2 px-3">
                 <h3 class="card-title font-weight-bold text-dark mb-0 d-flex align-items-center" style="font-size: 0.92rem;">
-                    <i class="fa-solid fa-filter mr-2" style="color: #1e40af;"></i> Filtros de Justificaciones y Permisos
+                    <i class="fa-solid fa-filter mr-2 text-primary"></i> Filtros de Justificaciones y Permisos
                 </h3>
-                <div class="d-flex align-items-center flex-wrap" style="gap: 8px; margin-left: auto;">
-                    <?php if (in_array($userRole, ['ADMIN', 'RRHH', 'SUPERVISOR'], true)): ?>
-                        <button class="btn btn-primary btn-sm" data-toggle="modal" data-target="#modalJustificacion">
-                            <i class="fa-solid fa-plus mr-1"></i> Registrar Justificación
-                        </button>
-                    <?php endif; ?>
-                </div>
             </div>
             <div class="card-body p-4">
                 <form method="GET" action="" class="row align-items-end">
@@ -136,12 +145,17 @@
 
                     <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
                         <label class="form-label-custom"><i class="fa-solid fa-building"></i> Área / Dpto.</label>
-                        <select name="departamento_id" class="form-control">
-                            <option value="">-- Todas las Áreas --</option>
+                        <select name="departamento_id" class="form-control" <?= ($userRole === 'SUPERVISOR') ? 'disabled' : '' ?>>
+                            <?php if ($userRole !== 'SUPERVISOR'): ?>
+                                <option value="">-- Todas las Áreas --</option>
+                            <?php endif; ?>
                             <?php foreach ($departamentos as $d): ?>
                                 <option value="<?= $d['id'] ?>" <?= ($deptoId ?? '') == $d['id'] ? 'selected' : '' ?>><?= htmlspecialchars($d['nombre']) ?></option>
                             <?php endforeach; ?>
                         </select>
+                        <?php if ($userRole === 'SUPERVISOR' && !empty($deptoId)): ?>
+                            <input type="hidden" name="departamento_id" value="<?= htmlspecialchars((string)$deptoId) ?>">
+                        <?php endif; ?>
                     </div>
 
                     <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
@@ -406,7 +420,12 @@ function validateJustificacionForm(e) {
     const fFin = document.querySelector('#modalJustificacion input[name="fecha_fin"]').value;
     if (fInicio && fFin && fInicio > fFin) {
         if (e) e.preventDefault();
-        alert('Error: La fecha de inicio (' + fInicio + ') no puede ser posterior a la fecha de fin (' + fFin + ').');
+        Swal.fire({
+            icon: 'warning',
+            title: 'Rango de Fechas Inválido',
+            text: 'La fecha de inicio (' + fInicio + ') no puede ser posterior a la fecha de fin (' + fFin + ').',
+            confirmButtonColor: '#1e40af'
+        });
         return false;
     }
     const tipo = document.getElementById('justModal_tipo')?.value;
@@ -414,7 +433,12 @@ function validateJustificacionForm(e) {
         const dest = document.getElementById('justModal_comision_destino')?.value;
         if (!dest) {
             if (e) e.preventDefault();
-            alert('Por favor selecciona la Comisión de Usuarios de destino.');
+            Swal.fire({
+                icon: 'warning',
+                title: 'Campo Obligatorio',
+                text: 'Por favor selecciona la Comisión de Usuarios de destino.',
+                confirmButtonColor: '#1e40af'
+            });
             document.getElementById('justModal_comision_destino')?.focus();
             return false;
         }

@@ -196,7 +196,8 @@ class AuthController {
             'ADMIN' => ['*'],
             'RRHH' => ['dashboard', 'asistencia', 'marcaciones', 'empleados', 'turnos', 'justificaciones'],
             'SUPERVISOR' => ['dashboard', 'asistencia', 'marcaciones', 'empleados', 'justificaciones'],
-            'CONSULTA' => ['dashboard', 'asistencia', 'marcaciones'],
+            'ASISTENTE' => ['dashboard', 'asistencia', 'marcaciones', 'justificaciones'],
+            'USER', 'USUARIO', 'CONSULTA' => ['dashboard', 'asistencia', 'marcaciones'],
             default => ['asistencia']
         };
     }

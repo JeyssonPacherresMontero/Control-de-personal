@@ -144,8 +144,18 @@ class AttendanceCalculator {
             $empWindowStart = $esNocturno ? "$date 12:00:00" : "$date 00:00:00";
             $empWindowEnd = $esNocturno ? "$nextDate 14:00:00" : "$date 23:59:59";
 
-            // Obtener marcaciones del empleado en su ventana de turno
-            $allPunches = $punchesByEmpId[$empId] ?? ($punchesByCode[$codigoReloj] ?? ($punchesByCode[$normEmpCode] ?? []));
+            // Obtener marcaciones del empleado en su ventana de turno (unificando por ID y código de reloj)
+            $rawPunches = array_merge(
+                $punchesByEmpId[$empId] ?? [],
+                $punchesByCode[$codigoReloj] ?? [],
+                $punchesByCode[$normEmpCode] ?? []
+            );
+            $uniquePunches = [];
+            foreach ($rawPunches as $p) {
+                $uniquePunches[$p['id']] = $p;
+            }
+            $allPunches = array_values($uniquePunches);
+
             $empPunches = [];
             foreach ($allPunches as $p) {
                 if ($p['fecha_hora'] >= $empWindowStart && $p['fecha_hora'] <= $empWindowEnd) {
@@ -153,6 +163,11 @@ class AttendanceCalculator {
                     $processedPunchIds[] = (int)$p['id'];
                 }
             }
+
+            // Ordenar cronológicamente ascendente
+            usort($empPunches, function($a, $b) {
+                return strcmp($a['fecha_hora'], $b['fecha_hora']);
+            });
 
             // Aplicar filtro debounce
             $cleanPunches = $this->filterDebouncePunches($empPunches);
@@ -182,6 +197,54 @@ class AttendanceCalculator {
                 $obs = $isHoliday ? 'Feriado / Día no laborable' : 'Día libre de descanso';
                 $recordsToUpsert[] = $this->buildRecordData($empId, $turnoId, $date, $progHoraEntrada, $progHoraSalida, null, null, null, null, 0, 0, 0, 0, $estado, $obs, $tolerancia);
                 $stats['processed']++;
+                continue;
+            }
+
+            // Caso: Laboró en Feriado o Día de Descanso Semanal (Domingo / Día libre con marcaciones registradas)
+            if (($isHoliday || !$isWorkday) && $punchCount > 0) {
+                $entryPunch = $cleanPunches[0]['fecha_hora'];
+                $exitPunch = ($punchCount > 1) ? $cleanPunches[$punchCount - 1]['fecha_hora'] : null;
+                $breakOutPunch = ($punchCount >= 4) ? $cleanPunches[1]['fecha_hora'] : null;
+                $breakInPunch = ($punchCount >= 4) ? $cleanPunches[2]['fecha_hora'] : null;
+
+                $minutosTrabajados = 0;
+                $minutosExtra = 0;
+                $minutosTardanza = 0;
+                $minutosSalidaTemprana = 0;
+                $estado = 'PRESENTE';
+                $observaciones = [];
+
+                if ($entryPunch && $exitPunch) {
+                    $diffSec = strtotime($exitPunch) - strtotime($entryPunch);
+                    $minutosBrutos = max(0, (int)floor($diffSec / 60));
+
+                    if ($breakOutPunch && $breakInPunch && strtotime($breakInPunch) > strtotime($breakOutPunch)) {
+                        $minRef = (int)floor((strtotime($breakInPunch) - strtotime($breakOutPunch)) / 60);
+                        $minutosTrabajados = max(0, $minutosBrutos - $minRef);
+                    } elseif ($minutosBrutos >= 300) {
+                        $minutosTrabajados = max(0, $minutosBrutos - 45);
+                    } else {
+                        $minutosTrabajados = $minutosBrutos;
+                    }
+
+                    // En día no laborable/feriado/domingo, todo el tiempo laborado son horas extras al 100%
+                    $minutosExtra = $minutosTrabajados;
+                    $tipoDia = $isHoliday ? "feriado oficial" : "descanso semanal / domingo";
+                    $observaciones[] = "Laboró en {$tipoDia}: {$minutosTrabajados} min trabajados (100% horas extras)";
+                } else {
+                    $dtPunch = new DateTime($entryPunch);
+                    $observaciones[] = "Marcación única en día no laborable (" . $dtPunch->format('H:i') . "). Requiere regularización.";
+                }
+
+                $recordsToUpsert[] = $this->buildRecordData(
+                    $empId, $turnoId, $date,
+                    $progHoraEntrada, $progHoraSalida,
+                    $entryPunch, $exitPunch, $breakOutPunch, $breakInPunch,
+                    $minutosTardanza, $minutosTrabajados, $minutosExtra, $minutosSalidaTemprana,
+                    $estado, implode(' | ', $observaciones), $tolerancia
+                );
+                $stats['processed']++;
+                $stats['present']++;
                 continue;
             }
 
@@ -415,52 +478,61 @@ class AttendanceCalculator {
                 $estado = 'ENTRADA_SIN_MARCAR';
             }
 
-            // Refrigerio (solo aplica de Lunes a Viernes)
-            $minutosRefrigerioTomados = 0;
-            if (!$isSaturday) {
-                if ($breakOutPunch && $breakInPunch) {
-                    $dtBreakOut = new DateTime($breakOutPunch);
-                    $dtBreakIn = new DateTime($breakInPunch);
-                    if ($dtBreakIn > $dtBreakOut) {
-                        $minutosRefrigerioTomados = (int)floor(($dtBreakIn->getTimestamp() - $dtBreakOut->getTimestamp()) / 60);
-                        if ($minutosRefrigerioTomados > 50) {
-                            $excesoRef = $minutosRefrigerioTomados - 45;
-                            $observaciones[] = "Exceso en refrigerio (+{$excesoRef} min)";
-                        }
-                    }
-                } elseif ($breakOutPunch && !$breakInPunch && $exitPunch) {
-                    // Marcó salida a refrigerio, omitió retorno, pero SÍ marcó salida final al concluir la jornada
-                    $minutosRefrigerioTomados = 50; // 45 min reglamentarios + 5 min retardo
-                    $horaSalidaStr = date('H:i', strtotime($exitPunch));
-                    $observaciones[] = "Omitió retorno de refrigerio: se descontaron 50 min (45 min reglamentarios + 5 min retardo) al verificar salida final registrada ($horaSalidaStr)";
-                }
-            }
-
-            // Salida y Jornada de Trabajo Efectivo (Horas Trabajadas SIN contar refrigerio)
+            // =========================================================================
+            // CÁLCULO DE HORAS TRABAJADAS Y REGLAS DE REFRIGERIO
+            // Requiere OBLIGATORIAMENTE marcación de Entrada y Salida General.
+            // Si falta Entrada o Salida General, no se pueden calcular horas trabajadas.
+            // =========================================================================
             if ($entryPunch && $exitPunch) {
+                // CASO A: Marcó Entrada y Salida general completa -> SE REALIZA EL CÁLCULO
                 $dtEntryReal = new DateTime($entryPunch);
                 $dtExitReal = new DateTime($exitPunch);
-                $diffSeconds = $dtExitReal->getTimestamp() - $dtEntryReal->getTimestamp();
+                $dtProgEntry = $scheduledEntryStr ? new DateTime($scheduledEntryStr) : new DateTime("$date 08:00:00");
+                $dtEffectiveEntry = ($dtEntryReal < $dtProgEntry) ? $dtProgEntry : $dtEntryReal;
+                $diffSeconds = $dtExitReal->getTimestamp() - $dtEffectiveEntry->getTimestamp();
+
                 if ($diffSeconds > 0) {
                     $minutosBrutos = (int)floor($diffSeconds / 60);
+
                     if ($isSaturday) {
-                        // En Sábado no hay refrigerio: horas trabajadas = permanencia íntegra (5h si 08:00 a 13:00)
+                        // Sábado sin refrigerio (08:00 a 13:00): permanencia íntegra
                         $minutosTrabajados = $minutosBrutos;
                     } else {
-                        // En Lunes a Viernes: HORAS TRABAJADAS SIN CONTAR LA HORA DE REFRIGERIO
-                        if ($minutosRefrigerioTomados > 0) {
-                            $minutosTrabajados = max(0, $minutosBrutos - $minutosRefrigerioTomados);
-                        } elseif ($minutosBrutos >= 300) {
-                            // Si cubrió la jornada pero omitió registrar las 2 huellas de refrigerio, se descuenta el refrigerio reglamentario (45 min)
-                            $minutosDeducir = $minutosRefProgramados > 0 ? $minutosRefProgramados : 45;
-                            $minutosTrabajados = max(0, $minutosBrutos - $minutosDeducir);
-                            $observaciones[] = "Omitió marcar refrigerio (se descontó refrigerio reglamentario de {$minutosDeducir} min)";
+                        // Lunes a Viernes (08:00 a 17:00):
+                        // Regla 1: Si solo marcó salida de refrigerio y NO retorno -> se descuenta 1 HORA (60 min)
+                        // Regla 2: En cualquier otro caso -> sí o sí descuento automático obligatorio de 45 min (o tiempo tomado si superó los 45 min)
+                        if ($breakOutPunch && !$breakInPunch) {
+                            $minutosDescuentoRef = 60;
+                            $observaciones[] = "Omitió retorno de refrigerio: se descuenta 1 hora (60 min) reglamentaria";
+                        } elseif ($breakOutPunch && $breakInPunch) {
+                            $dtBreakOut = new DateTime($breakOutPunch);
+                            $dtBreakIn = new DateTime($breakInPunch);
+                            $minutosRefrigerioTomados = 0;
+                            if ($dtBreakIn > $dtBreakOut) {
+                                $minutosRefrigerioTomados = (int)floor(($dtBreakIn->getTimestamp() - $dtBreakOut->getTimestamp()) / 60);
+                            }
+                            $minutosDescuentoRef = max(45, $minutosRefrigerioTomados);
+                            if ($minutosRefrigerioTomados > 50) {
+                                $excesoRef = $minutosRefrigerioTomados - 45;
+                                $observaciones[] = "Exceso en refrigerio (+{$excesoRef} min tomados)";
+                            }
                         } else {
-                            $minutosTrabajados = $minutosBrutos;
+                            // No marcó ninguna huella de refrigerio o solo marcó retorno: descuento automático obligatorio de 45 minutos
+                            $minutosDescuentoRef = 45;
+                            if (!$breakOutPunch && !$breakInPunch) {
+                                $observaciones[] = "Refrigerio no registrado (descuento automático obligatorio de 45 min)";
+                            } else {
+                                $observaciones[] = "Omitió salida a refrigerio (descuento automático obligatorio de 45 min)";
+                            }
                         }
+
+                        $minutosTrabajados = max(0, $minutosBrutos - $minutosDescuentoRef);
                     }
+                } else {
+                    $minutosTrabajados = 0;
                 }
 
+                // Cálculo de horas extras o salida anticipada respecto a la salida programada
                 if ($scheduledExitStr) {
                     $dtExitProg = new DateTime($scheduledExitStr);
                     if ($dtExitReal > $dtExitProg) {
@@ -477,43 +549,43 @@ class AttendanceCalculator {
                         }
                     }
                 }
-            } elseif ($entryPunch && !$exitPunch) {
-                // Entrada registrada, pero sin salida final
-                if ($breakOutPunch) {
-                    // Se rescata el turno matutino trabajado
-                    $minutosMatutinos = (int)floor((strtotime($breakOutPunch) - strtotime($entryPunch)) / 60);
-                    if ($minutosMatutinos > 0) {
-                        $minutosTrabajados = $minutosMatutinos;
-                        $observaciones[] = "Horas laboradas calculadas de jornada matutina";
-                    }
-                }
 
-                $dtEntryReal = new DateTime($entryPunch);
-                if ($isToday) {
-                    $dtExitProg = $scheduledExitStr ? new DateTime($scheduledExitStr) : (clone $dtEntryReal)->modify($isSaturday ? '+5 hours' : '+9 hours');
-                    $dtExitLimit = (clone $dtExitProg)->modify('+3 hours');
+            } else {
+                // CASO SIN ENTRADA O SIN SALIDA GENERAL:
+                // "el botón calcular solamente calcule cuando las horas trabajadas, que esté la hora de inicio marcada a las 8 y a las 17 que esté marcado de inicio y salida... si no, no se podría hacer ese cálculo."
+                $minutosTrabajados = 0;
+                $minutosExtra = 0;
 
-                    if ($now <= $dtExitLimit) {
-                        $observaciones[] = "Jornada en curso (ingreso a las " . $dtEntryReal->format('H:i') . ")";
+                if ($entryPunch && !$exitPunch) {
+                    // MARCÓ ENTRADA PERO NO MARCÓ SALIDA GENERAL (17:00 / 13:00)
+                    $dtEntryReal = new DateTime($entryPunch);
+                    $dtProgExit = $scheduledExitStr ? new DateTime($scheduledExitStr) : (clone $dtEntryReal)->modify($isSaturday ? '+5 hours' : '+9 hours');
+                    $dtExitWaitLimit = (clone $dtProgExit)->modify('+2 hours');
+
+                    if ($isToday && $now < $dtExitWaitLimit) {
+                        // Jornada en curso hoy: horas trabajadas se computarán al registrar la salida general
+                        if ($estado !== 'TARDANZA' && $estado !== 'FALTA') {
+                            $estado = 'PRESENTE';
+                        }
+                        $observaciones[] = "Jornada en curso (ingreso a las " . $dtEntryReal->format('H:i') . ") - Horas trabajadas se computarán al marcar salida general (" . ($isSaturday ? "13:00" : "17:00") . ")";
                     } else {
-                        $estado = 'SALIDA_SIN_MARCAR';
-                        $observaciones[] = "No registró marcación de salida";
+                        // Jornada concluida sin marcación de salida: estado SALIDA_SIN_MARCAR y 0 horas trabajadas
+                        if ($estado !== 'FALTA') {
+                            $estado = 'SALIDA_SIN_MARCAR';
+                        }
+                        $observaciones[] = "Sin marcación de salida general (" . ($isSaturday ? "13:00" : "17:00") . "): no se realiza cálculo de horas trabajadas";
                     }
-                } else {
+
+                } elseif (!$entryPunch && $exitPunch) {
+                    // OMITIÓ ENTRADA Y SOLO MARCÓ SALIDA GENERAL
+                    $estado = 'ENTRADA_SIN_MARCAR';
+                    $observaciones[] = "Sin marcación de ingreso (" . ($progHoraEntrada ? substr($progHoraEntrada, 0, 5) : "08:00") . "): no se realiza cálculo de horas trabajadas";
+
+                } elseif ($breakOutPunch || $breakInPunch) {
+                    // SOLO MARCÓ REFRIGERIO SIN ENTRADA NI SALIDA GENERAL
                     $estado = 'SALIDA_SIN_MARCAR';
-                    $observaciones[] = "No registró marcación de salida";
+                    $observaciones[] = "Solo registró refrigerio sin entrada ni salida general: no se realiza cálculo de horas trabajadas";
                 }
-            } elseif (!$entryPunch && $exitPunch) {
-                // Salida registrada, pero sin entrada matutina
-                if ($breakInPunch) {
-                    // Se rescata el turno vespertino trabajado
-                    $minutosVespertinos = (int)floor((strtotime($exitPunch) - strtotime($breakInPunch)) / 60);
-                    if ($minutosVespertinos > 0) {
-                        $minutosTrabajados = $minutosVespertinos;
-                        $observaciones[] = "Horas laboradas calculadas de jornada vespertina";
-                    }
-                }
-                $estado = 'ENTRADA_SIN_MARCAR';
             }
 
             // Justificaciones de tardanza o falta

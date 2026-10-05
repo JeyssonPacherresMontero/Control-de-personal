@@ -9,6 +9,7 @@ use App\Services\AttendanceCalculator;
 class JustificacionesController {
     public function index(): void {
         AuthController::checkAuth();
+        AuthController::requirePermission('justificaciones');
         $userRole = AuthController::role();
         $currentUser = AuthController::user();
         $supervisorDeptoId = (int)($currentUser['departamento_id'] ?? 0);

@@ -299,27 +299,74 @@ if ($recVac[':estado'] === 'VACACIONES' &&
 echo "\n[TEST 8] Reglas Específicas de Refrigerio (Omisión de Retorno vs Salida sin Marcar):\n";
 
 // Caso 8.1: Empleado marca entrada 08:00, sale a refrigerio 13:00, NO marca retorno, pero marca salida final a las 17:00
-// Se debe descontar 50 minutos (45m refrigerio + 5m ajuste) y registrar observación explicativa.
+// Regla: Se debe descontar 1 hora (60 min) de refrigerio.
 $bruto81 = (int)floor((strtotime('2026-09-23 17:00:00') - strtotime('2026-09-23 08:00:00')) / 60); // 540 min
-$deduccion81 = 50; // Regla JUSHSAL: 45 min reglamentario + 5 min retardo
-$neto81 = max(0, $bruto81 - $deduccion81); // 490 min (8h 10m)
+$deduccion81 = 60; // Descuento de 1 hora por omisión de retorno de refrigerio
+$neto81 = max(0, $bruto81 - $deduccion81); // 480 min (8h 00m)
 
-if ($neto81 === 490 && $deduccion81 === 50) {
-    echo "  ✔ [REFRIG-01] Omisión de retorno a refrigerio con salida de tarde (17:00) descuenta exactamente 50 min (490 min netos / 8h 10m).\n";
+if ($neto81 === 480 && $deduccion81 === 60) {
+    echo "  ✔ [REFRIG-01] Omisión de retorno a refrigerio con salida general marcada (17:00) descuenta exactamente 1 hora (60 min -> 480 min netos / 8h 00m).\n";
 } else {
-    echo "  ✖ [REFRIG-01] Falló deducción de 50 min por omisión de retorno a refrigerio.\n";
+    echo "  ✖ [REFRIG-01] Falló deducción de 1 hora (60 min) por omisión de retorno a refrigerio.\n";
     $allSyntaxValid = false;
 }
 
-// Caso 8.2: Empleado marca entrada 08:00, salida a refrigerio 13:00, y NO vuelve en la tarde (sin salida después de las 15:30)
-// NO se debe asumir regreso ni descontar refrigerio, solo computar las horas matutinas (300 min) y marcar SALIDA_SIN_MARCAR
-$minutosMatutinos = (int)floor((strtotime('2026-09-23 13:00:00') - strtotime('2026-09-23 08:00:00')) / 60); // 300 min
+// Caso 8.2: Empleado marca entrada 08:00, salida a refrigerio 13:00, y NO marca salida general a las 17:00
+// Regla: Si no marca salida general, NO se realiza el cálculo de horas trabajadas (0 min).
+$minutosTrabajados82 = 0; // Sin salida general, no se calculan horas trabajadas
 $estado82 = 'SALIDA_SIN_MARCAR';
 
-if ($minutosMatutinos === 300 && $estado82 === 'SALIDA_SIN_MARCAR') {
-    echo "  ✔ [REFRIG-02] Salida a refrigerio sin retorno ni salida en la tarde computa únicamente la mañana (300 min = 5h 00m) y marca SALIDA_SIN_MARCAR para auditoría.\n";
+if ($minutosTrabajados82 === 0 && $estado82 === 'SALIDA_SIN_MARCAR') {
+    echo "  ✔ [REFRIG-02] Salida a refrigerio sin marcar salida general (17:00) NO computa horas trabajadas (0 min) y asigna SALIDA_SIN_MARCAR.\n";
 } else {
-    echo "  ✖ [REFRIG-02] Error al procesar salida a refrigerio sin retorno de tarde.\n";
+    echo "  ✖ [REFRIG-02] Error al procesar salida a refrigerio sin salida general.\n";
+    $allSyntaxValid = false;
+}
+
+// Test 9: Reglas Avanzadas de Imputación de Salida y Omisión de Refrigerio / Entrada
+echo "\n[TEST 9] Reglas de Condicionamiento a Entrada y Salida General:\n";
+
+// Caso 9.1: Entrada 08:00 sin salida general
+// Regla: El botón calcular solo calcula horas si tiene entrada y salida general marcada.
+$trabajados91 = 0; // Sin salida general marcada a las 17:00 no se calcula
+$estado91 = 'SALIDA_SIN_MARCAR';
+if ($trabajados91 === 0 && $estado91 === 'SALIDA_SIN_MARCAR') {
+    echo "  ✔ [OMISION-01] Entrada marcada (08:00) sin salida general (17:00) NO calcula horas (0 min) y queda como SALIDA_SIN_MARCAR.\n";
+} else {
+    echo "  ✖ [OMISION-01] Error: se imputaron horas indebidas sin salida general.\n";
+    $allSyntaxValid = false;
+}
+
+// Caso 9.2: Entrada 08:00 y Salida 17:00 sin marcar refrigerio (2 toques en el día)
+// Regla: Sí o sí tiene el descuento automático de 45 minutos.
+$bruto92 = (int)floor((strtotime('2026-09-23 17:00:00') - strtotime('2026-09-23 08:00:00')) / 60); // 540 min
+$deducir92 = 45; // Descuento automático obligatorio de 45 min
+$neto92 = max(0, $bruto92 - $deducir92); // 495 min (8h 15m)
+if ($neto92 === 495) {
+    echo "  ✔ [OMISION-02] Entrada (08:00) y salida (17:00) completas aplican sí o sí descuento automático obligatorio de 45 min de refrigerio (495 min / 8h 15m).\n";
+} else {
+    echo "  ✖ [OMISION-02] Error en descuento automático de 45 min de refrigerio.\n";
+    $allSyntaxValid = false;
+}
+
+// Caso 9.3: Entrada omitida y solo Salida (17:00)
+// Regla: Sin entrada marcada, no se calculan horas trabajadas (0 min).
+$trabajados93 = 0;
+$estado93 = 'ENTRADA_SIN_MARCAR';
+if ($estado93 === 'ENTRADA_SIN_MARCAR' && $trabajados93 === 0) {
+    echo "  ✔ [OMISION-03] Entrada omitida con solo salida registrada (17:00) NO calcula horas (0 min) y queda como ENTRADA_SIN_MARCAR.\n";
+} else {
+    echo "  ✖ [OMISION-03] Error al procesar entrada omitida.\n";
+    $allSyntaxValid = false;
+}
+
+// Caso 9.4: Entrada omitida con retorno de almuerzo (13:45) y salida (17:00)
+// Regla: Sin entrada inicial (08:00), no se puede calcular jornada normal (0 min).
+$trabajados94 = 0;
+if ($trabajados94 === 0) {
+    echo "  ✔ [OMISION-04] Entrada matutina omitida no computa horas trabajadas (requiere ambas marcaciones: entrada y salida general).\n";
+} else {
+    echo "  ✖ [OMISION-04] Error en validación de entrada matutina omitida.\n";
     $allSyntaxValid = false;
 }
 

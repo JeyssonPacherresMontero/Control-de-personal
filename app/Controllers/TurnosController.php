@@ -9,6 +9,7 @@ use App\Database;
 class TurnosController {
     public function index(): void {
         AuthController::checkAuth();
+        AuthController::requirePermission('turnos');
 
         $turnos = Database::query("
             SELECT t.*, COUNT(e.id) as total_empleados

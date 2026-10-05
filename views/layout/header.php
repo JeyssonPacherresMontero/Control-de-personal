@@ -9,6 +9,8 @@ $roleBadgeClass = match($userRole) {
     'ADMIN' => 'badge-role-admin',
     'RRHH' => 'badge-role-rrhh',
     'SUPERVISOR' => 'badge-role-supervisor',
+    'ASISTENTE' => 'badge-role-asistente',
+    'USER', 'USUARIO' => 'badge-role-user',
     default => 'badge-role-consulta'
 };
 
@@ -16,6 +18,8 @@ $roleLabel = match($userRole) {
     'ADMIN' => 'Administrador',
     'RRHH' => 'Recursos Humanos',
     'SUPERVISOR' => 'Supervisor de Área',
+    'ASISTENTE' => 'Asistente',
+    'USER', 'USUARIO' => 'Usuario del Sistema',
     'CONSULTA' => 'Consulta',
     default => $userRole
 };
@@ -169,9 +173,18 @@ $roleLabel = match($userRole) {
             border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
             margin-top: 0 !important;
             margin-bottom: 0.5rem !important;
+            transition: all 0.3s ease-in-out;
+        }
+        .user-panel .image {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease-in-out;
         }
         .user-panel .info {
             padding-left: 0.75rem !important;
+            overflow: hidden;
+            transition: opacity 0.2s ease-in-out;
         }
         .user-panel-name {
             font-size: 0.875rem;
@@ -180,6 +193,66 @@ $roleLabel = match($userRole) {
             line-height: 1.2;
             margin-bottom: 3px;
             display: block;
+        }
+        /* CENTRADO PERFECTO CUANDO EL SIDEBAR ESTÁ COLAPSADO */
+        .sidebar-collapse .main-sidebar:not(:hover) .user-panel {
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+            padding-top: 0.75rem !important;
+            padding-bottom: 0.75rem !important;
+            text-align: center !important;
+            width: 100% !important;
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+        }
+        .sidebar-collapse .main-sidebar:not(:hover) .user-panel .image {
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            width: 100% !important;
+            padding: 0 !important;
+            margin: 0 auto !important;
+            float: none !important;
+        }
+        .sidebar-collapse .main-sidebar:not(:hover) .user-panel .user-avatar-circle {
+            margin: 0 auto !important;
+            width: 36px !important;
+            height: 36px !important;
+        }
+        .sidebar-collapse .main-sidebar:not(:hover) .user-panel .info {
+            display: none !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+            width: 0 !important;
+            height: 0 !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        /* COMPORTAMIENTO AL PASAR EL MOUSE (HOVER) SOBRE EL SIDEBAR COLAPSADO */
+        .sidebar-collapse .main-sidebar:hover .user-panel {
+            display: flex !important;
+            justify-content: flex-start !important;
+            align-items: center !important;
+            padding: 0.85rem 0.75rem !important;
+            width: auto !important;
+        }
+        .sidebar-collapse .main-sidebar:hover .user-panel .image {
+            display: flex !important;
+            width: auto !important;
+            margin: 0 !important;
+            justify-content: flex-start !important;
+        }
+        .sidebar-collapse .main-sidebar:hover .user-panel .info {
+            display: block !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+            width: auto !important;
+            height: auto !important;
+            padding-left: 0.75rem !important;
+            transition: opacity 0.2s ease-in-out;
         }
 
         /* SIDEBAR NAV ITEMS */
@@ -412,12 +485,77 @@ $roleLabel = match($userRole) {
         .badge-role-admin { background-color: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
         .badge-role-rrhh { background-color: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
         .badge-role-supervisor { background-color: #f0fdfa; color: #0f766e; border: 1px solid #99f6e4; }
+        .badge-role-asistente { background-color: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe; }
+        .badge-role-user { background-color: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
         .badge-role-consulta { background-color: #f8fafc; color: #475569; border: 1px solid #e2e8f0; }
 
         /* TABLAS MODERNAS Y LIGERAS */
         .table {
             color: #334155 !important;
             margin-bottom: 0 !important;
+        }
+        .table-marcaciones-fit {
+            width: 100% !important;
+            table-layout: auto;
+        }
+        .table-marcaciones-fit th,
+        .table-marcaciones-fit td {
+            padding: 0.42rem 0.45rem !important;
+            vertical-align: middle !important;
+            font-size: 0.815rem !important;
+        }
+        .table-marcaciones-fit th {
+            font-size: 0.73rem !important;
+            white-space: nowrap;
+            letter-spacing: 0.02em !important;
+        }
+        .table-marcaciones-fit .cell-nowrap {
+            white-space: nowrap !important;
+        }
+        .table-marcaciones-fit .badge-pill-custom {
+            padding: 2px 6px !important;
+            font-size: 0.70rem !important;
+            white-space: nowrap;
+        }
+
+        /* BUSCADOR DE TRABAJADOR FLOTANTE / DROPDOWN */
+        .worker-search-wrapper {
+            position: relative;
+        }
+        .worker-search-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            z-index: 1060;
+            background: #ffffff;
+            max-height: 270px;
+            overflow-y: auto;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.15), 0 8px 10px -6px rgba(0,0,0,0.1);
+        }
+        .worker-search-item {
+            cursor: pointer;
+            padding: 8px 12px;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: background-color 0.15s ease;
+        }
+        .worker-search-item:last-child {
+            border-bottom: none;
+        }
+        .worker-search-item:hover, .worker-search-item.active {
+            background-color: #eff6ff !important;
+        }
+        .worker-search-item mark {
+            background-color: #fef08a;
+            color: #0f172a;
+            font-weight: 700;
+            padding: 0 2px;
+            border-radius: 2px;
         }
         .table thead th {
             background-color: #f8fafc !important;
@@ -699,25 +837,46 @@ $roleLabel = match($userRole) {
             color: #115e59 !important;
         }
 
-        /* TOOLBARS DE ACCIONES ESPACIADAS Y CENTRADAS */
+        /* TOOLBARS DE ACCIONES: SUBTÍTULO A LA IZQUIERDA Y BOTONES A LA DERECHA */
         .actions-toolbar {
             display: flex;
             align-items: center;
             justify-content: space-between;
             flex-wrap: wrap;
-            gap: 12px;
+            gap: 10px 14px;
             margin-bottom: 1.25rem;
-            padding: 0.85rem 1.25rem;
+            padding: 0.70rem 1.15rem;
             background: #ffffff;
             border: 1px solid #e2e8f0;
             border-radius: 10px;
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
         }
         .actions-toolbar-group {
-            display: flex;
+            display: inline-flex;
             align-items: center;
             flex-wrap: wrap;
             gap: 8px;
+            margin: 0;
+        }
+        .actions-toolbar-group form,
+        .actions-toolbar-group .dropdown {
+            display: inline-flex;
+            align-items: center;
+            margin: 0;
+            padding: 0;
+        }
+        .actions-toolbar-group .btn {
+            white-space: nowrap;
+        }
+        /* Subtítulo a la izquierda y botones a la derecha */
+        .actions-toolbar > .actions-toolbar-group:first-child {
+            order: 1;
+            margin-right: auto;
+        }
+        .actions-toolbar > .actions-toolbar-group:last-child:not(:only-child) {
+            order: 2;
+            margin-left: auto;
+            justify-content: flex-end;
         }
 
         /* MODALES INSTITUCIONALES UNIFICADOS JUSHSAL */
@@ -1310,6 +1469,19 @@ $roleLabel = match($userRole) {
 
         <!-- Sidebar -->
         <div class="sidebar">
+            <!-- Sidebar User Panel -->
+            <div class="user-panel d-flex align-items-center">
+                <div class="image">
+                    <div class="d-flex align-items-center justify-content-center bg-white rounded-circle shadow-sm user-avatar-circle" style="width: 36px; height: 36px; border: 2px solid rgba(255,255,255,0.15);">
+                        <i class="fa-solid fa-user text-primary" style="font-size: 0.95rem;"></i>
+                    </div>
+                </div>
+                <div class="info text-truncate" style="max-width: 175px;">
+                    <span class="user-panel-name text-truncate" title="<?= htmlspecialchars($currentUser['nombre'] ?? 'Usuario') ?>"><?= htmlspecialchars($currentUser['nombre'] ?? 'Usuario') ?></span>
+                    <span class="badge-pill-custom <?= $roleBadgeClass ?>" style="font-size: 0.65rem; padding: 2px 7px; display: inline-block;"><?= htmlspecialchars($roleLabel) ?></span>
+                </div>
+            </div>
+
             <!-- Sidebar Menu -->
             <nav class="mt-2">
                 <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">

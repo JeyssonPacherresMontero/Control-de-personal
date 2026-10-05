@@ -377,16 +377,30 @@ class MarcacionesController {
             $userRole = AuthController::role();
             $verifTipo = ($userRole === 'ADMIN') ? 'MANUAL_ADMIN' : 'MANUAL_RRHH';
 
-            // Inserción de marcación manual
+            // Obtener dispositivo y serie
+            $disp = Database::queryOne("SELECT nombre, ip, numero_serie FROM dispositivos WHERE id = ?", [$idDispositivo]);
+            $deviceSerial = !empty($disp['numero_serie']) ? strtoupper(trim($disp['numero_serie'])) : "DEV_{$idDispositivo}";
+
+            // Normalización idéntica para idempotency_key
+            $normUser = ltrim(trim((string)$codigoReloj), '0');
+            if ($normUser === '') $normUser = '0';
+            $normTime = substr(trim($fechaHora), 0, 19);
+            $normPunch = strtolower(trim($tipo));
+            $normVerify = strtolower(trim($verifTipo));
+            $idempotencyKey = hash('sha256', "{$deviceSerial}|{$normUser}|{$normTime}|{$normPunch}|{$normVerify}");
+
+            // Inserción de marcación manual con clave de idempotencia y origen
             Database::execute("
                 INSERT INTO marcaciones 
-                (id_empleado, codigo_reloj, id_dispositivo, fecha_hora, tipo, tipo_verificacion, procesado)
-                VALUES (?, ?, ?, ?, ?, ?, 0)
-                ON DUPLICATE KEY UPDATE tipo = VALUES(tipo), tipo_verificacion = VALUES(tipo_verificacion)
-            ", [$idEmpleado, $codigoReloj, $idDispositivo, $fechaHora, $tipo, $verifTipo]);
+                (id_empleado, codigo_reloj, id_dispositivo, fecha_hora, tipo, tipo_verificacion, idempotency_key, origen, procesado)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'MANUAL', 0)
+                ON DUPLICATE KEY UPDATE 
+                    tipo = VALUES(tipo), 
+                    tipo_verificacion = VALUES(tipo_verificacion),
+                    idempotency_key = VALUES(idempotency_key),
+                    origen = 'MANUAL'
+            ", [$idEmpleado, $codigoReloj, $idDispositivo, $fechaHora, $tipo, $verifTipo, $idempotencyKey]);
 
-            // Obtener dispositivo
-            $disp = Database::queryOne("SELECT nombre, ip FROM dispositivos WHERE id = ?", [$idDispositivo]);
             $currentUser = AuthController::user();
             $usuario = $currentUser['nombre'] ?? ($currentUser['usuario'] ?? 'RRHH');
 

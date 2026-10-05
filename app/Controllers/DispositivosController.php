@@ -9,10 +9,18 @@ use App\Services\PythonRunner;
 class DispositivosController {
     public function index(): void {
         AuthController::checkAuth();
+        AuthController::requirePermission('dispositivos', 'dashboard');
 
-        $dispositivos = Database::query("SELECT * FROM dispositivos ORDER BY id ASC");
+        $dispositivos = Database::query("
+            SELECT d.*,
+                   (SELECT COUNT(*) FROM cola_eventos_asistencia q WHERE q.id_dispositivo = d.id AND q.estado IN ('PENDING', 'RETRY')) as eventos_pendientes,
+                   (SELECT COUNT(*) FROM log_sincronizacion l WHERE l.id_dispositivo = d.id AND l.estado = 'ERROR' AND l.fecha_hora >= DATE_SUB(NOW(), INTERVAL 24 HOUR)) as errores_24h,
+                   (SELECT l.latencia_ms FROM log_sincronizacion l WHERE l.id_dispositivo = d.id AND l.latencia_ms > 0 ORDER BY l.id DESC LIMIT 1) as ultima_latencia_ms
+            FROM dispositivos d 
+            ORDER BY d.id ASC
+        ");
         
-        // Logs de sincronización recientes
+        // Logs de sincronización recientes con métricas
         $logs = Database::query("
             SELECT l.*, d.nombre as dispositivo_nombre, d.ip as dispositivo_ip
             FROM log_sincronizacion l
@@ -22,6 +30,42 @@ class DispositivosController {
         ");
 
         require_once APP_ROOT . '/views/dispositivos/index.php';
+    }
+
+    /**
+     * AJAX/HealthCheck: Retorna el estado en tiempo real de la red biométrica y cola para polling
+     */
+    public function healthCheck(): void {
+        AuthController::checkAuth();
+        session_write_close();
+        header('Content-Type: application/json; charset=utf-8');
+
+        $dispositivos = Database::query("
+            SELECT d.id, d.nombre, d.ip, d.puerto, d.protocolo, d.modo, d.numero_serie, d.estado_conexion, d.ultimo_sync, d.ultimo_error,
+                   (SELECT COUNT(*) FROM cola_eventos_asistencia q WHERE q.id_dispositivo = d.id AND q.estado IN ('PENDING', 'RETRY')) as eventos_pendientes,
+                   (SELECT COUNT(*) FROM log_sincronizacion l WHERE l.id_dispositivo = d.id AND l.estado = 'ERROR' AND l.fecha_hora >= DATE_SUB(NOW(), INTERVAL 24 HOUR)) as errores_24h,
+                   (SELECT l.latencia_ms FROM log_sincronizacion l WHERE l.id_dispositivo = d.id AND l.latencia_ms > 0 ORDER BY l.id DESC LIMIT 1) as ultima_latencia_ms
+            FROM dispositivos d 
+            ORDER BY d.id ASC
+        ");
+
+        $colaTotales = Database::queryOne("
+            SELECT 
+                COALESCE(SUM(CASE WHEN estado = 'PENDING' THEN 1 ELSE 0 END), 0) as pendientes,
+                COALESCE(SUM(CASE WHEN estado = 'PROCESSING' THEN 1 ELSE 0 END), 0) as procesando,
+                COALESCE(SUM(CASE WHEN estado = 'RETRY' THEN 1 ELSE 0 END), 0) as reintentos,
+                COALESCE(SUM(CASE WHEN estado = 'PROCESSED' THEN 1 ELSE 0 END), 0) as procesados,
+                COALESCE(SUM(CASE WHEN estado = 'FAILED' THEN 1 ELSE 0 END), 0) as fallidos
+            FROM cola_eventos_asistencia
+        ") ?: ['pendientes' => 0, 'procesando' => 0, 'reintentos' => 0, 'procesados' => 0, 'fallidos' => 0];
+
+        echo json_encode([
+            'success'      => true,
+            'timestamp'    => date('Y-m-d H:i:s'),
+            'dispositivos' => $dispositivos,
+            'cola'         => $colaTotales
+        ], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+        exit;
     }
 
     public function guardar(): void {
@@ -34,7 +78,12 @@ class DispositivosController {
         $ip = trim($_POST['ip'] ?? '');
         $puerto = (int)($_POST['puerto'] ?? 4370);
         $protocolo = $_POST['protocolo'] ?? 'TCP';
+        $modo = in_array($_POST['modo'] ?? '', ['PULL', 'PUSH', 'HYBRID'], true) ? $_POST['modo'] : 'PULL';
         $clave = (int)($_POST['clave_comunicacion'] ?? 0);
+        $apiToken = trim($_POST['api_token'] ?? '');
+        if (empty($apiToken) && $modo !== 'PULL') {
+            $apiToken = bin2hex(random_bytes(16));
+        }
         $ubicacion = trim($_POST['ubicacion'] ?? '');
         $modelo = trim($_POST['modelo'] ?? '');
         $activo = isset($_POST['activo']) ? 1 : 0;
@@ -49,7 +98,9 @@ class DispositivosController {
             ':ip'    => $ip,
             ':port'  => $puerto,
             ':proto' => $protocolo,
+            ':modo'  => $modo,
             ':clave' => $clave,
+            ':token' => !empty($apiToken) ? $apiToken : null,
             ':ubi'   => $ubicacion,
             ':mod'   => $modelo,
             ':act'   => $activo
@@ -59,15 +110,15 @@ class DispositivosController {
             $params[':id'] = $id;
             $result = Database::executeSafe("
                 UPDATE dispositivos 
-                SET nombre = :nom, ip = :ip, puerto = :port, protocolo = :proto, 
-                    clave_comunicacion = :clave, ubicacion = :ubi, modelo = :mod, activo = :act
+                SET nombre = :nom, ip = :ip, puerto = :port, protocolo = :proto, modo = :modo, 
+                    clave_comunicacion = :clave, api_token = COALESCE(:token, api_token), ubicacion = :ubi, modelo = :mod, activo = :act
                 WHERE id = :id
             ", $params);
         } else {
             $result = Database::executeSafe("
                 INSERT INTO dispositivos 
-                (nombre, ip, puerto, protocolo, clave_comunicacion, ubicacion, modelo, activo)
-                VALUES (:nom, :ip, :port, :proto, :clave, :ubi, :mod, :act)
+                (nombre, ip, puerto, protocolo, modo, clave_comunicacion, api_token, ubicacion, modelo, activo)
+                VALUES (:nom, :ip, :port, :proto, :modo, :clave, :token, :ubi, :mod, :act)
             ", $params);
         }
 

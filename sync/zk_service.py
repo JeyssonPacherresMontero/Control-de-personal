@@ -1,4 +1,5 @@
 import os
+import time
 import logging
 import datetime
 try:
@@ -27,6 +28,7 @@ class ZKDeviceService:
         self.force_udp = force_udp
         self.zk = None
         self.conn = None
+        self.last_latency_ms = None
 
     @staticmethod
     def parse_verification_type(status_code):
@@ -52,24 +54,63 @@ class ZKDeviceService:
             return "clave"
         return "huella"
 
-    def connect(self):
-        """Establece la conexión con el biométrico"""
+    def connect(self, timeout: int = None):
+        """Establece la conexión con el biométrico midiendo latencia"""
+        conn_timeout = int(timeout) if timeout is not None else self.timeout
+        t_start = time.time()
         try:
             self.zk = ZK(
                 self.ip,
                 port=self.port,
-                timeout=self.timeout,
+                timeout=conn_timeout,
                 password=self.password,
                 force_udp=self.force_udp,
                 ommit_ping=True
             )
             self.conn = self.zk.connect()
-            logger.info(f"Conexión exitosa con dispositivo {self.ip}:{self.port}")
+            self.last_latency_ms = round((time.time() - t_start) * 1000, 2)
+            logger.info(f"Conexión exitosa con dispositivo {self.ip}:{self.port} (Latencia: {self.last_latency_ms}ms)")
             return True
         except Exception as e:
+            self.last_latency_ms = round((time.time() - t_start) * 1000, 2)
             logger.error(f"Error conectando con {self.ip}:{self.port}: {str(e)}")
             self.conn = None
             raise
+
+    def connect_with_retry(self, max_retries: int = 4, backoff_delays: list = None):
+        """
+        Establece conexión aplicando estrategia de backoff exponencial:
+        1er intento: 2s
+        2do intento: 5s
+        3er intento: 10s
+        4to intento: 30s
+        Evita bloqueos indefinidos y realiza intentos controlados.
+        """
+        if backoff_delays is None:
+            backoff_delays = [2, 5, 10, 30]
+
+        last_err = None
+        for attempt in range(1, max_retries + 1):
+            try:
+                logger.info(f"Intentando conectar a {self.ip}:{self.port} (Intento {attempt}/{max_retries})...")
+                return self.connect()
+            except Exception as e:
+                last_err = e
+                if attempt < max_retries:
+                    delay_idx = min(attempt - 1, len(backoff_delays) - 1)
+                    delay = backoff_delays[delay_idx]
+                    logger.warning(
+                        f"DEVICE: {self.ip}:{self.port} | ACTION: CONNECT | "
+                        f"ERROR: {str(e)} | RETRY: Reintentando en {delay}s (Intento {attempt}/{max_retries})"
+                    )
+                    time.sleep(delay)
+                else:
+                    logger.error(
+                        f"DEVICE: {self.ip}:{self.port} | ACTION: CONNECT | "
+                        f"ERROR: Fallaron todos los {max_retries} intentos de conexión: {str(e)}"
+                    )
+
+        raise last_err
 
     def disconnect(self):
         """Cierra la conexión de forma segura"""
@@ -353,17 +394,18 @@ class ZKDeviceService:
             self.connect()
         try:
             tz_name = os.getenv('APP_TIMEZONE', 'America/Lima')
+            naive_now = datetime.datetime.now()
             if ZoneInfo:
-                now = datetime.datetime.now(ZoneInfo(tz_name))
-                # pyzk espera un datetime naive en hora local del dispositivo
-                naive_now = now.replace(tzinfo=None)
-            else:
-                naive_now = datetime.datetime.now()
+                try:
+                    now = datetime.datetime.now(ZoneInfo(tz_name))
+                    naive_now = now.replace(tzinfo=None)
+                except Exception:
+                    naive_now = datetime.datetime.now()
             
             self.conn.set_time(naive_now)
             logger.info(f"Hora del reloj {self.ip} sincronizada a: {naive_now} ({tz_name})")
             return True
         except Exception as e:
-            logger.error(f"Error al sincronizar hora en {self.ip}: {str(e)}")
-            raise
+            logger.warning(f"Aviso al sincronizar hora en {self.ip}: {str(e)}")
+            return False
 

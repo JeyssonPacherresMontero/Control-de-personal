@@ -286,3 +286,37 @@ Stack trace:
 
 
 [25-Sep-2026 12:43:59 America/Lima] [2026-09-25 12:43:59] [SECURITY AUDIT] Usuario 'test_operador_1790358239' (ID: 12) ELIMINADO DEFINITIVAMENTE por el Administrador 'admin' (ID: 1)
+[28-Sep-2026 09:55:23 America/Lima] PHP Warning:  session_set_cookie_params(): Session cookie parameters cannot be changed after headers have already been sent in C:\Users\JEYSSON\Downloads\Control de personal\config\config.php on line 234
+[28-Sep-2026 09:55:23 America/Lima] PHP Warning:  session_name(): Session name cannot be changed after headers have already been sent in C:\Users\JEYSSON\Downloads\Control de personal\config\config.php on line 242
+[28-Sep-2026 09:55:23 America/Lima] PHP Warning:  session_start(): Session cannot be started after headers have already been sent in C:\Users\JEYSSON\Downloads\Control de personal\config\config.php on line 243
+[28-Sep-2026 09:55:23 America/Lima] PHP Warning:  require_once(config/database.php): Failed to open stream: No such file or directory in Command line code on line 1
+[28-Sep-2026 09:55:23 America/Lima] PHP Fatal error:  Uncaught Error: Failed opening required 'config/database.php' (include_path='C:\xampp\php\PEAR') in Command line code:1
+Stack trace:
+#0 {main}
+  thrown in Command line code on line 1
+[28-Sep-2026 09:55:42 America/Lima] PHP Warning:  require_once(config/database.php): Failed to open stream: No such file or directory in Command line code on line 1
+[28-Sep-2026 09:55:42 America/Lima] PHP Fatal error:  Uncaught Error: Failed opening required 'config/database.php' (include_path='C:\xampp\php\PEAR') in Command line code:1
+Stack trace:
+#0 {main}
+  thrown in Command line code on line 1
+[28-Sep-2026 10:06:10 America/Lima] PHP Warning:  require_once(C:\Users\JEYSSON\Downloads\Control de personal/config/database.php): Failed to open stream: No such file or directory in C:\Users\JEYSSON\Downloads\Control de personal\scratch_health_test.php on line 3
+[28-Sep-2026 10:06:10 America/Lima] [2026-09-28 10:06:10] Uncaught Exception: Failed opening required 'C:\Users\JEYSSON\Downloads\Control de personal/config/database.php' (include_path='C:\xampp\php\PEAR') in C:\Users\JEYSSON\Downloads\Control de personal\scratch_health_test.php:3
+Stack trace:
+#0 {main}
+
+
+[28-Sep-2026 10:53:59 America/Lima] PHP Fatal error:  Maximum execution time of 120 seconds exceeded in C:\Users\JEYSSON\Downloads\Control de personal\app\Services\PythonRunner.php on line 154
+[30-Sep-2026 10:48:22 America/Lima] [CRITICAL] Database connection error: SQLSTATE[HY000] [2002] No se puede establecer una conexión ya que el equipo de destino denegó expresamente dicha conexión
+[01-Oct-2026 14:40:04 America/Lima] [CRITICAL] Database connection error: SQLSTATE[HY000] [2002] No se puede establecer una conexión ya que el equipo de destino denegó expresamente dicha conexión
+[05-Oct-2026 10:33:07 America/Lima] PHP Fatal error:  Uncaught Error: Class "app\Database" not found in Command line code:1
+Stack trace:
+#0 {main}
+  thrown in Command line code on line 1
+[05-Oct-2026 10:33:24 America/Lima] PHP Fatal error:  Uncaught Error: Class "Database" not found in Command line code:1
+Stack trace:
+#0 {main}
+  thrown in Command line code on line 1
+[05-Oct-2026 10:33:36 America/Lima] PHP Fatal error:  Uncaught Error: Class "Database" not found in Command line code:1
+Stack trace:
+#0 {main}
+  thrown in Command line code on line 1

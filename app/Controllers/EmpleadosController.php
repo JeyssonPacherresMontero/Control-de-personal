@@ -9,6 +9,7 @@ use App\Database;
 class EmpleadosController {
     public function index(): void {
         AuthController::checkAuth();
+        AuthController::requirePermission('empleados');
         $userRole = AuthController::role();
         $currentUser = AuthController::user();
         $supervisorDeptoId = (int)($currentUser['departamento_id'] ?? 0);

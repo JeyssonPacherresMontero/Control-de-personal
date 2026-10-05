@@ -97,7 +97,9 @@ CREATE TABLE IF NOT EXISTS `dispositivos` (
     `ip` VARCHAR(45) NOT NULL COMMENT 'IPv4 o IPv6 fija del biométrico',
     `puerto` INT DEFAULT 4370 COMMENT 'Puerto estándar ZKTeco (4370)',
     `protocolo` ENUM('TCP', 'UDP') DEFAULT 'TCP',
+    `modo` ENUM('PULL', 'PUSH', 'HYBRID') NOT NULL DEFAULT 'PULL' COMMENT 'Modo de comunicación: PULL, PUSH o HÍBRIDO',
     `clave_comunicacion` INT DEFAULT 0 COMMENT 'ComKey configurada en el reloj (por defecto 0)',
+    `api_token` VARCHAR(64) NULL COMMENT 'Token secreto de autenticación para Push Listener / ADMS',
     `ubicacion` VARCHAR(150) NULL COMMENT 'Ej: Puerta Principal, Almacén, Sede Norte',
     `modelo` VARCHAR(50) NULL,
     `numero_serie` VARCHAR(100) NULL,
@@ -122,16 +124,21 @@ CREATE TABLE IF NOT EXISTS `marcaciones` (
     `tipo` ENUM('entrada', 'salida', 'refrigerio_salida', 'refrigerio_entrada', 'desconocido') DEFAULT 'desconocido',
     `tipo_verificacion` VARCHAR(30) DEFAULT 'huella' COMMENT 'huella, facial, tarjeta, clave',
     `uid_dispositivo` BIGINT NULL COMMENT 'Número de registro interno del reloj ZKTeco',
+    `idempotency_key` VARCHAR(64) NULL COMMENT 'SHA-256(serial + user_id + timestamp + punch + verify) para cero duplicados',
+    `origen` ENUM('PULL', 'PUSH', 'LIVE_CAPTURE', 'MANUAL') NOT NULL DEFAULT 'PULL' COMMENT 'Fuente del evento de marcación',
     `procesado` TINYINT(1) DEFAULT 0 COMMENT '0: Pendiente de cálculo, 1: Procesado en asistencia_diaria',
     `creado_en` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT `fk_marcaciones_empleado` FOREIGN KEY (`id_empleado`) REFERENCES `empleados` (`id`) ON DELETE CASCADE,
     CONSTRAINT `fk_marcaciones_dispositivo` FOREIGN KEY (`id_dispositivo`) REFERENCES `dispositivos` (`id`) ON DELETE RESTRICT,
-    -- Clave Única para evitar duplicados en re-intentos de sincronización
+    -- Clave Única compuesta tradicional
     UNIQUE KEY `uniq_marcacion` (`codigo_reloj`, `fecha_hora`, `id_dispositivo`),
+    -- Clave Única de Idempotencia Criptográfica
+    UNIQUE KEY `uniq_idempotency` (`idempotency_key`),
     INDEX `idx_marcaciones_emp_fecha` (`id_empleado`, `fecha_hora`),
     INDEX `idx_marcaciones_fecha_hora` (`fecha_hora`),
     INDEX `idx_marcaciones_procesado` (`procesado`),
-    INDEX `idx_marcaciones_codigo_reloj` (`codigo_reloj`)
+    INDEX `idx_marcaciones_codigo_reloj` (`codigo_reloj`),
+    INDEX `idx_marcaciones_origen` (`origen`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 8. TABLA: ASISTENCIA DIARIA CONSOLIDADA (CALCULADA)
@@ -199,15 +206,41 @@ CREATE TABLE IF NOT EXISTS `log_sincronizacion` (
     `id_dispositivo` INT NULL,
     `fecha_hora` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `tipo_evento` ENUM('SYNC_AUTO', 'SYNC_MANUAL', 'TEST_CONEXION', 'CLEAR_ATTENDANCE', 'SYNC_USERS', 'ERROR') NOT NULL,
+    `modo` ENUM('PULL', 'PUSH', 'HYBRID') NOT NULL DEFAULT 'PULL',
     `total_descargados` INT DEFAULT 0,
     `total_insertados` INT DEFAULT 0,
     `total_duplicados` INT DEFAULT 0,
+    `total_fallidos` INT DEFAULT 0,
     `estado` ENUM('EXITO', 'ERROR', 'ADVERTENCIA') NOT NULL,
     `mensaje` TEXT NULL,
     `duracion_segundos` DECIMAL(6, 2) DEFAULT 0.00,
+    `latencia_ms` INT DEFAULT 0,
     CONSTRAINT `fk_logs_dispositivo` FOREIGN KEY (`id_dispositivo`) REFERENCES `dispositivos` (`id`) ON DELETE SET NULL,
     INDEX `idx_logs_fecha` (`fecha_hora`),
     INDEX `idx_logs_estado` (`estado`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 11.1 TABLA: COLA LÓGICA DE EVENTOS DE ASISTENCIA (RESILIENCIA Y BUFFER)
+CREATE TABLE IF NOT EXISTS `cola_eventos_asistencia` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `id_dispositivo` INT NOT NULL,
+    `device_serial` VARCHAR(100) NULL,
+    `user_id` VARCHAR(32) NOT NULL,
+    `timestamp` DATETIME NOT NULL,
+    `punch_type` VARCHAR(30) NOT NULL DEFAULT 'entrada',
+    `verify_type` VARCHAR(30) NOT NULL DEFAULT 'huella',
+    `uid_dispositivo` BIGINT NULL,
+    `origen` ENUM('PUSH', 'PULL', 'LIVE_CAPTURE', 'MANUAL') NOT NULL DEFAULT 'PULL',
+    `idempotency_key` VARCHAR(64) NOT NULL,
+    `estado` ENUM('PENDING', 'PROCESSING', 'PROCESSED', 'FAILED', 'RETRY') NOT NULL DEFAULT 'PENDING',
+    `intentos` INT NOT NULL DEFAULT 0,
+    `ultimo_error` TEXT NULL,
+    `creado_en` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `actualizado_en` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT `fk_cola_dispositivo` FOREIGN KEY (`id_dispositivo`) REFERENCES `dispositivos` (`id`) ON DELETE CASCADE,
+    UNIQUE KEY `uniq_cola_idempotency` (`idempotency_key`),
+    INDEX `idx_cola_estado_intentos` (`estado`, `intentos`),
+    INDEX `idx_cola_dispositivo` (`id_dispositivo`, `creado_en`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 12. TABLA: USUARIOS DEL SISTEMA WEB (ADMINISTRADORES / RRHH)

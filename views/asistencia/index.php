@@ -118,6 +118,7 @@ if (!empty($deptoId)) {
                         <th>Faltas</th>
                         <th>Justificados</th>
                         <th>Total Trabajado</th>
+                        <th>Horas Extras</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -130,6 +131,7 @@ if (!empty($deptoId)) {
                         <td style="color: #991b1b;"><b><?= $kpiFaltas ?></b></td>
                         <td style="color: #075985;"><b><?= $kpiJustificados ?></b></td>
                         <td><b><?= $kpiHorasTrab ?></b></td>
+                        <td style="color: #15803d;"><b>+<?= $kpiHorasExt ?></b></td>
                     </tr>
                 </tbody>
             </table>
@@ -137,7 +139,7 @@ if (!empty($deptoId)) {
 
         <!-- KPI SUMMARY CARDS (PANTALLA) -->
         <div class="row no-print">
-            <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+            <div class="col-xl col-lg-4 col-md-6 col-12 mb-3">
                 <div class="kpi-card h-100">
                     <div class="kpi-card-header">
                         <div>
@@ -151,7 +153,7 @@ if (!empty($deptoId)) {
                     </div>
                 </div>
             </div>
-            <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+            <div class="col-xl col-lg-4 col-md-6 col-12 mb-3">
                 <div class="kpi-card h-100">
                     <div class="kpi-card-header">
                         <div>
@@ -165,7 +167,7 @@ if (!empty($deptoId)) {
                     </div>
                 </div>
             </div>
-            <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+            <div class="col-xl col-lg-4 col-md-6 col-12 mb-3">
                 <div class="kpi-card h-100">
                     <div class="kpi-card-header">
                         <div>
@@ -179,7 +181,21 @@ if (!empty($deptoId)) {
                     </div>
                 </div>
             </div>
-            <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+            <div class="col-xl col-lg-4 col-md-6 col-12 mb-3">
+                <div class="kpi-card h-100" style="border-left: 3px solid #10b981;">
+                    <div class="kpi-card-header">
+                        <div>
+                            <div class="kpi-title">Horas Extras</div>
+                            <div class="kpi-value" style="color: #047857;">+<?= $kpiHorasExt ?></div>
+                            <div class="kpi-subtitle">Acumulado: <b><?= number_format($kpiMinExtra / 60, 2) ?> hrs</b></div>
+                        </div>
+                        <div class="kpi-icon-box" style="background: #f0fdf4; color: #10b981; border: 1px solid #bbf7d0;">
+                            <i class="fa-solid fa-user-clock"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl col-lg-4 col-md-6 col-12 mb-3">
                 <div class="kpi-card h-100">
                     <div class="kpi-card-header">
                         <div>
@@ -195,84 +211,93 @@ if (!empty($deptoId)) {
             </div>
         </div>
 
-        <!-- FILTER AND ACTIONS CARD -->
-        <div class="card mb-4 no-print">
-            <div class="card-header d-flex align-items-center justify-content-between flex-wrap" style="padding: 0.85rem 1.25rem;">
-                <h3 class="card-title font-weight-bold text-dark mb-0 d-flex align-items-center" style="font-size: 0.92rem;">
-                    <i class="fa-solid fa-filter mr-2" style="color: #1e40af;"></i> Filtros y Gestión de Asistencia
-                </h3>
-                <div class="d-flex align-items-center flex-wrap" style="gap: 8px; margin-left: auto;">
-                    <?php if ($userRole === 'ADMIN'): ?>
-                        <button type="button" class="btn btn-primary btn-sm" onclick="openAsignarHorasModal()" title="Asignar u oficializar horas de entrada y salida">
-                            <i class="fa-solid fa-clock-medical mr-1"></i> Asignar Horas
-                        </button>
-                    <?php endif; ?>
-                    <?php if ($userRole === 'ADMIN' || $userRole === 'RRHH'): ?>
-                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="openJustificarAdminModal()" title="Registrar justificación oficial">
-                            <i class="fa-solid fa-user-shield mr-1 text-primary"></i> Registrar Justificación
-                        </button>
-                    <?php endif; ?>
-
-                    <?php if ($userRole === 'ADMIN' || $userRole === 'RRHH'): ?>
-                        <div class="dropdown d-inline">
-                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="syncRelojDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" title="Sincronizar marcaciones directamente desde el reloj">
-                                <i class="fa-solid fa-fingerprint mr-1 text-primary"></i> Sincronizar Reloj
-                            </button>
-                            <div class="dropdown-menu dropdown-menu-right shadow-sm border-0" aria-labelledby="syncRelojDropdown">
-                                <h6 class="dropdown-header font-weight-bold text-primary" style="font-size: 0.78rem;"><i class="fa-solid fa-clock mr-1"></i> Extracción Biométrico ZKTeco</h6>
-                                <form method="POST" action="?route=dispositivos&action=sincronizar" class="px-2 py-1 m-0">
-                                    <?= csrf_field() ?>
-                                    <input type="hidden" name="mode" value="incremental">
-                                    <button type="submit" class="dropdown-item py-2" style="font-size: 0.85rem;">
-                                        <i class="fa-solid fa-bolt mr-2 text-primary"></i> Sincronizar Hoy / Rápido
-                                    </button>
-                                </form>
-                                <form method="POST" action="?route=dispositivos&action=sincronizar" class="px-2 py-1 m-0">
-                                    <?= csrf_field() ?>
-                                    <input type="hidden" name="mode" value="days">
-                                    <input type="hidden" name="days" value="7">
-                                    <button type="submit" class="dropdown-item py-2" style="font-size: 0.85rem;">
-                                        <i class="fa-solid fa-calendar-week mr-2 text-primary"></i> Sincronizar Últimos 7 Días
-                                    </button>
-                                </form>
-                                <div class="dropdown-divider my-1"></div>
-                                <form method="POST" action="?route=dispositivos&action=sincronizar" class="px-2 py-1 m-0" onsubmit="return confirm('¿Deseas extraer el 100% de las marcaciones almacenadas en el reloj físico?')">
-                                    <?= csrf_field() ?>
-                                    <input type="hidden" name="mode" value="full">
-                                    <button type="submit" class="dropdown-item py-2 font-weight-bold" style="font-size: 0.85rem; color: #1e40af;">
-                                        <i class="fa-solid fa-cloud-arrow-down mr-2"></i> Histórico Completo del Reloj
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                    <?php endif; ?>
-
-                    <?php if ($userRole === 'ADMIN'): ?>
-                        <form method="POST" action="?route=asistencia&action=recalcular" class="d-inline m-0">
-                            <?= csrf_field() ?>
-                            <input type="hidden" name="fecha_inicio" value="<?= htmlspecialchars($fechaInicio) ?>">
-                            <input type="hidden" name="fecha_fin" value="<?= htmlspecialchars($fechaFin) ?>">
-                            <button type="submit" class="btn btn-outline-secondary btn-sm" onclick="return confirm('¿Deseas recalcular la asistencia en este rango de fechas?')">
-                                <i class="fa-solid fa-calculator mr-1"></i> Recalcular
-                            </button>
-                        </form>
-                    <?php endif; ?>
-
-                    <!-- Botón Reporte Individual de Trabajador -->
-                    <button type="button" class="btn btn-outline-primary btn-sm font-weight-bold" onclick="openReporteIndividualModal()" title="Generar reporte individual oficial para un trabajador específico">
-                        <i class="fa-solid fa-file-invoice mr-1"></i> Reporte por Empleado
+        <!-- ACTIONS TOOLBAR -->
+        <div class="actions-toolbar no-print mb-3">
+            <div class="actions-toolbar-group">
+                <span class="font-weight-bold text-dark" style="font-size: 0.95rem;">
+                    <i class="fa-solid fa-list-check mr-2 text-primary"></i> Operaciones y Reportes de Asistencia
+                </span>
+            </div>
+            <div class="actions-toolbar-group flex-wrap">
+                <?php if ($userRole === 'ADMIN'): ?>
+                    <button type="button" class="btn btn-primary btn-sm" onclick="openAsignarHorasModal()" title="Asignar u oficializar horas de entrada y salida">
+                        <i class="fa-solid fa-clock-medical mr-1"></i> Asignar Horas
                     </button>
+                <?php endif; ?>
+                <?php if ($userRole === 'ADMIN' || $userRole === 'RRHH'): ?>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="openJustificarAdminModal()" title="Registrar justificación oficial">
+                        <i class="fa-solid fa-user-shield mr-1 text-primary"></i> Registrar Justificación
+                    </button>
+                <?php endif; ?>
 
-                    <!-- Botones de Exportación Agrupados Elegantes -->
-                    <div class="btn-group btn-group-sm">
-                        <a href="?route=asistencia&fecha_inicio=<?= urlencode($fechaInicio) ?>&fecha_fin=<?= urlencode($fechaFin) ?>&departamento_id=<?= urlencode((string)($deptoId ?? '')) ?>&empleado_id=<?= urlencode((string)($empleadoId ?? '')) ?>&estado=<?= urlencode((string)($estado ?? '')) ?>&search=<?= urlencode($search ?? '') ?>&export=excel" class="btn btn-outline-secondary" title="Descargar reporte oficial en Excel">
-                            <i class="fa-solid fa-file-excel mr-1 text-success"></i> Excel
-                        </a>
-                        <button type="button" class="btn btn-outline-secondary" onclick="window.print()" title="Imprimir reporte oficial o Guardar como PDF">
-                            <i class="fa-solid fa-print mr-1 text-secondary"></i> PDF
+                <?php if ($userRole === 'ADMIN' || $userRole === 'RRHH'): ?>
+                    <div class="dropdown d-inline">
+                        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="syncRelojDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" title="Sincronizar marcaciones directamente desde el reloj">
+                            <i class="fa-solid fa-fingerprint mr-1 text-primary"></i> Sincronizar Reloj
                         </button>
+                        <div class="dropdown-menu dropdown-menu-right shadow-sm border-0" aria-labelledby="syncRelojDropdown">
+                            <h6 class="dropdown-header font-weight-bold text-primary" style="font-size: 0.78rem;"><i class="fa-solid fa-clock mr-1"></i> Extracción Biométrico ZKTeco</h6>
+                            <form method="POST" action="?route=dispositivos&action=sincronizar" class="px-2 py-1 m-0">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="mode" value="incremental">
+                                <button type="submit" class="dropdown-item py-2" style="font-size: 0.85rem;">
+                                    <i class="fa-solid fa-bolt mr-2 text-primary"></i> Sincronizar Hoy / Rápido
+                                </button>
+                            </form>
+                            <form method="POST" action="?route=dispositivos&action=sincronizar" class="px-2 py-1 m-0">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="mode" value="days">
+                                <input type="hidden" name="days" value="7">
+                                <button type="submit" class="dropdown-item py-2" style="font-size: 0.85rem;">
+                                    <i class="fa-solid fa-calendar-week mr-2 text-primary"></i> Sincronizar Últimos 7 Días
+                                </button>
+                            </form>
+                            <div class="dropdown-divider my-1"></div>
+                            <form method="POST" action="?route=dispositivos&action=sincronizar" class="px-2 py-1 m-0" onsubmit="return confirm('¿Deseas extraer el 100% de las marcaciones almacenadas en el reloj físico?')">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="mode" value="full">
+                                <button type="submit" class="dropdown-item py-2 font-weight-bold" style="font-size: 0.85rem; color: #1e40af;">
+                                    <i class="fa-solid fa-cloud-arrow-down mr-2"></i> Histórico Completo del Reloj
+                                </button>
+                            </form>
+                        </div>
                     </div>
+                <?php endif; ?>
+
+                <?php if (in_array($userRole, ['ADMIN', 'RRHH', 'SUPERVISOR', 'ASISTENTE'], true) || AuthController::hasPermission('asistencia')): ?>
+                    <form method="POST" action="?route=asistencia&action=recalcular" class="d-inline m-0">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="fecha_inicio" value="<?= htmlspecialchars($fechaInicio) ?>">
+                        <input type="hidden" name="fecha_fin" value="<?= htmlspecialchars($fechaFin) ?>">
+                        <button type="submit" class="btn btn-outline-secondary btn-sm" onclick="return confirm('¿Deseas calcular y consolidar la asistencia en este rango de fechas?')">
+                            <i class="fa-solid fa-calculator mr-1"></i> Calcular Asistencia
+                        </button>
+                    </form>
+                <?php endif; ?>
+
+                <!-- Botón Reporte Individual de Trabajador -->
+                <button type="button" class="btn btn-outline-primary btn-sm font-weight-bold" onclick="openReporteIndividualModal()" title="Generar reporte individual oficial para un trabajador específico">
+                    <i class="fa-solid fa-file-invoice mr-1"></i> Reporte por Empleado
+                </button>
+
+                <!-- Botones de Exportación Agrupados Elegantes -->
+                <div class="btn-group btn-group-sm">
+                    <a href="?route=asistencia&fecha_inicio=<?= urlencode($fechaInicio) ?>&fecha_fin=<?= urlencode($fechaFin) ?>&departamento_id=<?= urlencode((string)($deptoId ?? '')) ?>&empleado_id=<?= urlencode((string)($empleadoId ?? '')) ?>&estado=<?= urlencode((string)($estado ?? '')) ?>&search=<?= urlencode($search ?? '') ?>&export=excel" class="btn btn-outline-secondary" title="Descargar reporte oficial en Excel">
+                        <i class="fa-solid fa-file-excel mr-1 text-success"></i> Excel
+                    </a>
+                    <button type="button" class="btn btn-outline-secondary" onclick="window.print()" title="Imprimir reporte oficial o Guardar como PDF">
+                        <i class="fa-solid fa-print mr-1 text-secondary"></i> PDF
+                    </button>
                 </div>
+            </div>
+        </div>
+
+        <!-- FILTER CARD -->
+        <div class="card mb-4 no-print">
+            <div class="card-header py-2 px-3">
+                <h3 class="card-title font-weight-bold text-dark mb-0 d-flex align-items-center" style="font-size: 0.92rem;">
+                    <i class="fa-solid fa-filter mr-2 text-primary"></i> Filtros de Búsqueda de Asistencia
+                </h3>
             </div>
             <div class="card-body p-4">
                 <form method="GET" action="" class="row align-items-end">
@@ -290,12 +315,17 @@ if (!empty($deptoId)) {
 
                     <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
                         <label class="form-label-custom"><i class="fa-solid fa-building"></i> Departamento</label>
-                        <select name="departamento_id" class="form-control">
-                            <option value="">-- Todos los Deptos --</option>
+                        <select name="departamento_id" class="form-control" <?= ($userRole === 'SUPERVISOR') ? 'disabled' : '' ?>>
+                            <?php if ($userRole !== 'SUPERVISOR'): ?>
+                                <option value="">-- Todos los Deptos --</option>
+                            <?php endif; ?>
                             <?php foreach ($departamentos as $d): ?>
                                 <option value="<?= $d['id'] ?>" <?= $deptoId == $d['id'] ? 'selected' : '' ?>><?= htmlspecialchars($d['nombre']) ?></option>
                             <?php endforeach; ?>
                         </select>
+                        <?php if ($userRole === 'SUPERVISOR' && !empty($deptoId)): ?>
+                            <input type="hidden" name="departamento_id" value="<?= htmlspecialchars((string)$deptoId) ?>">
+                        <?php endif; ?>
                     </div>
 
                     <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
@@ -396,6 +426,7 @@ if (!empty($deptoId)) {
                             <th class="text-center">Salida</th>
                             <th class="text-center">Tardanza</th>
                             <th class="text-center">Tiempo Trabajado</th>
+                            <th class="text-center">H. Extras</th>
                             <th class="text-center">Estado</th>
                             <?php if ($userRole === 'ADMIN' || $userRole === 'RRHH'): ?>
                                 <th class="text-center no-print">Acciones</th>
@@ -405,7 +436,7 @@ if (!empty($deptoId)) {
                     <tbody>
                         <?php if (empty($asistencias)): ?>
                             <tr>
-                                <td colspan="<?= ($userRole === 'ADMIN' || $userRole === 'RRHH') ? '10' : '9' ?>" class="text-center py-5 text-muted">
+                                <td colspan="<?= ($userRole === 'ADMIN' || $userRole === 'RRHH') ? '11' : '10' ?>" class="text-center py-5 text-muted">
                                     <i class="fa-solid fa-folder-open fa-2x mb-2 d-block text-secondary"></i>
                                     <div>No se encontraron registros de asistencia para los filtros seleccionados.</div>
                                     <a href="?route=asistencia" class="btn btn-xs btn-outline-primary mt-2">
@@ -490,6 +521,19 @@ if (!empty($deptoId)) {
                                     <div class="font-weight-bold" style="color: #0f172a; font-size: 0.92rem;"><?= "{$hrs}h {$min}m" ?></div>
                                     <div class="badge badge-light text-primary font-weight-bold" style="font-size: 0.73rem; border: 1px solid #bfdbfe; margin-top: 1px;" title="Total en horas decimales"><?= "{$decHrs} hrs" ?></div>
                                 </td>
+                                <td class="text-center font-monospace small">
+                                    <?php if ((int)($a['minutos_extra'] ?? 0) > 0): ?>
+                                        <?php
+                                            $extHrs = floor($a['minutos_extra'] / 60);
+                                            $extMin = $a['minutos_extra'] % 60;
+                                            $decExt = number_format($a['minutos_extra'] / 60, 2);
+                                        ?>
+                                        <div class="font-weight-bold text-success" style="font-size: 0.92rem;">+<?= "{$extHrs}h {$extMin}m" ?></div>
+                                        <div class="badge badge-light text-success font-weight-bold" style="font-size: 0.72rem; border: 1px solid #bbf7d0; margin-top: 1px;" title="Total en horas extras decimales">+<?= "{$decExt} hrs" ?></div>
+                                    <?php else: ?>
+                                        <span class="text-muted small">-</span>
+                                    <?php endif; ?>
+                                </td>
                                 <td class="text-center">
                                     <?php
                                         $est = $a['estado'];
@@ -560,7 +604,11 @@ if (!empty($deptoId)) {
                                 <div><?= $kpiHorasTrab ?></div>
                                 <span class="badge badge-light text-primary" style="font-size: 0.72rem; border: 1px solid #bfdbfe;"><?= number_format($kpiMinTrabajados / 60, 2) ?> hrs</span>
                             </th>
-                            <th colspan="<?= $userRole === 'ADMIN' ? '2' : '1' ?>"><?= $kpiTotal ?> registros</th>
+                            <th class="text-center text-success">
+                                <div>+<?= $kpiHorasExt ?></div>
+                                <span class="badge badge-light text-success" style="font-size: 0.72rem; border: 1px solid #bbf7d0;"><?= number_format($kpiMinExtra / 60, 2) ?> hrs</span>
+                            </th>
+                            <th colspan="<?= ($userRole === 'ADMIN' || $userRole === 'RRHH') ? '2' : '1' ?>"><?= $kpiTotal ?> registros</th>
                         </tr>
                     </tfoot>
                 </table>
@@ -635,7 +683,7 @@ if (!empty($deptoId)) {
 <?php if ($userRole === 'ADMIN'): ?>
 <!-- MODAL EVENT SOURCING: LÍNEA DE TIEMPO DE AUDITORÍA Y TRAZABILIDAD -->
 <div class="modal fade" id="modalTimelineEventos" tabindex="-1" role="dialog" aria-labelledby="timelineTitle" aria-modal="true" aria-hidden="true">
-    <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title font-weight-bold" id="timelineTitle">
@@ -683,7 +731,7 @@ if (!empty($deptoId)) {
 <?php if ($userRole === 'ADMIN'): ?>
 <!-- MODAL CORRECCIÓN / ASIGNACIÓN ADMINISTRATIVA DE HORARIO Y ASISTENCIA (EXCLUSIVO ADMINISTRADOR) -->
 <div class="modal fade" id="modalEditarAsistencia" tabindex="-1" role="dialog" aria-labelledby="modalEditarTitle" aria-modal="true" aria-hidden="true">
-    <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
         <form method="POST" action="?route=asistencia&action=editar" class="modal-content shadow-lg border-0" id="formAdminEditAsistencia" onsubmit="submitAdminEditAttendance(event)">
             <?= csrf_field() ?>
             <input type="hidden" name="id" id="edit_id" value="0">
@@ -889,7 +937,7 @@ if (!empty($deptoId)) {
 <?php if ($userRole === 'ADMIN' || $userRole === 'RRHH'): ?>
 <!-- MODAL REGISTRAR ASISTENCIA JUSTIFICADA / COMISIÓN DE SERVICIO -->
 <div class="modal fade" id="modalJustificarAdmin" tabindex="-1" role="dialog" aria-labelledby="modalJustificarTitle" aria-modal="true" aria-hidden="true">
-    <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
         <form method="POST" action="?route=asistencia&action=justificar_admin" class="modal-content shadow-lg border-0" id="formJustificarAdmin" onsubmit="submitJustificarAdmin(event)">
             <?= csrf_field() ?>
             <div class="modal-header">
@@ -1033,47 +1081,6 @@ if (!empty($deptoId)) {
         </form>
     </div>
 </div>
-
-<style>
-.worker-search-wrapper {
-    position: relative;
-}
-.worker-search-dropdown {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    z-index: 1060;
-    background: #ffffff;
-    max-height: 270px;
-    overflow-y: auto;
-    border: 1px solid #cbd5e1;
-    border-radius: 8px;
-    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.15), 0 8px 10px -6px rgba(0,0,0,0.1);
-}
-.worker-search-item {
-    cursor: pointer;
-    padding: 8px 12px;
-    border-bottom: 1px solid #f1f5f9;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    transition: background-color 0.15s ease;
-}
-.worker-search-item:last-child {
-    border-bottom: none;
-}
-.worker-search-item:hover, .worker-search-item.active {
-    background-color: #eff6ff !important;
-}
-.worker-search-item mark {
-    background-color: #fef08a;
-    color: #0f172a;
-    font-weight: 700;
-    padding: 0 2px;
-    border-radius: 2px;
-}
-</style>
 
 <script>
 // =========================================================================
@@ -1554,26 +1561,36 @@ function calculateRealtimeAdminAttendance() {
     if (entVal && salVal) {
         const [hEnt, mEnt] = entVal.split(':').map(Number);
         const [hSal, mSal] = salVal.split(':').map(Number);
+        const [hProgEnt, mProgEnt] = progEnt.split(':').map(Number);
         const [hProgSal, mProgSal] = progSal.split(':').map(Number);
 
-        const minStart = hEnt * 60 + mEnt;
+        let minStart = hEnt * 60 + mEnt;
+        const minProgStart = hProgEnt * 60 + mProgEnt;
+        if (minStart < minProgStart) {
+            minStart = minProgStart; // Inicio efectivo desde la hora programada (ej. 08:00)
+        }
         const minEnd = hSal * 60 + mSal;
-        const minProgExit = hProgSal * 60 + mProgSal;
 
         if (minEnd > minStart) {
             const rawDiffMin = minEnd - minStart;
             let minutesDiscount = 0;
 
             if (!isSaturday) {
-                if (salRefVal && retRefVal) {
+                if (salRefVal && !retRefVal) {
+                    // Marcó salida a refrigerio y omitió retorno -> Descuento de 1 hora (60 min)
+                    minutesDiscount = 60;
+                } else if (salRefVal && retRefVal) {
                     const [hSR, mSR] = salRefVal.split(':').map(Number);
                     const [hRR, mRR] = retRefVal.split(':').map(Number);
                     const minSalRef = hSR * 60 + mSR;
                     const minRetRef = hRR * 60 + mRR;
+                    let taken = 0;
                     if (minRetRef > minSalRef) {
-                        minutesDiscount = minRetRef - minSalRef;
+                        taken = minRetRef - minSalRef;
                     }
-                } else if (rawDiffMin >= 300) {
+                    minutesDiscount = Math.max(45, taken);
+                } else {
+                    // En los demás casos: sí o sí descuento automático obligatorio de 45 minutos
                     minutesDiscount = 45;
                 }
             }
@@ -1582,11 +1599,15 @@ function calculateRealtimeAdminAttendance() {
             const netHrs = Math.floor(netMinutes / 60);
             const netMins = netMinutes % 60;
 
-            let descText = minutesDiscount > 0 ? ` (Desc. ${minutesDiscount}m ref)` : '';
+            let descText = minutesDiscount > 0 ? ` (Desc. ${minutesDiscount}m ref${minutesDiscount === 60 ? ' / 1 hora' : ''})` : '';
             summaryParts.push(`<span class="font-weight-bold text-dark"><i class="fa-solid fa-business-time mr-1 text-muted"></i>${netHrs}h ${netMins}m laboradas${descText}</span>`);
         }
     } else if (entVal && !salVal) {
-        summaryParts.push(`<span class="font-weight-bold text-dark"><i class="fa-solid fa-triangle-exclamation mr-1 text-warning"></i>Salida pendiente</span>`);
+        summaryParts.push(`<span class="font-weight-bold text-warning"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Sin marcación de salida general: no se calculan horas</span>`);
+        suggestedState = 'SALIDA_SIN_MARCAR';
+    } else if (!entVal && salVal) {
+        summaryParts.push(`<span class="font-weight-bold text-warning"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Sin marcación de entrada: no se calculan horas</span>`);
+        suggestedState = 'ENTRADA_SIN_MARCAR';
     }
 
     tardanzaInput.value = computedTardanza;

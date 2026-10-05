@@ -28,7 +28,7 @@ class AsistenciaController {
             $fechaFin = $tmp;
         }
 
-        // Auto-calcular días faltantes en asistencia_diaria para el rango solicitado (hasta 31 días)
+        // Auto-calcular días faltantes o con marcaciones pendientes en asistencia_diaria para el rango solicitado (hasta 31 días)
         try {
             $db = Database::getInstance()->getConnection();
             $dInicio = new \DateTime($fechaInicio);
@@ -45,10 +45,18 @@ class AsistenciaController {
                 $period = new \DatePeriod($dInicio, new \DateInterval('P1D'), (clone $dFin)->modify('+1 day'));
                 foreach ($period as $dt) {
                     $currDate = $dt->format('Y-m-d');
-                    if (!isset($existingSet[$currDate])) {
+                    $isDateToday = ($currDate === date('Y-m-d'));
+
+                    // Verificar si existen marcaciones sin procesar para este día
+                    $stmtUnproc = $db->prepare("SELECT 1 FROM marcaciones WHERE fecha_hora >= :d1 AND fecha_hora <= :d2 AND procesado = 0 LIMIT 1");
+                    $stmtUnproc->execute([':d1' => "$currDate 00:00:00", ':d2' => "$currDate 23:59:59"]);
+                    $hasUnprocessed = (bool)$stmtUnproc->fetchColumn();
+
+                    // Recalcular si no existe en asistencia_diaria, si tiene marcaciones pendientes de cálculo, o si es hoy
+                    if (!isset($existingSet[$currDate]) || $hasUnprocessed || $isDateToday) {
                         $stmtMarc = $db->prepare("SELECT 1 FROM marcaciones WHERE fecha_hora >= :d1 AND fecha_hora <= :d2 LIMIT 1");
                         $stmtMarc->execute([':d1' => "$currDate 00:00:00", ':d2' => "$currDate 23:59:59"]);
-                        if ($stmtMarc->fetchColumn() || $diffDias === 0) {
+                        if ($stmtMarc->fetchColumn() || $diffDias === 0 || !isset($existingSet[$currDate])) {
                             if (!$calc) {
                                 $calc = new AttendanceCalculator(ATTENDANCE_DEBOUNCE_MINUTES);
                             }
@@ -248,7 +256,10 @@ class AsistenciaController {
 
     public function recalcular(): void {
         AuthController::checkAuth();
-        AuthController::requireRole('ADMIN', 'asistencia');
+        if (!AuthController::hasPermission('asistencia') && !in_array(AuthController::role(), ['ADMIN', 'RRHH', 'SUPERVISOR', 'ASISTENTE'], true)) {
+            header("Location: ?route=asistencia&msg=acceso_denegado");
+            exit;
+        }
         \App\Security\Csrf::validate();
 
         $fechaInicio = $_POST['fecha_inicio'] ?? date('Y-m-d');
@@ -431,7 +442,9 @@ class AsistenciaController {
             if ($horaEntradaReal && $horaSalidaReal) {
                 $dtEntryReal = new \DateTime($horaEntradaReal);
                 $dtExitReal = new \DateTime($horaSalidaReal);
-                $diffSec = $dtExitReal->getTimestamp() - $dtEntryReal->getTimestamp();
+                $dtProgEntry = !empty($actual['hora_entrada_programada']) ? new \DateTime("$fecha {$actual['hora_entrada_programada']}") : new \DateTime("$fecha 08:00:00");
+                $dtEffectiveEntry = ($dtEntryReal < $dtProgEntry) ? $dtProgEntry : $dtEntryReal;
+                $diffSec = $dtExitReal->getTimestamp() - $dtEffectiveEntry->getTimestamp();
 
                 if ($diffSec > 0) {
                     $minBrutos = (int)floor($diffSec / 60);
@@ -441,24 +454,24 @@ class AsistenciaController {
                         // Sábado sin refrigerio: Horas trabajadas = Permanencia bruta
                         $minutosTrabajados = $minBrutos;
                     } else {
-                        // Lunes a Viernes: HORAS TRABAJADAS SIN CONTAR LA HORA DE REFRIGERIO
-                        $minRefTomados = 0;
-                        if ($horaInicioRefReal && $horaFinRefReal) {
+                        // Lunes a Viernes: HORAS TRABAJADAS CON REGLAS DE REFRIGERIO
+                        // Regla 1: Si solo marcó salida de refrigerio y NO retorno -> Descuento de 1 hora (60 min)
+                        // Regla 2: En cualquier otro caso -> sí o sí descuento automático obligatorio de 45 min (o tiempo tomado si superó 45 min)
+                        if ($horaInicioRefReal && !$horaFinRefReal) {
+                            $minRefDeducir = 60; // 1 hora de descuento por omisión de retorno
+                        } elseif ($horaInicioRefReal && $horaFinRefReal) {
                             $dtRefSal = new \DateTime($horaInicioRefReal);
                             $dtRefEnt = new \DateTime($horaFinRefReal);
+                            $minRefTomados = 0;
                             if ($dtRefEnt > $dtRefSal) {
                                 $minRefTomados = (int)floor(($dtRefEnt->getTimestamp() - $dtRefSal->getTimestamp()) / 60);
                             }
+                            $minRefDeducir = max(45, $minRefTomados);
+                        } else {
+                            $minRefDeducir = 45; // sí o sí 45 min automático obligatorio
                         }
 
-                        if ($minRefTomados > 0) {
-                            $minutosTrabajados = max(0, $minBrutos - $minRefTomados);
-                        } elseif ($minBrutos >= 300) {
-                            $minRefDeducir = (int)($actual['minutos_refrigerio'] ?? 45);
-                            $minutosTrabajados = max(0, $minBrutos - $minRefDeducir);
-                        } else {
-                            $minutosTrabajados = $minBrutos;
-                        }
+                        $minutosTrabajados = max(0, $minBrutos - $minRefDeducir);
                     }
                 }
 
@@ -477,6 +490,15 @@ class AsistenciaController {
                         $diffEarlySec = $dtExitProg->getTimestamp() - $dtExitReal->getTimestamp();
                         $minutosSalidaTemprana = (int)floor($diffEarlySec / 60);
                     }
+                }
+            } else {
+                // Sin marcación de Entrada o sin Salida General: no se pueden computar horas trabajadas
+                $minutosTrabajados = 0;
+                $minutosExtra = 0;
+                if ($horaEntradaReal && !$horaSalidaReal && $estado === 'PRESENTE') {
+                    $estado = 'SALIDA_SIN_MARCAR';
+                } elseif (!$horaEntradaReal && $horaSalidaReal && $estado === 'PRESENTE') {
+                    $estado = 'ENTRADA_SIN_MARCAR';
                 }
             }
 
@@ -1029,6 +1051,7 @@ class AsistenciaController {
         $totalSinSalida = 0;
         $sumMinTardanza = 0;
         $sumMinTrabajados = 0;
+        $sumMinExtra = 0;
 
         foreach ($data as $r) {
             $st = $r['estado'];
@@ -1041,15 +1064,17 @@ class AsistenciaController {
             elseif ($st === 'SALIDA_SIN_MARCAR') $totalSinSalida++;
 
             $sumMinTrabajados += (int)$r['minutos_trabajados'];
+            $sumMinExtra += (int)($r['minutos_extra'] ?? 0);
         }
 
         $horasTrabajadasTotales = sprintf('%dh %02dm (%s hrs)', floor($sumMinTrabajados / 60), $sumMinTrabajados % 60, number_format($sumMinTrabajados / 60, 2));
+        $horasExtraTotales = sprintf('+%dh %02dm (+%s hrs)', floor($sumMinExtra / 60), $sumMinExtra % 60, number_format($sumMinExtra / 60, 2));
         $horasTardanzaTotales = sprintf('%dh %02dm', floor($sumMinTardanza / 60), $sumMinTardanza % 60);
         $tasaPuntualidad = $totalRegistros > 0 ? round(($totalPresentes / $totalRegistros) * 100, 1) : 0;
         $generadoEl = date('d/m/Y H:i:s');
         $usuario = AuthController::user()['nombre'] ?? 'Administrador';
 
-        $colspanMain = $empleado ? 13 : 17;
+        $colspanMain = $empleado ? 15 : 19;
         ?>
         <!DOCTYPE html>
         <html lang="es">
@@ -1120,9 +1145,9 @@ class AsistenciaController {
             </table>
 
             <!-- RESUMEN DE INDICADORES -->
-            <table class="summary-table" style="width: 85%; margin-bottom: 15px;">
+            <table class="summary-table" style="width: 95%; margin-bottom: 15px;">
                 <tr style="background-color: #E2E8F0; font-weight: bold;">
-                    <td colspan="7" class="text-center">INDICADORES GENERALES DE ASISTENCIA DEL PERÍODO</td>
+                    <td colspan="8" class="text-center">INDICADORES GENERALES DE ASISTENCIA DEL PERÍODO</td>
                 </tr>
                 <tr class="text-center">
                     <td style="background-color: #F8FAFC;">Días / Reg. Evaluados</td>
@@ -1132,6 +1157,7 @@ class AsistenciaController {
                     <td style="background-color: #EFF6FF;">Justificados</td>
                     <td style="background-color: #ECFDF5;">% Puntualidad</td>
                     <td style="background-color: #ECFDF5;">Horas Trabajadas Netas</td>
+                    <td style="background-color: #F0FDF4;">Horas Extras Totales</td>
                 </tr>
                 <tr class="text-center" style="font-weight: bold; font-size: 11pt;">
                     <td><?= $totalRegistros ?></td>
@@ -1141,6 +1167,7 @@ class AsistenciaController {
                     <td style="color: #1E40AF;"><?= $totalJustificados ?></td>
                     <td style="color: #065F46;"><?= $tasaPuntualidad ?>%</td>
                     <td style="color: #065F46; font-weight: bold;"><?= $horasTrabajadasTotales ?></td>
+                    <td style="color: #047857; font-weight: bold;"><?= $horasExtraTotales ?></td>
                 </tr>
             </table>
 
@@ -1165,6 +1192,8 @@ class AsistenciaController {
                         <th class="th-col" style="width: 80px;">Tardanza</th>
                         <th class="th-col" style="width: 95px;">H. Trabajadas</th>
                         <th class="th-col" style="width: 75px;">H. Decimal</th>
+                        <th class="th-col" style="width: 85px;">H. Extras</th>
+                        <th class="th-col" style="width: 75px;">H. Ext Dec</th>
                         <th class="th-col" style="width: 100px;">Estado</th>
                         <th class="th-col" style="width: 180px;">Observaciones</th>
                     </tr>
@@ -1184,6 +1213,9 @@ class AsistenciaController {
                         $minTrab = (int)$r['minutos_trabajados'];
                         $strTrabajado = sprintf('%02dh %02dm', floor($minTrab / 60), $minTrab % 60);
                         $decTrabajado = number_format($minTrab / 60, 2);
+                        $minExtra = (int)($r['minutos_extra'] ?? 0);
+                        $strExtra = $minExtra > 0 ? sprintf('+%02dh %02dm', floor($minExtra / 60), $minExtra % 60) : '-';
+                        $decExtra = $minExtra > 0 ? ('+' . number_format($minExtra / 60, 2)) : '-';
                         $minTard = (int)$r['minutos_tardanza'];
                         $strTard = $minTard >= 60 ? sprintf('+%dh %02dm', floor($minTard / 60), $minTard % 60) : "+{$minTard} min";
                     ?>
@@ -1205,6 +1237,8 @@ class AsistenciaController {
                         <td class="text-center <?= $minTard > 0 ? 'bg-tardanza' : '' ?>"><?= $minTard > 0 ? $strTard : '-' ?></td>
                         <td class="text-center font-weight-bold" style="color: #065F46;"><?= $strTrabajado ?></td>
                         <td class="text-center font-weight-bold" style="color: #1E40AF;"><?= $decTrabajado ?></td>
+                        <td class="text-center font-weight-bold" style="color: #047857;"><?= $strExtra ?></td>
+                        <td class="text-center font-weight-bold" style="color: #047857;"><?= $decExtra ?></td>
                         <td class="text-center <?= $classBg ?>"><?= $st ?></td>
                         <td><?= htmlspecialchars($r['observaciones'] ?? '') ?></td>
                     </tr>

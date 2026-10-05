@@ -154,71 +154,80 @@ if (!empty($dispositivoId)) {
             </div>
         </div>
 
-        <!-- FILTER AND ACTIONS CARD -->
-        <div class="card mb-4 no-print">
-            <div class="card-header d-flex align-items-center justify-content-between flex-wrap" style="padding: 0.85rem 1.25rem;">
-                <h3 class="card-title font-weight-bold text-dark mb-0 d-flex align-items-center" style="font-size: 0.92rem;">
-                    <i class="fa-solid fa-filter mr-2" style="color: #1e40af;"></i> Filtros y Auditoría de Marcaciones
-                </h3>
-                <div class="d-flex align-items-center flex-wrap" style="gap: 8px; margin-left: auto;">
-                    <?php if (in_array($userRole, ['ADMIN', 'RRHH'], true)): ?>
-                        <div class="dropdown d-inline">
-                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="syncRelojDropdownMarc" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" title="Sincronizar marcaciones directamente desde el reloj">
-                                <i class="fa-solid fa-fingerprint mr-1 text-primary"></i> Sincronizar Reloj
-                            </button>
-                            <div class="dropdown-menu dropdown-menu-right shadow-sm border-0" aria-labelledby="syncRelojDropdownMarc">
-                                <h6 class="dropdown-header font-weight-bold text-primary" style="font-size: 0.78rem;"><i class="fa-solid fa-clock mr-1"></i> Extracción Biométrico ZKTeco</h6>
-                                <form method="POST" action="?route=dispositivos&action=sincronizar" class="px-2 py-1 m-0">
-                                    <?= csrf_field() ?>
-                                    <input type="hidden" name="mode" value="incremental">
-                                    <button type="submit" class="dropdown-item py-2" style="font-size: 0.85rem;">
-                                        <i class="fa-solid fa-bolt mr-2 text-primary"></i> Sincronizar Hoy / Rápido
-                                    </button>
-                                </form>
-                                <form method="POST" action="?route=dispositivos&action=sincronizar" class="px-2 py-1 m-0">
-                                    <?= csrf_field() ?>
-                                    <input type="hidden" name="mode" value="days">
-                                    <input type="hidden" name="days" value="7">
-                                    <button type="submit" class="dropdown-item py-2" style="font-size: 0.85rem;">
-                                        <i class="fa-solid fa-calendar-week mr-2 text-primary"></i> Sincronizar Últimos 7 Días
-                                    </button>
-                                </form>
-                                <div class="dropdown-divider my-1"></div>
-                                <form method="POST" action="?route=dispositivos&action=sincronizar" class="px-2 py-1 m-0" onsubmit="return confirm('¿Deseas extraer el 100% de las marcaciones almacenadas en el reloj físico?')">
-                                    <?= csrf_field() ?>
-                                    <input type="hidden" name="mode" value="full">
-                                    <button type="submit" class="dropdown-item py-2 font-weight-bold" style="font-size: 0.85rem; color: #1e40af;">
-                                        <i class="fa-solid fa-cloud-arrow-down mr-2"></i> Histórico Completo del Reloj
-                                    </button>
-                                </form>
-                            </div>
+        <!-- ACTIONS TOOLBAR -->
+        <div class="actions-toolbar no-print mb-3">
+            <div class="actions-toolbar-group">
+                <span class="font-weight-bold text-dark" style="font-size: 0.95rem;">
+                    <i class="fa-solid fa-fingerprint mr-2 text-primary"></i> Operaciones y Auditoría de Marcaciones
+                </span>
+            </div>
+            <div class="actions-toolbar-group flex-wrap">
+                <?php if (in_array($userRole, ['ADMIN', 'RRHH'], true)): ?>
+                    <div class="dropdown d-inline">
+                        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="syncRelojDropdownMarc" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" title="Sincronizar marcaciones directamente desde el reloj">
+                            <i class="fa-solid fa-fingerprint mr-1 text-primary"></i> Sincronizar Reloj
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-right shadow-sm border-0" aria-labelledby="syncRelojDropdownMarc">
+                            <h6 class="dropdown-header font-weight-bold text-primary" style="font-size: 0.78rem;"><i class="fa-solid fa-clock mr-1"></i> Extracción Biométrico ZKTeco</h6>
+                            <form method="POST" action="?route=dispositivos&action=sincronizar" class="px-2 py-1 m-0">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="mode" value="incremental">
+                                <button type="submit" class="dropdown-item py-2" style="font-size: 0.85rem;">
+                                    <i class="fa-solid fa-bolt mr-2 text-primary"></i> Sincronizar Hoy / Rápido
+                                </button>
+                            </form>
+                            <form method="POST" action="?route=dispositivos&action=sincronizar" class="px-2 py-1 m-0">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="mode" value="days">
+                                <input type="hidden" name="days" value="7">
+                                <button type="submit" class="dropdown-item py-2" style="font-size: 0.85rem;">
+                                    <i class="fa-solid fa-calendar-week mr-2 text-primary"></i> Sincronizar Últimos 7 Días
+                                </button>
+                            </form>
+                            <div class="dropdown-divider my-1"></div>
+                            <form method="POST" action="?route=dispositivos&action=sincronizar" class="px-2 py-1 m-0" onsubmit="return confirm('¿Deseas extraer el 100% de las marcaciones almacenadas en el reloj físico?')">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="mode" value="full">
+                                <button type="submit" class="dropdown-item py-2 font-weight-bold" style="font-size: 0.85rem; color: #1e40af;">
+                                    <i class="fa-solid fa-cloud-arrow-down mr-2"></i> Histórico Completo del Reloj
+                                </button>
+                            </form>
                         </div>
-
-                        <button class="btn btn-primary btn-sm" data-toggle="modal" data-target="#modalNuevaMarcacion">
-                            <i class="fa-solid fa-plus mr-1"></i> Registrar Marcación
-                        </button>
-                    <?php endif; ?>
-
-                    <?php if ($userRole === 'ADMIN'): ?>
-                        <form method="POST" action="?route=asistencia&action=recalcular" class="d-inline" onsubmit="return confirm('¿Deseas recalcular y consolidar la asistencia laboral para el período del <?= date('d/m/Y', strtotime($fechaInicio)) ?> al <?= date('d/m/Y', strtotime($fechaFin)) ?>?')">
-                            <?= csrf_field() ?>
-                            <input type="hidden" name="fecha_inicio" value="<?= htmlspecialchars($fechaInicio) ?>">
-                            <input type="hidden" name="fecha_fin" value="<?= htmlspecialchars($fechaFin) ?>">
-                            <button type="submit" class="btn btn-outline-secondary btn-sm" title="Recalcular asistencia para el período filtrado">
-                                <i class="fa-solid fa-calculator mr-1"></i> Recalcular Asistencia
-                            </button>
-                        </form>
-                    <?php endif; ?>
-
-                    <div class="btn-group btn-group-sm">
-                        <a href="?route=marcaciones&fecha_inicio=<?= urlencode($fechaInicio) ?>&fecha_fin=<?= urlencode($fechaFin) ?>&departamento_id=<?= urlencode((string)($departamentoId ?? '')) ?>&dispositivo_id=<?= urlencode((string)($dispositivoId ?? '')) ?>&tipo=<?= urlencode((string)($tipo ?? '')) ?>&search=<?= urlencode($search ?? '') ?>&export=excel" class="btn btn-outline-secondary" title="Descargar reporte en Excel">
-                            <i class="fa-solid fa-file-excel mr-1 text-success"></i> Excel
-                        </a>
-                        <button type="button" class="btn btn-outline-secondary" onclick="window.print()" title="Imprimir reporte oficial o Guardar como PDF">
-                            <i class="fa-solid fa-print mr-1 text-secondary"></i> PDF
-                        </button>
                     </div>
+
+                    <button class="btn btn-primary btn-sm" data-toggle="modal" data-target="#modalNuevaMarcacion">
+                        <i class="fa-solid fa-plus mr-1"></i> Registrar Marcación
+                    </button>
+                <?php endif; ?>
+
+                <?php if (in_array($userRole, ['ADMIN', 'RRHH', 'SUPERVISOR', 'ASISTENTE'], true) || AuthController::hasPermission('asistencia')): ?>
+                    <form method="POST" action="?route=asistencia&action=recalcular" class="d-inline" onsubmit="return confirm('¿Deseas recalcular y consolidar la asistencia laboral para el período del <?= date('d/m/Y', strtotime($fechaInicio)) ?> al <?= date('d/m/Y', strtotime($fechaFin)) ?>?')">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="fecha_inicio" value="<?= htmlspecialchars($fechaInicio) ?>">
+                        <input type="hidden" name="fecha_fin" value="<?= htmlspecialchars($fechaFin) ?>">
+                        <button type="submit" class="btn btn-outline-secondary btn-sm" title="Recalcular asistencia para el período filtrado">
+                            <i class="fa-solid fa-calculator mr-1"></i> Recalcular Asistencia
+                        </button>
+                    </form>
+                <?php endif; ?>
+
+                <div class="btn-group btn-group-sm">
+                    <a href="?route=marcaciones&fecha_inicio=<?= urlencode($fechaInicio) ?>&fecha_fin=<?= urlencode($fechaFin) ?>&departamento_id=<?= urlencode((string)($departamentoId ?? '')) ?>&dispositivo_id=<?= urlencode((string)($dispositivoId ?? '')) ?>&tipo=<?= urlencode((string)($tipo ?? '')) ?>&search=<?= urlencode($search ?? '') ?>&export=excel" class="btn btn-outline-secondary" title="Descargar reporte en Excel">
+                        <i class="fa-solid fa-file-excel mr-1 text-success"></i> Excel
+                    </a>
+                    <button type="button" class="btn btn-outline-secondary" onclick="window.print()" title="Imprimir reporte oficial o Guardar como PDF">
+                        <i class="fa-solid fa-print mr-1 text-secondary"></i> PDF
+                    </button>
                 </div>
+            </div>
+        </div>
+
+        <!-- FILTER CARD -->
+        <div class="card mb-4 no-print">
+            <div class="card-header py-2 px-3">
+                <h3 class="card-title font-weight-bold text-dark mb-0 d-flex align-items-center" style="font-size: 0.92rem;">
+                    <i class="fa-solid fa-filter mr-2 text-primary"></i> Filtros de Auditoría de Marcaciones
+                </h3>
             </div>
             <div class="card-body p-4">
                 <form method="GET" action="" class="row align-items-end">
@@ -236,12 +245,17 @@ if (!empty($dispositivoId)) {
 
                     <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
                         <label class="form-label-custom"><i class="fa-solid fa-building"></i> Área / Dpto.</label>
-                        <select name="departamento_id" class="form-control">
-                            <option value="">-- Todas las Áreas --</option>
+                        <select name="departamento_id" class="form-control" <?= ($userRole === 'SUPERVISOR') ? 'disabled' : '' ?>>
+                            <?php if ($userRole !== 'SUPERVISOR'): ?>
+                                <option value="">-- Todas las Áreas --</option>
+                            <?php endif; ?>
                             <?php foreach ($departamentos as $dep): ?>
                                 <option value="<?= $dep['id'] ?>" <?= ($departamentoId ?? '') == $dep['id'] ? 'selected' : '' ?>><?= htmlspecialchars($dep['nombre']) ?></option>
                             <?php endforeach; ?>
                         </select>
+                        <?php if ($userRole === 'SUPERVISOR' && !empty($departamentoId)): ?>
+                            <input type="hidden" name="departamento_id" value="<?= htmlspecialchars((string)$departamentoId) ?>">
+                        <?php endif; ?>
                     </div>
 
                     <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
@@ -287,31 +301,6 @@ if (!empty($dispositivoId)) {
         </div>
 
         <!-- MAIN TABLE CARD -->
-        <style>
-            .table-marcaciones-fit {
-                width: 100% !important;
-                table-layout: auto;
-            }
-            .table-marcaciones-fit th,
-            .table-marcaciones-fit td {
-                padding: 0.42rem 0.45rem !important;
-                vertical-align: middle !important;
-                font-size: 0.815rem !important;
-            }
-            .table-marcaciones-fit th {
-                font-size: 0.73rem !important;
-                white-space: nowrap;
-                letter-spacing: 0.02em !important;
-            }
-            .table-marcaciones-fit .cell-nowrap {
-                white-space: nowrap !important;
-            }
-            .table-marcaciones-fit .badge-pill-custom {
-                padding: 2px 6px !important;
-                font-size: 0.70rem !important;
-                white-space: nowrap;
-            }
-        </style>
         <div class="card">
             <div class="card-body p-0 table-responsive">
                 <table class="table table-hover table-sm table-marcaciones-fit mb-0">
@@ -593,7 +582,7 @@ if (!empty($dispositivoId)) {
 
 <!-- MODAL EVENT SOURCING: LÍNEA DE TIEMPO DE AUDITORÍA Y TRAZABILIDAD -->
 <div class="modal fade" id="modalTimelineEventos" tabindex="-1" role="dialog" aria-labelledby="timelineTitle" aria-modal="true" aria-hidden="true">
-    <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
         <div class="modal-content shadow-lg border-0">
             <div class="modal-header">
                 <h5 class="modal-title font-weight-bold" id="timelineTitle">
@@ -609,7 +598,7 @@ if (!empty($dispositivoId)) {
                         <small class="text-muted"><i class="fa-solid fa-id-card mr-1 text-secondary"></i> DNI: <span id="timelineEmpleadoDni">--</span> | ID Reloj: <span id="timelineEmpleadoReloj">--</span></small>
                     </div>
                     <div class="text-right">
-                        <span class="badge badge-light border px-2 py-1 font-weight-bold text-secondary" id="timelineFecha">--</span>
+                        <span class="badge-pill-custom badge-pill-neutral font-weight-bold" id="timelineFecha">--</span>
                         <div class="small text-muted mt-1" id="timelineTotalEventos">-- eventos registrados</div>
                     </div>
                 </div>

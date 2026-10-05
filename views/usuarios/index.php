@@ -84,14 +84,87 @@
             <?php endif; ?>
         <?php endif; ?>
 
-        <!-- ACTIONS TOOLBAR -->
-        <div class="actions-toolbar no-print">
-            <div class="actions-toolbar-group">
-                <h5 class="text-dark font-weight-bold mb-0" style="font-size: 1.05rem;">
-                    <i class="fa-solid fa-users-gear mr-2 text-primary"></i> Lista de Cuentas y Permisos de Módulos
-                </h5>
+        <?php
+            $userTotal = count($usuarios);
+            $userAdmin = 0;
+            $userGestion = 0;
+            $userActivos = 0;
+            foreach ($usuarios as $u) {
+                if (!empty($u['activo'])) $userActivos++;
+                if (($u['rol'] ?? '') === 'ADMIN') $userAdmin++;
+                if (in_array($u['rol'] ?? '', ['RRHH', 'SUPERVISOR', 'ASISTENTE'], true)) $userGestion++;
+            }
+            $userConsulta = $userTotal - $userAdmin - $userGestion;
+        ?>
+
+        <!-- KPI SUMMARY CARDS (PANTALLA) -->
+        <div class="row no-print mb-2">
+            <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="kpi-card h-100">
+                    <div class="kpi-card-header">
+                        <div>
+                            <div class="kpi-title">Total Cuentas</div>
+                            <div class="kpi-value"><?= $userTotal ?></div>
+                            <div class="kpi-subtitle"><b><?= $userActivos ?></b> cuentas activas</div>
+                        </div>
+                        <div class="kpi-icon-box">
+                            <i class="fa-solid fa-users-gear"></i>
+                        </div>
+                    </div>
+                </div>
             </div>
+            <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="kpi-card h-100">
+                    <div class="kpi-card-header">
+                        <div>
+                            <div class="kpi-title">Administradores</div>
+                            <div class="kpi-value"><?= $userAdmin ?></div>
+                            <div class="kpi-subtitle">Acceso global irrestricto</div>
+                        </div>
+                        <div class="kpi-icon-box">
+                            <i class="fa-solid fa-user-shield"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="kpi-card h-100">
+                    <div class="kpi-card-header">
+                        <div>
+                            <div class="kpi-title">Gestión Operativa</div>
+                            <div class="kpi-value"><?= $userGestion ?></div>
+                            <div class="kpi-subtitle">RRHH, Supervisor y Asistente</div>
+                        </div>
+                        <div class="kpi-icon-box">
+                            <i class="fa-solid fa-user-tie"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="kpi-card h-100">
+                    <div class="kpi-card-header">
+                        <div>
+                            <div class="kpi-title">Usuarios / Consulta</div>
+                            <div class="kpi-value"><?= $userConsulta ?></div>
+                            <div class="kpi-subtitle">Acceso de visualización básica</div>
+                        </div>
+                        <div class="kpi-icon-box">
+                            <i class="fa-solid fa-user-check"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ACTIONS TOOLBAR -->
+        <div class="actions-toolbar no-print mb-3">
             <div class="actions-toolbar-group">
+                <span class="font-weight-bold text-dark" style="font-size: 0.95rem;">
+                    <i class="fa-solid fa-users-gear mr-2 text-primary"></i> Lista de Cuentas y Permisos de Módulos
+                </span>
+            </div>
+            <div class="actions-toolbar-group flex-wrap">
                 <button type="button" class="btn btn-primary btn-sm font-weight-bold" onclick="openNewUserModal()">
                     <i class="fa-solid fa-user-plus mr-1"></i> Crear Nuevo Usuario
                 </button>
@@ -140,13 +213,15 @@
                                 </td>
                                 <td class="py-2 text-center">
                                     <?php if ($u['rol'] === 'ADMIN'): ?>
-                                        <span class="badge-pill-custom badge-pill-neutral font-weight-bold" style="font-size: 0.7rem; color: #0f172a; border-color: #cbd5e1; background: #f8fafc;"><i class="fa-solid fa-shield-halved mr-1 text-primary"></i> ADMIN</span>
+                                        <span class="badge-pill-custom badge-role-admin font-weight-bold" style="font-size: 0.72rem;"><i class="fa-solid fa-shield-halved mr-1"></i> ADMIN</span>
                                     <?php elseif ($u['rol'] === 'RRHH'): ?>
-                                        <span class="badge-pill-custom badge-pill-neutral font-weight-bold" style="font-size: 0.7rem; color: #1e3a8a; border-color: #bfdbfe; background: #eff6ff;"><i class="fa-solid fa-user-tie mr-1 text-primary"></i> RRHH</span>
+                                        <span class="badge-pill-custom badge-role-rrhh font-weight-bold" style="font-size: 0.72rem;"><i class="fa-solid fa-user-tie mr-1"></i> RRHH</span>
                                     <?php elseif ($u['rol'] === 'SUPERVISOR'): ?>
-                                        <span class="badge-pill-custom badge-pill-neutral font-weight-bold" style="font-size: 0.7rem; color: #334155; border-color: #e2e8f0; background: #f8fafc;"><i class="fa-solid fa-eye mr-1 text-secondary"></i> SUPERVISOR</span>
+                                        <span class="badge-pill-custom badge-role-supervisor font-weight-bold" style="font-size: 0.72rem;"><i class="fa-solid fa-eye mr-1"></i> SUPERVISOR</span>
+                                    <?php elseif ($u['rol'] === 'ASISTENTE'): ?>
+                                        <span class="badge-pill-custom badge-role-asistente font-weight-bold" style="font-size: 0.72rem;"><i class="fa-solid fa-clipboard-user mr-1"></i> ASISTENTE</span>
                                     <?php else: ?>
-                                        <span class="badge-pill-custom badge-pill-neutral font-weight-bold" style="font-size: 0.7rem;"><?= htmlspecialchars($u['rol']) ?></span>
+                                        <span class="badge-pill-custom badge-role-user font-weight-bold" style="font-size: 0.72rem;"><i class="fa-solid fa-user mr-1"></i> <?= htmlspecialchars($u['rol']) ?></span>
                                     <?php endif; ?>
                                 </td>
                                 <td class="py-2">

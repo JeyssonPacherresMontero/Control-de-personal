@@ -46,17 +46,89 @@
             </div>
         <?php endif; endif; ?>
 
-        <!-- ACTIONS TOOLBAR -->
-        <div class="actions-toolbar no-print">
-            <div class="actions-toolbar-group">
-                <div>
-                    <h5 class="text-dark font-weight-bold mb-0" style="font-size: 1.05rem;">
-                        <i class="fa-solid fa-server mr-2 text-primary"></i> Terminales Biométricas en Red
-                    </h5>
-                    <div class="text-muted small">Gestión de dispositivos ZKTeco, conectividad IP y protocolos de comunicación.</div>
+        <?php
+            $dispTotal = count($dispositivos);
+            $dispOnline = 0;
+            $dispHybridOrPush = 0;
+            $dispPendientes = 0;
+            foreach ($dispositivos as $d) {
+                if (($d['estado_conexion'] ?? '') === 'ONLINE') $dispOnline++;
+                if (in_array($d['modo'] ?? '', ['HYBRID', 'PUSH'], true)) $dispHybridOrPush++;
+                $dispPendientes += (int)($d['eventos_pendientes'] ?? 0);
+            }
+        ?>
+
+        <!-- KPI SUMMARY CARDS (PANTALLA) -->
+        <div class="row no-print mb-2">
+            <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="kpi-card h-100">
+                    <div class="kpi-card-header">
+                        <div>
+                            <div class="kpi-title">Terminales Biométricas</div>
+                            <div class="kpi-value"><?= $dispTotal ?></div>
+                            <div class="kpi-subtitle"><b><?= $dispOnline ?></b> en línea en red local</div>
+                        </div>
+                        <div class="kpi-icon-box">
+                            <i class="fa-solid fa-server"></i>
+                        </div>
+                    </div>
                 </div>
             </div>
+            <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="kpi-card h-100">
+                    <div class="kpi-card-header">
+                        <div>
+                            <div class="kpi-title">Estado de Conexión</div>
+                            <div class="kpi-value"><?= $dispOnline ?> / <?= $dispTotal ?></div>
+                            <div class="kpi-subtitle">Terminales respondiendo en red</div>
+                        </div>
+                        <div class="kpi-icon-box">
+                            <i class="fa-solid fa-network-wired"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="kpi-card h-100">
+                    <div class="kpi-card-header">
+                        <div>
+                            <div class="kpi-title">Modo Tiempo Real</div>
+                            <div class="kpi-value"><?= $dispHybridOrPush ?></div>
+                            <div class="kpi-subtitle">Enlace PUSH / Híbrido activo</div>
+                        </div>
+                        <div class="kpi-icon-box">
+                            <i class="fa-solid fa-arrows-split-up-and-left"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="kpi-card h-100">
+                    <div class="kpi-card-header">
+                        <div>
+                            <div class="kpi-title">Eventos en Cola</div>
+                            <div class="kpi-value"><?= $dispPendientes ?></div>
+                            <div class="kpi-subtitle">Marcaciones por consolidar</div>
+                        </div>
+                        <div class="kpi-icon-box">
+                            <i class="fa-solid fa-hourglass-half"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ACTIONS TOOLBAR -->
+        <div class="actions-toolbar no-print mb-3">
             <div class="actions-toolbar-group">
+                <div>
+                    <span class="font-weight-bold text-dark d-block" style="font-size: 0.95rem;">
+                        <i class="fa-solid fa-server mr-2 text-primary"></i> Terminales Biométricas en Red
+                    </span>
+                    <div class="text-muted small" style="font-size: 0.8rem;">Gestión de dispositivos ZKTeco, conectividad IP y protocolos de comunicación.</div>
+                </div>
+            </div>
+            <div class="actions-toolbar-group flex-wrap">
                 <!-- Botón Principal: Sync Rápido Hoy -->
                 <button type="button" class="btn btn-primary btn-sm" onclick="syncAllDevices('today', this)">
                     <i class="fa-solid fa-bolt mr-1"></i> Sincronizar Hoy
@@ -137,10 +209,54 @@
                                 </div>
                                 <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-color: #f1f5f9 !important;">
                                     <span class="text-muted small font-weight-medium">
+                                        <i class="fa-solid fa-arrows-split-up-and-left mr-2" style="color: #64748b; width: 16px;"></i> Modo de Sincronización
+                                    </span>
+                                    <span>
+                                        <?php if (($d['modo'] ?? 'PULL') === 'HYBRID'): ?>
+                                            <span class="badge-pill-custom badge-pill-justificado font-weight-bold" style="font-size: 0.72rem;"><i class="fa-solid fa-bolt mr-1"></i> HÍBRIDO (PUSH + PULL)</span>
+                                        <?php elseif (($d['modo'] ?? 'PULL') === 'PUSH'): ?>
+                                            <span class="badge-pill-custom badge-pill-presente font-weight-bold" style="font-size: 0.72rem;"><i class="fa-solid fa-cloud-arrow-up mr-1"></i> PUSH / ADMS</span>
+                                        <?php else: ?>
+                                            <span class="badge-pill-custom badge-pill-neutral font-weight-bold" style="font-size: 0.72rem;"><i class="fa-solid fa-download mr-1"></i> PULL (Sondeo)</span>
+                                        <?php endif; ?>
+                                    </span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-color: #f1f5f9 !important;">
+                                    <span class="text-muted small font-weight-medium">
                                         <i class="fa-solid fa-location-dot mr-2" style="color: #64748b; width: 16px;"></i> Ubicación / Sede
                                     </span>
                                     <span class="font-weight-semibold text-dark" style="font-size: 0.85rem;">
                                         <?= htmlspecialchars($d['ubicacion'] ?? 'Sede Principal') ?>
+                                    </span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-color: #f1f5f9 !important;">
+                                    <span class="text-muted small font-weight-medium">
+                                        <i class="fa-solid fa-gauge-high mr-2" style="color: #64748b; width: 16px;"></i> Latencia
+                                    </span>
+                                    <span class="font-monospace small font-weight-bold" id="device-latency-<?= $d['id'] ?>">
+                                        <?php if (!empty($d['ultima_latencia_ms'])): ?>
+                                            <?php $latClass = $d['ultima_latencia_ms'] < 200 ? 'presente' : ($d['ultima_latencia_ms'] < 1000 ? 'tardanza' : 'falta'); ?>
+                                            <span class="badge-pill-custom badge-pill-<?= $latClass ?> font-weight-bold" style="font-size: 0.72rem;">
+                                                <?= (int)$d['ultima_latencia_ms'] ?> ms
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="text-muted">-</span>
+                                        <?php endif; ?>
+                                    </span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-color: #f1f5f9 !important;">
+                                    <span class="text-muted small font-weight-medium">
+                                        <i class="fa-solid fa-layer-group mr-2" style="color: #64748b; width: 16px;"></i> Cola / Errores 24h
+                                    </span>
+                                    <span id="device-metrics-<?= $d['id'] ?>">
+                                        <?php if (($d['eventos_pendientes'] ?? 0) > 0): ?>
+                                            <span class="badge-pill-custom badge-pill-tardanza font-weight-bold" style="font-size: 0.72rem;"><i class="fa-solid fa-hourglass-half mr-1"></i><?= $d['eventos_pendientes'] ?> en cola</span>
+                                        <?php else: ?>
+                                            <span class="badge-pill-custom badge-pill-neutral" style="font-size: 0.72rem;"><i class="fa-solid fa-check text-success mr-1"></i>Al día</span>
+                                        <?php endif; ?>
+                                        <?php if (($d['errores_24h'] ?? 0) > 0): ?>
+                                            <span class="badge-pill-custom badge-pill-falta ml-1 font-weight-bold" style="font-size: 0.72rem;" title="<?= $d['errores_24h'] ?> fallos en 24h"><i class="fa-solid fa-triangle-exclamation mr-1"></i><?= $d['errores_24h'] ?> err</span>
+                                        <?php endif; ?>
                                     </span>
                                 </div>
                                 <div class="d-flex justify-content-between align-items-center py-2">
@@ -210,6 +326,8 @@
                             <th class="text-center">Fecha y Hora</th>
                             <th>Dispositivo</th>
                             <th class="text-center">Evento</th>
+                            <th class="text-center">Modo</th>
+                            <th class="text-center">Latencia</th>
                             <th class="text-center">Descargados</th>
                             <th class="text-center">Insertados</th>
                             <th class="text-center">Duplicados</th>
@@ -236,6 +354,18 @@
                                         };
                                     ?>
                                     <span class="badge-pill-custom badge-pill-neutral"><?= $eventoLabel ?></span>
+                                </td>
+                                <td class="text-center">
+                                    <?php if (($l['modo'] ?? '') === 'HYBRID'): ?>
+                                        <span class="badge-pill-custom badge-pill-justificado px-1 py-0 font-weight-bold" style="font-size: 0.72rem;">HYBRID</span>
+                                    <?php elseif (($l['modo'] ?? '') === 'PUSH'): ?>
+                                        <span class="badge-pill-custom badge-pill-presente px-1 py-0 font-weight-bold" style="font-size: 0.72rem;">PUSH</span>
+                                    <?php else: ?>
+                                        <span class="badge-pill-custom badge-pill-neutral px-1 py-0 font-weight-bold" style="font-size: 0.72rem;"><?= htmlspecialchars($l['modo'] ?? 'PULL') ?></span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="text-center font-monospace small">
+                                    <?= !empty($l['latencia_ms']) ? (int)$l['latencia_ms'] . ' ms' : '-' ?>
                                 </td>
                                 <td class="text-center font-weight-bold"><?= $l['total_descargados'] ?></td>
                                 <td class="text-center text-success font-weight-bold">+<?= $l['total_insertados'] ?></td>
@@ -339,6 +469,29 @@
                     </div>
                 </div>
 
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label class="modal-form-label">
+                                <i class="fa-solid fa-arrows-split-up-and-left mr-1 text-primary"></i> Modo de Sincronización
+                            </label>
+                            <select name="modo" id="dev_modo" class="form-control" style="height: 38px;">
+                                <option value="HYBRID">HÍBRIDO (PUSH tiempo real + PULL respaldo)</option>
+                                <option value="PULL" selected>PULL (Sondeo por IP / pyzk)</option>
+                                <option value="PUSH">PUSH (Servidor Cloud ADMS exclusivo)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label class="modal-form-label">
+                                <i class="fa-solid fa-key mr-1 text-muted"></i> Token API (Autenticación PUSH)
+                            </label>
+                            <input type="text" name="api_token" id="dev_api_token" class="form-control font-monospace" placeholder="Automático si se deja vacío" style="height: 38px;">
+                        </div>
+                    </div>
+                </div>
+
                 <div class="p-3 rounded border mt-2" style="background: #f8fafc; border-color: #e2e8f0 !important;">
                     <div class="custom-control custom-switch">
                         <input class="custom-control-input" type="checkbox" name="activo" id="dev_activo" value="1" checked>
@@ -383,7 +536,9 @@ function openNewDeviceModal() {
     document.getElementById('dev_ip').value = '';
     document.getElementById('dev_puerto').value = '4370';
     document.getElementById('dev_protocolo').value = 'TCP';
+    document.getElementById('dev_modo').value = 'PULL';
     document.getElementById('dev_clave').value = '0';
+    document.getElementById('dev_api_token').value = '';
     document.getElementById('dev_ubicacion').value = '';
     document.getElementById('dev_modelo').value = '';
     document.getElementById('dev_activo').checked = true;
@@ -397,18 +552,22 @@ function openEditDeviceModal(d) {
     document.getElementById('dev_ip').value = d.ip;
     document.getElementById('dev_puerto').value = d.puerto || 4370;
     document.getElementById('dev_protocolo').value = d.protocolo || 'TCP';
+    document.getElementById('dev_modo').value = d.modo || 'PULL';
     document.getElementById('dev_clave').value = d.clave_comunicacion || 0;
+    document.getElementById('dev_api_token').value = d.api_token || '';
     document.getElementById('dev_ubicacion').value = d.ubicacion || '';
     document.getElementById('dev_modelo').value = d.modelo || '';
     document.getElementById('dev_activo').checked = (parseInt(d.activo) === 1);
     $('#modalDispositivo').modal('show');
 }
 
-function updateDeviceCardUI(deviceId, status, lastSync, lastError) {
+function updateDeviceCardUI(deviceId, status, lastSync, lastError, latency = null, pendingEvents = null, errors24h = null) {
     const card = document.getElementById(`device-card-${deviceId}`);
     const badge = document.getElementById(`device-badge-${deviceId}`);
     const syncEl = document.getElementById(`device-sync-${deviceId}`);
     const errorEl = document.getElementById(`device-error-${deviceId}`);
+    const latencyEl = document.getElementById(`device-latency-${deviceId}`);
+    const metricsEl = document.getElementById(`device-metrics-${deviceId}`);
 
     if (card) {
         if (status === 'ONLINE') {
@@ -422,14 +581,36 @@ function updateDeviceCardUI(deviceId, status, lastSync, lastError) {
 
     if (badge) {
         if (status === 'ONLINE') {
-            badge.innerHTML = '<span class="badge badge-success px-2 py-1"><i class="fa-solid fa-signal mr-1"></i> EN LÍNEA</span>';
+            badge.innerHTML = '<span class="badge-pill-custom badge-pill-online"><i class="fa-solid fa-circle" style="font-size: 6px;"></i> En Línea</span>';
         } else {
-            badge.innerHTML = '<span class="badge badge-danger px-2 py-1"><i class="fa-solid fa-circle-xmark mr-1"></i> DESCONECTADO</span>';
+            badge.innerHTML = '<span class="badge-pill-custom badge-pill-offline"><i class="fa-solid fa-circle" style="font-size: 6px;"></i> Desconectado</span>';
         }
     }
 
     if (syncEl && lastSync) {
         syncEl.innerText = lastSync;
+    }
+
+    if (latencyEl && latency !== null) {
+        if (latency > 0) {
+            const latClass = latency < 200 ? 'presente' : (latency < 1000 ? 'tardanza' : 'falta');
+            latencyEl.innerHTML = `<span class="badge-pill-custom badge-pill-${latClass} font-weight-bold" style="font-size: 0.72rem;">${parseInt(latency)} ms</span>`;
+        } else {
+            latencyEl.innerHTML = '<span class="text-muted">-</span>';
+        }
+    }
+
+    if (metricsEl && pendingEvents !== null) {
+        let html = '';
+        if (pendingEvents > 0) {
+            html += `<span class="badge-pill-custom badge-pill-tardanza font-weight-bold" style="font-size: 0.72rem;"><i class="fa-solid fa-hourglass-half mr-1"></i>${pendingEvents} en cola</span>`;
+        } else {
+            html += `<span class="badge-pill-custom badge-pill-neutral" style="font-size: 0.72rem;"><i class="fa-solid fa-check text-success mr-1"></i>Al día</span>`;
+        }
+        if (errors24h > 0) {
+            html += `<span class="badge-pill-custom badge-pill-falta ml-1 font-weight-bold" style="font-size: 0.72rem;" title="${errors24h} fallos en 24h"><i class="fa-solid fa-triangle-exclamation mr-1"></i>${errors24h} err</span>`;
+        }
+        metricsEl.innerHTML = html;
     }
 
     if (errorEl) {
@@ -792,6 +973,35 @@ function openClearMemoryModal() {
         });
     }
 }
+
+// Telemetría en vivo: sondeo de estado de red y colas cada 20 segundos
+function pollDeviceHealth() {
+    fetch('?route=dispositivos&action=health_check', {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(res => res.ok ? res.json() : null)
+    .then(data => {
+        if (data && data.success && Array.isArray(data.dispositivos)) {
+            data.dispositivos.forEach(d => {
+                updateDeviceCardUI(
+                    d.id,
+                    d.estado_conexion,
+                    d.ultimo_sync ? d.ultimo_sync.substring(0, 16) : 'Nunca',
+                    d.ultimo_error,
+                    d.ultima_latencia_ms,
+                    d.eventos_pendientes,
+                    d.errores_24h
+                );
+            });
+        }
+    })
+    .catch(() => {});
+}
+
+// Iniciar sondeo automático tras cargar la página
+document.addEventListener('DOMContentLoaded', () => {
+    setInterval(pollDeviceHealth, 20000);
+});
 </script>
 
 <?php require_once APP_ROOT . '/views/layout/footer.php'; ?>

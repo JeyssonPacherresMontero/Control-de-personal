@@ -243,19 +243,102 @@
             </div>
         <?php endif; endif; ?>
 
-        <!-- FILTER AND ACTIONS CARD -->
+        <?php
+            $empTotal = count($empleados);
+            $empActivos = 0;
+            $empConTurno = 0;
+            $empConHuellas = 0;
+            foreach ($empleados as $e) {
+                if (!empty($e['activo'])) $empActivos++;
+                if (!empty($e['turno_id'])) $empConTurno++;
+                if (!empty($e['huellas_count']) && (int)$e['huellas_count'] > 0) $empConHuellas++;
+            }
+            $pctActivos = $empTotal > 0 ? round(($empActivos / $empTotal) * 100) : 0;
+            $pctHuellas = $empTotal > 0 ? round(($empConHuellas / $empTotal) * 100) : 0;
+        ?>
+
+        <!-- KPI SUMMARY CARDS (PANTALLA) -->
+        <div class="row no-print mb-2">
+            <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="kpi-card h-100">
+                    <div class="kpi-card-header">
+                        <div>
+                            <div class="kpi-title">Total Personal</div>
+                            <div class="kpi-value"><?= $empTotal ?></div>
+                            <div class="kpi-subtitle"><b><?= $pctActivos ?>%</b> Activos en el Padrón</div>
+                        </div>
+                        <div class="kpi-icon-box">
+                            <i class="fa-solid fa-users"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="kpi-card h-100">
+                    <div class="kpi-card-header">
+                        <div>
+                            <div class="kpi-title">Personal Activo</div>
+                            <div class="kpi-value"><?= $empActivos ?></div>
+                            <div class="kpi-subtitle">Habilitados para marcaciones</div>
+                        </div>
+                        <div class="kpi-icon-box">
+                            <i class="fa-solid fa-user-check"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="kpi-card h-100">
+                    <div class="kpi-card-header">
+                        <div>
+                            <div class="kpi-title">Con Turno Asignado</div>
+                            <div class="kpi-value"><?= $empConTurno ?></div>
+                            <div class="kpi-subtitle">Horario laboral configurado</div>
+                        </div>
+                        <div class="kpi-icon-box">
+                            <i class="fa-solid fa-business-time"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-3">
+                <div class="kpi-card h-100">
+                    <div class="kpi-card-header">
+                        <div>
+                            <div class="kpi-title">Huellas Enroladas</div>
+                            <div class="kpi-value"><?= $empConHuellas ?></div>
+                            <div class="kpi-subtitle"><b><?= $pctHuellas ?>%</b> con respaldo biométrico</div>
+                        </div>
+                        <div class="kpi-icon-box">
+                            <i class="fa-solid fa-fingerprint"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ACTIONS TOOLBAR -->
+        <div class="actions-toolbar no-print mb-3">
+            <div class="actions-toolbar-group">
+                <span class="font-weight-bold text-dark" style="font-size: 0.95rem;">
+                    <i class="fa-solid fa-users-gear mr-2 text-primary"></i> Operaciones y Gestión del Personal
+                </span>
+            </div>
+            <div class="actions-toolbar-group flex-wrap">
+                <?php if (in_array($userRole, ['ADMIN', 'RRHH'], true)): ?>
+                    <button class="btn btn-primary btn-sm" onclick="openNewEmpleadoModal()">
+                        <i class="fa-solid fa-user-plus mr-1"></i> Registrar Empleado
+                    </button>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <!-- FILTER CARD -->
         <div class="card mb-3 no-print">
-            <div class="card-header d-flex align-items-center justify-content-between flex-wrap py-2 px-3">
+            <div class="card-header py-2 px-3">
                 <h3 class="card-title font-weight-bold text-dark mb-0 d-flex align-items-center" style="font-size: 0.92rem;">
                     <i class="fa-solid fa-filter mr-2 text-primary"></i> Filtros de Búsqueda de Personal
                 </h3>
-                <?php if (in_array($userRole, ['ADMIN', 'RRHH'], true)): ?>
-                    <div class="card-tools my-1">
-                        <button class="btn btn-primary btn-sm" onclick="openNewEmpleadoModal()">
-                            <i class="fa-solid fa-user-plus mr-1"></i> Registrar Empleado
-                        </button>
-                    </div>
-                <?php endif; ?>
             </div>
             <div class="card-body py-3 px-3">
                 <form method="GET" action="" class="row align-items-end">
@@ -263,12 +346,17 @@
 
                     <div class="col-md-3 col-sm-6 mb-2">
                         <label class="form-label-custom"><i class="fa-solid fa-building mr-1"></i> Departamento</label>
-                        <select name="departamento_id" class="form-control form-control-sm">
-                            <option value="">-- Todos los Departamentos --</option>
+                        <select name="departamento_id" class="form-control form-control-sm" <?= ($userRole === 'SUPERVISOR') ? 'disabled' : '' ?>>
+                            <?php if ($userRole !== 'SUPERVISOR'): ?>
+                                <option value="">-- Todos los Departamentos --</option>
+                            <?php endif; ?>
                             <?php foreach ($departamentos as $d): ?>
                                 <option value="<?= $d['id'] ?>" <?= ($deptoId ?? '') == $d['id'] ? 'selected' : '' ?>><?= htmlspecialchars($d['nombre']) ?></option>
                             <?php endforeach; ?>
                         </select>
+                        <?php if ($userRole === 'SUPERVISOR' && !empty($deptoId)): ?>
+                            <input type="hidden" name="departamento_id" value="<?= htmlspecialchars((string)$deptoId) ?>">
+                        <?php endif; ?>
                     </div>
 
                     <div class="col-md-2 col-sm-6 mb-2">
@@ -438,7 +526,7 @@
 <?php if (in_array($userRole, ['ADMIN', 'RRHH'], true)): ?>
 <!-- MODAL GESTIÓN DE EMPLEADO -->
 <div class="modal fade" id="modalEmpleado" tabindex="-1">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
         <form method="POST" action="?route=empleados&action=guardar" class="modal-content">
             <?= csrf_field() ?>
             <div class="modal-header">
@@ -579,7 +667,7 @@
                         <span class="small text-muted">
                             Selecciona 1 o más dedos que el empleado registrará en el sensor biométrico:
                         </span>
-                        <span class="badge badge-light border text-secondary px-2 py-1 small">
+                        <span class="badge-pill-custom badge-pill-neutral font-weight-bold" style="font-size: 0.72rem;">
                             <i class="fa-solid fa-check-double mr-1 text-secondary"></i> Selección Múltiple Activada
                         </span>
                     </div>
@@ -707,9 +795,9 @@
                                 </div>
                                 <div>
                                     <small class="text-muted d-block" style="line-height: 1.1;">Dedos Seleccionados para Registro:</small>
-                                    <span class="badge badge-light border text-secondary px-2 py-1 font-weight-bold" id="emp_selected_fingers_count_badge">
-                                        <i class="fa-solid fa-fingerprint mr-1"></i> 1 Dedo Seleccionado
-                                    </span>
+                                    <span class="badge-pill-custom badge-pill-neutral font-weight-bold" id="emp_selected_fingers_count_badge">
+                                         <i class="fa-solid fa-fingerprint mr-1"></i> 1 Dedo Seleccionado
+                                     </span>
                                 </div>
                             </div>
                             <div>
@@ -732,7 +820,7 @@
                 <div class="p-3 rounded" style="background-color: #f8fafc; border: 1px solid #e2e8f0;">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <span class="font-weight-bold text-dark small text-uppercase">Acceso y Respaldo Biométrico</span>
-                        <span class="badge badge-light border text-secondary px-2 py-1" id="emp_inline_bio_badge">
+                        <span class="badge-pill-custom badge-pill-neutral" id="emp_inline_bio_badge">
                             <i class="fa-solid fa-fingerprint mr-1"></i> <span id="emp_inline_bio_text">0 Huellas en BDD</span>
                         </span>
                     </div>
@@ -793,7 +881,7 @@
 
                 <div class="p-3 rounded mb-3 text-center" style="background-color: #f8fafc; border: 1px solid #e2e8f0;">
                     <div class="h5 font-weight-bold text-dark mb-1" id="empBioDisplayUser">Empleado</div>
-                    <span class="badge badge-light border text-secondary px-2 py-1 font-monospace" id="empBioDisplayCode">ID Reloj: -</span>
+                    <span class="badge-pill-custom badge-pill-neutral font-monospace font-weight-bold" id="empBioDisplayCode">ID Reloj: -</span>
                 </div>
 
                 <div class="form-group mb-3">
@@ -818,7 +906,7 @@
                 <div class="p-3 rounded mb-3" style="background-color: #f8fafc; border: 1px solid #e2e8f0;" id="empBioFingersListContainer">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <span class="small font-weight-bold text-secondary">Verificación Biométrica:</span>
-                        <span id="empBioSummaryBadge" class="badge badge-light border text-secondary px-2 py-0.5">Consultando...</span>
+                        <span id="empBioSummaryBadge" class="badge-pill-custom badge-pill-neutral">Consultando...</span>
                     </div>
                     <div id="empBioFingersList" class="d-flex flex-column" style="gap: 6px;">
                         <div class="text-center text-muted small py-2">

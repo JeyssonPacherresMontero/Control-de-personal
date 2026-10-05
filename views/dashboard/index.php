@@ -31,6 +31,10 @@
                         <i class="fa-solid fa-users-gear mr-2 text-primary"></i> Panel de Recursos Humanos
                     <?php elseif ($activeRoleView === 'SUPERVISOR'): ?>
                         <i class="fa-solid fa-user-tie mr-2 text-primary"></i> Panel de Supervisión
+                    <?php elseif ($activeRoleView === 'ASISTENTE'): ?>
+                        <i class="fa-solid fa-clipboard-user mr-2 text-primary"></i> Panel de Asistente
+                    <?php elseif (in_array($activeRoleView, ['USER', 'USUARIO'], true)): ?>
+                        <i class="fa-solid fa-chart-pie mr-2 text-primary"></i> Panel de Usuario
                     <?php else: ?>
                         <i class="fa-solid fa-chart-pie mr-2 text-primary"></i> Panel Principal
                     <?php endif; ?>
@@ -42,6 +46,10 @@
                         Puntualidad, ausentismo y horas trabajadas del personal.
                     <?php elseif ($activeRoleView === 'SUPERVISOR'): ?>
                         Control en tiempo real del personal en turno.
+                    <?php elseif ($activeRoleView === 'ASISTENTE'): ?>
+                        Control de asistencia diaria, permisos y justificaciones del personal.
+                    <?php elseif (in_array($activeRoleView, ['USER', 'USUARIO'], true)): ?>
+                        Consulta general de asistencias, puntualidad y marcaciones.
                     <?php else: ?>
                         Resumen general de asistencia y métricas del personal.
                     <?php endif; ?>
@@ -66,6 +74,17 @@
                 <?php elseif ($activeRoleView === 'SUPERVISOR'): ?>
                     <a href="?route=asistencia&fecha_inicio=<?= $today ?>&fecha_fin=<?= $today ?>" class="btn btn-xs btn-primary">
                         <i class="fa-solid fa-list-check mr-1"></i> Asistencia de Hoy
+                    </a>
+                <?php elseif ($activeRoleView === 'ASISTENTE'): ?>
+                    <a href="?route=asistencia&fecha_inicio=<?= $today ?>&fecha_fin=<?= $today ?>" class="btn btn-xs btn-primary mr-1">
+                        <i class="fa-solid fa-calendar-check mr-1"></i> Asistencia de Hoy
+                    </a>
+                    <a href="?route=justificaciones" class="btn btn-xs btn-outline-primary">
+                        <i class="fa-solid fa-file-signature mr-1"></i> Justificaciones
+                    </a>
+                <?php else: ?>
+                    <a href="?route=asistencia&fecha_inicio=<?= $today ?>&fecha_fin=<?= $today ?>" class="btn btn-xs btn-primary">
+                        <i class="fa-solid fa-calendar-check mr-1"></i> Ver Asistencia de Hoy
                     </a>
                 <?php endif; ?>
             </div>
@@ -937,38 +956,48 @@
 
         <?php else: ?>
             <!-- =================================================================== -->
-            <!-- VISTA: SOLO CONSULTA / GENERAL                                     -->
+            <!-- VISTA: SOLO CONSULTA / GENERAL / USUARIO / ASISTENTE               -->
             <!-- =================================================================== -->
             <div class="row">
-                <div class="col-lg-4 col-12 mb-2">
+                <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-2">
                     <div class="kpi-card h-100">
                         <div class="kpi-card-header">
                             <div>
                                 <div class="kpi-title">Total Presentes Hoy</div>
                                 <div class="kpi-value"><?= $presentesHoy ?></div>
-                                <div class="kpi-subtitle">Personal con ingreso registrado</div>
+                                <div class="kpi-subtitle">Personal con ingreso puntual registrado</div>
                             </div>
                             <div class="kpi-icon-box">
                                 <i class="fa-solid fa-user-check"></i>
                             </div>
                         </div>
+                        <div>
+                            <a href="?route=asistencia&fecha_inicio=<?= $today ?>&fecha_fin=<?= $today ?>&estado=PRESENTE" class="kpi-footer-link">
+                                Ver presentes <i class="fas fa-arrow-right ml-1"></i>
+                            </a>
+                        </div>
                     </div>
                 </div>
-                <div class="col-lg-4 col-12 mb-2">
+                <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-2">
                     <div class="kpi-card h-100">
                         <div class="kpi-card-header">
                             <div>
                                 <div class="kpi-title">Tardanzas Hoy</div>
                                 <div class="kpi-value"><?= $tardanzasHoy ?></div>
-                                <div class="kpi-subtitle">Ingresos fuera de tolerancia</div>
+                                <div class="kpi-subtitle"><?= (int)($statsHoy['total_minutos_tardanza'] ?? 0) ?> min acumulados hoy</div>
                             </div>
                             <div class="kpi-icon-box">
                                 <i class="fa-solid fa-clock-rotate-left"></i>
                             </div>
                         </div>
+                        <div>
+                            <a href="?route=asistencia&fecha_inicio=<?= $today ?>&fecha_fin=<?= $today ?>&estado=TARDANZA" class="kpi-footer-link">
+                                Ver tardanzas <i class="fas fa-arrow-right ml-1"></i>
+                            </a>
+                        </div>
                     </div>
                 </div>
-                <div class="col-lg-4 col-12 mb-2">
+                <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-2">
                     <div class="kpi-card h-100">
                         <div class="kpi-card-header">
                             <div>
@@ -979,6 +1008,30 @@
                             <div class="kpi-icon-box">
                                 <i class="fa-solid fa-user-slash"></i>
                             </div>
+                        </div>
+                        <div>
+                            <a href="?route=asistencia&fecha_inicio=<?= $today ?>&fecha_fin=<?= $today ?>&estado=FALTA" class="kpi-footer-link">
+                                Ver inasistencias <i class="fas fa-arrow-right ml-1"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-lg-6 col-md-6 col-12 mb-2">
+                    <div class="kpi-card h-100">
+                        <div class="kpi-card-header">
+                            <div>
+                                <div class="kpi-title">Tasa de Asistencia Hoy</div>
+                                <div class="kpi-value"><?= $tasaAsistenciaHoy ?>%</div>
+                                <div class="kpi-subtitle"><?= $totalHoyConteo ?> marcaciones procesadas</div>
+                            </div>
+                            <div class="kpi-icon-box">
+                                <i class="fa-solid fa-chart-pie"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <a href="?route=asistencia&fecha_inicio=<?= $today ?>&fecha_fin=<?= $today ?>" class="kpi-footer-link">
+                                Ver reporte completo <i class="fas fa-arrow-right ml-1"></i>
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -1026,21 +1079,21 @@
                                     <span style="width: 10px; height: 10px; border-radius: 2px; display: inline-block; background-color: #10b981; margin-right: 5px;"></span>
                                     <span class="text-muted mr-1">Presentes:</span>
                                     <strong class="text-success" id="leyenda-total-presentes-consulta"><?= $totalesTendencia['presentes'] ?? 0 ?></strong>
-                                    <span class="badge badge-light border text-success ml-1 font-weight-bold" id="leyenda-porc-presentes-consulta" style="font-size: 0.68rem;"><?= $totalesTendencia['porc_presentes'] ?? 0 ?>%</span>
+                                    <span class="badge-pill-custom badge-pill-presente ml-1" id="leyenda-porc-presentes-consulta" style="font-size: 0.68rem;"><?= $totalesTendencia['porc_presentes'] ?? 0 ?>%</span>
                                 </span>
 
                                 <span class="d-inline-flex align-items-center legend-item-btn" id="legend-item-tardanzas-consulta" onclick="toggleTendenciaDataset(1, 'consulta')" title="Clic para ocultar o mostrar 'Tardanzas' en el gráfico" style="cursor: pointer; user-select: none; transition: all 0.2s ease;">
                                     <span style="width: 10px; height: 10px; border-radius: 2px; display: inline-block; background-color: #f59e0b; margin-right: 5px;"></span>
                                     <span class="text-muted mr-1">Tardanzas:</span>
                                     <strong class="text-warning" id="leyenda-total-tardanzas-consulta"><?= $totalesTendencia['tardanzas'] ?? 0 ?></strong>
-                                    <span class="badge badge-light border text-warning ml-1 font-weight-bold" id="leyenda-porc-tardanzas-consulta" style="font-size: 0.68rem;"><?= $totalesTendencia['porc_tardanzas'] ?? 0 ?>%</span>
+                                    <span class="badge-pill-custom badge-pill-tardanza ml-1" id="leyenda-porc-tardanzas-consulta" style="font-size: 0.68rem;"><?= $totalesTendencia['porc_tardanzas'] ?? 0 ?>%</span>
                                 </span>
 
                                 <span class="d-inline-flex align-items-center legend-item-btn" id="legend-item-faltas-consulta" onclick="toggleTendenciaDataset(2, 'consulta')" title="Clic para ocultar o mostrar 'Faltas' en el gráfico" style="cursor: pointer; user-select: none; transition: all 0.2s ease;">
                                     <span style="width: 10px; height: 10px; border-radius: 2px; display: inline-block; background-color: #f43f5e; margin-right: 5px;"></span>
                                     <span class="text-muted mr-1">Faltas:</span>
                                     <strong class="text-danger" id="leyenda-total-faltas-consulta"><?= $totalesTendencia['faltas'] ?? 0 ?></strong>
-                                    <span class="badge badge-light border text-danger ml-1 font-weight-bold" id="leyenda-porc-faltas-consulta" style="font-size: 0.68rem;"><?= $totalesTendencia['porc_faltas'] ?? 0 ?>%</span>
+                                    <span class="badge-pill-custom badge-pill-falta ml-1" id="leyenda-porc-faltas-consulta" style="font-size: 0.68rem;"><?= $totalesTendencia['porc_faltas'] ?? 0 ?>%</span>
                                 </span>
                             </div>
 
@@ -1068,17 +1121,23 @@
                             </div>
                             <div class="pt-2 border-top">
                                 <div class="d-flex justify-content-between align-items-center py-1 border-bottom" style="font-size: 0.79rem;">
-                                    <span class="text-dark"><i class="fa-solid fa-circle text-success mr-1" style="font-size: 8px;"></i> <strong>Presentes</strong></span>
-                                    <span class="font-weight-bold text-dark"><?= $presentesHoy ?> <span class="badge badge-light border text-success ml-1"><?= $porcPresentes ?>%</span></span>
+                                    <span class="text-dark"><i class="fa-solid fa-circle text-success mr-1" style="font-size: 8px;"></i> <strong>Presentes</strong> (A tiempo)</span>
+                                    <span class="font-weight-bold text-dark"><?= $presentesHoy ?> <span class="badge-pill-custom badge-pill-presente ml-1" style="font-size: 0.7rem;"><?= $porcPresentes ?>%</span></span>
                                 </div>
                                 <div class="d-flex justify-content-between align-items-center py-1 border-bottom" style="font-size: 0.79rem;">
                                     <span class="text-dark"><i class="fa-solid fa-circle text-warning mr-1" style="font-size: 8px;"></i> <strong>Tardanzas</strong></span>
-                                    <span class="font-weight-bold text-dark"><?= $tardanzasHoy ?> <span class="badge badge-light border text-warning ml-1"><?= $porcTardanzas ?>%</span></span>
+                                    <span class="font-weight-bold text-dark"><?= $tardanzasHoy ?> <span class="badge-pill-custom badge-pill-tardanza ml-1" style="font-size: 0.7rem;"><?= $porcTardanzas ?>%</span></span>
                                 </div>
                                 <div class="d-flex justify-content-between align-items-center py-1 border-bottom" style="font-size: 0.79rem;">
-                                    <span class="text-dark"><i class="fa-solid fa-circle text-danger mr-1" style="font-size: 8px;"></i> <strong>Faltas</strong></span>
-                                    <span class="font-weight-bold text-dark"><?= (int)($statsHoy['faltas'] ?? 0) ?> <span class="badge badge-light border text-danger ml-1"><?= $porcFaltas ?>%</span></span>
+                                    <span class="text-dark"><i class="fa-solid fa-circle text-danger mr-1" style="font-size: 8px;"></i> <strong>Inasistencias</strong> (Faltas)</span>
+                                    <span class="font-weight-bold text-dark"><?= (int)($statsHoy['faltas'] ?? 0) ?> <span class="badge-pill-custom badge-pill-falta ml-1" style="font-size: 0.7rem;"><?= $porcFaltas ?>%</span></span>
                                 </div>
+                                <?php if (((int)($statsHoy['justificados'] ?? 0) > 0) || ((int)($statsHoy['sin_salida'] ?? 0) > 0)): ?>
+                                    <div class="d-flex justify-content-between align-items-center py-1" style="font-size: 0.79rem;">
+                                        <span class="text-secondary"><i class="fa-solid fa-circle text-primary mr-1" style="font-size: 8px;"></i> Justificados o En Curso</span>
+                                        <span class="font-weight-bold text-dark"><?= (int)($statsHoy['justificados'] ?? 0) + (int)($statsHoy['sin_salida'] ?? 0) ?> <span class="badge-pill-custom badge-pill-neutral ml-1" style="font-size: 0.7rem;"><?= round($porcJustificados + $porcSinSalida, 1) ?>%</span></span>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
