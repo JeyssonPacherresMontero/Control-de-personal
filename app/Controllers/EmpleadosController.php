@@ -125,7 +125,7 @@ class EmpleadosController {
         $cargoId = !empty($_POST['cargo_id']) ? (int)$_POST['cargo_id'] : null;
         $turnoId = !empty($_POST['turno_id']) ? (int)$_POST['turno_id'] : null;
         $fechaIngreso = !empty($_POST['fecha_ingreso']) ? $_POST['fecha_ingreso'] : null;
-        $activo = isset($_POST['activo']) ? 1 : 0;
+        $activo = (!empty($_POST['activo']) && $_POST['activo'] !== '0' && $_POST['activo'] !== 0) ? 1 : 0;
 
         $dedoMap = [
             1 => 'Pulgar Mano Derecha',

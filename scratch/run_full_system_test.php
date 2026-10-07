@@ -898,6 +898,7 @@ class SystemTestRunner {
         }
 
         // 2. Creación de terminal biométrico
+        $this->db->exec("DELETE FROM dispositivos WHERE ip = '192.168.1.250' OR nombre LIKE 'Reloj Test E2E%'");
         $dispNombre = 'Reloj Test E2E ' . time();
         $token = $client->getCsrfToken();
         $client->post('index.php?route=dispositivos&action=guardar', [
@@ -984,6 +985,8 @@ class SystemTestRunner {
         if ($emp) {
             $empId = (int)$emp['id'];
             $testFechaHora = date('Y-m-d') . ' 07:55:00';
+            $this->db->exec("DELETE FROM marcaciones WHERE id_empleado = $empId AND fecha_hora = '$testFechaHora'");
+            $this->db->exec("DELETE FROM eventos_asistencia WHERE aggregate_id LIKE 'emp_{$empId}_%' AND event_type = 'MARCACION_MANUAL_REGISTRADA'");
 
             $token = $client->getCsrfToken();
             $client->post('index.php?route=marcaciones&action=guardar_manual', [
@@ -1002,8 +1005,8 @@ class SystemTestRunner {
                 // 3. Verificar auditoría en EventStore
                 $eventoDb = $this->db->query("
                     SELECT * FROM eventos_asistencia 
-                    WHERE tipo_evento = 'MARCACION_MANUAL_REGISTRADA' 
-                      AND id_agregado LIKE 'emp_{$empId}_%' 
+                    WHERE event_type = 'MARCACION_MANUAL_REGISTRADA' 
+                      AND aggregate_id LIKE 'emp_{$empId}_%' 
                     ORDER BY id DESC LIMIT 1
                 ")->fetch();
                 if ($eventoDb) {
@@ -1259,6 +1262,8 @@ class SystemTestRunner {
     }
 }
 
-// Ejecutar runner
-$runner = new SystemTestRunner();
-$runner->runAll();
+// Ejecutar runner si se invoca directamente desde CLI
+if (php_sapi_name() === 'cli' && basename(__FILE__) === basename($_SERVER['SCRIPT_FILENAME'] ?? '')) {
+    $runner = new SystemTestRunner();
+    $runner->runAll();
+}

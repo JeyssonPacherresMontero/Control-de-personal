@@ -117,7 +117,18 @@ class JustificacionesController {
         $supervisorDeptoId = (int)($currentUser['departamento_id'] ?? 0);
 
         $idEmpleado = (int)($_POST['id_empleado'] ?? 0);
-        $tipo = $_POST['tipo'] ?? 'TARDANZA';
+        $rawTipo = strtoupper(trim((string)($_POST['tipo'] ?? 'TARDANZA')));
+        $tipoMap = [
+            'SALUD'   => 'PERMISO_MEDICO',
+            'MEDICO'  => 'PERMISO_MEDICO',
+            'PERMISO' => 'OTRO',
+        ];
+        $tipo = $tipoMap[$rawTipo] ?? $rawTipo;
+        $validTipos = ['TARDANZA', 'FALTA', 'PERMISO_MEDICO', 'COMISION_SERVICIO', 'VACACIONES', 'LICENCIA_MATERNIDAD_PATERNIDAD', 'OTRO'];
+        if (!in_array($tipo, $validTipos, true)) {
+            $tipo = 'OTRO';
+        }
+
         $fechaInicio = $_POST['fecha_inicio'] ?? date('Y-m-d');
         $fechaFin = $_POST['fecha_fin'] ?? $fechaInicio;
         $comisionDestino = trim($_POST['comision_destino'] ?? '');

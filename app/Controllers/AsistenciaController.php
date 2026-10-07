@@ -112,6 +112,8 @@ class AsistenciaController {
             $estadoUpper = strtoupper($estado);
             if ($estadoUpper === 'ASISTIERON') {
                 $where .= " AND (a.hora_entrada_real IS NOT NULL OR a.hora_salida_real IS NOT NULL OR a.estado IN ('PRESENTE', 'TARDANZA', 'SALIDA_SIN_MARCAR', 'ENTRADA_SIN_MARCAR', 'COMISION_SERVICIO'))";
+            } elseif ($estadoUpper === 'EN_JORNADA') {
+                $where .= " AND a.hora_entrada_real IS NOT NULL AND a.hora_salida_real IS NULL AND (a.observaciones LIKE '%Jornada en curso%' OR a.estado IN ('PRESENTE', 'TARDANZA'))";
             } elseif ($estadoUpper === 'PRESENTE') {
                 $where .= " AND a.estado = 'PRESENTE' AND a.hora_entrada_real IS NOT NULL";
             } elseif ($estadoUpper === 'PENDIENTE') {
@@ -492,10 +494,34 @@ class AsistenciaController {
                     }
                 }
             } else {
-                // Sin marcación de Entrada o sin Salida General: no se pueden computar horas trabajadas
+                // Sin marcación completa de Entrada y Salida General
                 $minutosTrabajados = 0;
                 $minutosExtra = 0;
-                if ($horaEntradaReal && !$horaSalidaReal && $estado === 'PRESENTE') {
+                $minutosSalidaTemprana = 0;
+
+                $isEnJornada = ($estado === 'EN_JORNADA') 
+                    || ($horaEntradaReal && !$horaSalidaReal && ($fecha === date('Y-m-d') || in_array($estado, ['PRESENTE', 'EN_JORNADA', 'TARDANZA'])));
+
+                if ($horaEntradaReal && !$horaSalidaReal && $isEnJornada) {
+                    // JORNADA EN CURSO: solo se ingresó / corrigió el ingreso matutino
+                    // El trabajador se mantiene en jornada oficial para capturar refrigerio y salida en el biométrico
+                    $estado = ($minutosTardanza > 0) ? 'TARDANZA' : 'PRESENTE';
+
+                    $hEntFmt = substr($horaEntradaReal, 11, 5);
+                    $dayOfWeek = (int)(new \DateTime($fecha))->format('N');
+                    $isSat = ($dayOfWeek === 6);
+                    $hSalProg = $isSat ? '13:00' : (!empty($actual['hora_salida_programada']) ? substr($actual['hora_salida_programada'], 0, 5) : '17:00');
+                    $obsJornada = "Jornada en curso (ingreso a las {$hEntFmt}) - Horas trabajadas se computarán al marcar salida general ({$hSalProg})";
+
+                    if (!empty($observaciones)) {
+                        if (!str_contains($observaciones, 'Jornada en curso')) {
+                            $observaciones = $obsJornada . " | " . $observaciones;
+                        }
+                    } else {
+                        $observaciones = $obsJornada;
+                    }
+                } elseif ($horaEntradaReal && !$horaSalidaReal && in_array($estado, ['PRESENTE', 'TARDANZA', 'EN_JORNADA'])) {
+                    // Fechas concluidas pasadas donde nunca se registró salida
                     $estado = 'SALIDA_SIN_MARCAR';
                 } elseif (!$horaEntradaReal && $horaSalidaReal && $estado === 'PRESENTE') {
                     $estado = 'ENTRADA_SIN_MARCAR';
@@ -612,10 +638,20 @@ class AsistenciaController {
                             VALUES (?, ?, 1, ?, 'salida', 'ADMIN_OFICIAL', 1, NOW())
                         ", [$empId, $codReloj, $horaSalidaReal]);
                     }
+                } else {
+                    // Si la salida se dejó vacía (por ej. En Jornada o Salida Sin Marcar):
+                    // Eliminar cualquier marcación artificial ADMIN_OFICIAL creada previamente para no reactivarla en recálculos
+                    Database::execute("
+                        DELETE FROM marcaciones 
+                        WHERE (id_empleado = :emp_id OR codigo_reloj = :cod_reloj)
+                          AND tipo = 'salida'
+                          AND tipo_verificacion = 'ADMIN_OFICIAL'
+                          AND DATE(fecha_hora) = :fecha
+                    ", [':emp_id' => $empId, ':cod_reloj' => $codReloj, ':fecha' => $fecha]);
                 }
 
                 // 3. Sincronizar Salida a Refrigerio en marcaciones
-                if (!empty($horaInicioRefrigerioReal)) {
+                if (!empty($horaInicioRefReal)) {
                     $mRefSal = Database::queryOne("
                         SELECT id FROM marcaciones 
                         WHERE (id_empleado = :emp_id OR codigo_reloj = :cod_reloj)
@@ -629,18 +665,26 @@ class AsistenciaController {
                             UPDATE marcaciones 
                             SET fecha_hora = :fhora, tipo = 'refrigerio_salida', procesado = 1 
                             WHERE id = :mid
-                        ", [':fhora' => $horaInicioRefrigerioReal, ':mid' => $mRefSal['id']]);
+                        ", [':fhora' => $horaInicioRefReal, ':mid' => $mRefSal['id']]);
                     } else {
                         Database::execute("
                             INSERT INTO marcaciones 
                             (id_empleado, codigo_reloj, id_dispositivo, fecha_hora, tipo, tipo_verificacion, procesado, creado_en)
                             VALUES (?, ?, 1, ?, 'refrigerio_salida', 'ADMIN_OFICIAL', 1, NOW())
-                        ", [$empId, $codReloj, $horaInicioRefrigerioReal]);
+                        ", [$empId, $codReloj, $horaInicioRefReal]);
                     }
+                } else {
+                    Database::execute("
+                        DELETE FROM marcaciones 
+                        WHERE (id_empleado = :emp_id OR codigo_reloj = :cod_reloj)
+                          AND tipo = 'refrigerio_salida'
+                          AND tipo_verificacion = 'ADMIN_OFICIAL'
+                          AND DATE(fecha_hora) = :fecha
+                    ", [':emp_id' => $empId, ':cod_reloj' => $codReloj, ':fecha' => $fecha]);
                 }
 
                 // 4. Sincronizar Retorno de Refrigerio en marcaciones
-                if (!empty($horaFinRefrigerioReal)) {
+                if (!empty($horaFinRefReal)) {
                     $mRefEnt = Database::queryOne("
                         SELECT id FROM marcaciones 
                         WHERE (id_empleado = :emp_id OR codigo_reloj = :cod_reloj)
@@ -654,14 +698,22 @@ class AsistenciaController {
                             UPDATE marcaciones 
                             SET fecha_hora = :fhora, tipo = 'refrigerio_entrada', procesado = 1 
                             WHERE id = :mid
-                        ", [':fhora' => $horaFinRefrigerioReal, ':mid' => $mRefEnt['id']]);
+                        ", [':fhora' => $horaFinRefReal, ':mid' => $mRefEnt['id']]);
                     } else {
                         Database::execute("
                             INSERT INTO marcaciones 
                             (id_empleado, codigo_reloj, id_dispositivo, fecha_hora, tipo, tipo_verificacion, procesado, creado_en)
                             VALUES (?, ?, 1, ?, 'refrigerio_entrada', 'ADMIN_OFICIAL', 1, NOW())
-                        ", [$empId, $codReloj, $horaFinRefrigerioReal]);
+                        ", [$empId, $codReloj, $horaFinRefReal]);
                     }
+                } else {
+                    Database::execute("
+                        DELETE FROM marcaciones 
+                        WHERE (id_empleado = :emp_id OR codigo_reloj = :cod_reloj)
+                          AND tipo = 'refrigerio_entrada'
+                          AND tipo_verificacion = 'ADMIN_OFICIAL'
+                          AND DATE(fecha_hora) = :fecha
+                    ", [':emp_id' => $empId, ':cod_reloj' => $codReloj, ':fecha' => $fecha]);
                 }
 
                 // Event Sourcing: Registrar evento inmutable de modificación administrativa de horario
@@ -990,7 +1042,20 @@ class AsistenciaController {
         session_write_close(); // Liberar bloqueo de sesión para consultas AJAX concurrentes
 
         $empId = (int)($_GET['id_empleado'] ?? 0);
-        $fecha = $_GET['fecha'] ?? date('Y-m-d');
+        $fecha = $_GET['fecha'] ?? null;
+        $asistId = (int)($_GET['id'] ?? 0);
+
+        if ($asistId > 0 && ($empId <= 0 || empty($fecha))) {
+            $asistRow = Database::queryOne("SELECT id_empleado, fecha FROM asistencia_diaria WHERE id = ?", [$asistId]);
+            if ($asistRow) {
+                $empId = (int)$asistRow['id_empleado'];
+                $fecha = $asistRow['fecha'];
+            }
+        }
+
+        if (empty($fecha)) {
+            $fecha = date('Y-m-d');
+        }
 
         if ($empId <= 0) {
             header('Content-Type: application/json; charset=utf-8');

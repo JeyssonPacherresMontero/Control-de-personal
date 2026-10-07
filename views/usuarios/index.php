@@ -43,7 +43,7 @@
                 </div>
             <?php elseif ($_GET['msg'] === 'error_pass_corta'): ?>
                 <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
-                    <i class="fa-solid fa-triangle-exclamation mr-2"></i> Error: La contraseña debe contener al menos 5 caracteres.
+                    <i class="fa-solid fa-triangle-exclamation mr-2"></i> Error: La contraseña debe tener al menos 8 caracteres, una mayúscula y un número.
                     <button type="button" class="close" data-dismiss="alert">&times;</button>
                 </div>
             <?php elseif ($_GET['msg'] === 'usuario_duplicado'): ?>

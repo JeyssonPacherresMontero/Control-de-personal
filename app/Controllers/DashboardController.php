@@ -243,7 +243,7 @@ class DashboardController {
 
         try {
             // Lanzar el cálculo en background vía CLI en vez de bloquear el request
-            $phpBin = PHP_BINARY;
+            $phpBin = defined('PHP_BIN') ? PHP_BIN : (PHP_BINARY ?: 'php');
             $script = APP_ROOT . '/app/Console/process_attendance.php';
             $cmd = "\"$phpBin\" \"$script\" \"$date\"";
 
@@ -373,6 +373,11 @@ class DashboardController {
             'labelPeriodo' => $labelPeriodo,
             'labels' => $chartLabels,
             'datasets' => [
+                'presentes' => $chartPresentes,
+                'tardanzas' => $chartTardanzas,
+                'faltas' => $chartFaltas
+            ],
+            'series' => [
                 'presentes' => $chartPresentes,
                 'tardanzas' => $chartTardanzas,
                 'faltas' => $chartFaltas

@@ -172,7 +172,7 @@
                                         <i class="fa-solid fa-utensils mr-2" style="color: #64748b; width: 16px;"></i> Refrigerio (L-V)
                                     </span>
                                     <span class="font-weight-semibold" style="color: #334155; font-size: 0.85rem;">
-                                        <?= $t['minutos_refrigerio'] ?> min <?= $t['hora_inicio_refrigerio'] ? '(' . substr($t['hora_inicio_refrigerio'], 0, 5) . ' &ndash; ' . substr($t['hora_fin_refrigerio'], 0, 5) . ')' : '(Flexible)' ?>
+                                        <?= $t['minutos_refrigerio'] ?> min <?= (!empty($t['hora_inicio_refrigerio']) && !empty($t['hora_fin_refrigerio'])) ? '(' . substr((string)$t['hora_inicio_refrigerio'], 0, 5) . ' &ndash; ' . substr((string)$t['hora_fin_refrigerio'], 0, 5) . ')' : '(Flexible)' ?>
                                     </span>
                                 </div>
                                 <div class="d-flex justify-content-between align-items-center py-2">

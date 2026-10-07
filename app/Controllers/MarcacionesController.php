@@ -360,7 +360,10 @@ class MarcacionesController {
         \App\Csrf::validateRequest();
 
         $idEmpleado = (int)($_POST['id_empleado'] ?? 0);
-        $fechaHora = trim($_POST['fecha_hora'] ?? '');
+        $fechaHora = str_replace('T', ' ', trim($_POST['fecha_hora'] ?? ''));
+        if (strlen($fechaHora) === 16) {
+            $fechaHora .= ':00';
+        }
         $tipo = $_POST['tipo'] ?? 'entrada';
         $idDispositivo = (int)($_POST['id_dispositivo'] ?? 1);
         $motivo = trim($_POST['motivo'] ?? 'Marcación registrada manualmente');
@@ -395,6 +398,8 @@ class MarcacionesController {
                 (id_empleado, codigo_reloj, id_dispositivo, fecha_hora, tipo, tipo_verificacion, idempotency_key, origen, procesado)
                 VALUES (?, ?, ?, ?, ?, ?, ?, 'MANUAL', 0)
                 ON DUPLICATE KEY UPDATE 
+                    id_empleado = VALUES(id_empleado),
+                    fecha_hora = VALUES(fecha_hora),
                     tipo = VALUES(tipo), 
                     tipo_verificacion = VALUES(tipo_verificacion),
                     idempotency_key = VALUES(idempotency_key),

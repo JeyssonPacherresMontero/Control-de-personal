@@ -360,7 +360,7 @@
                             <!-- Desglose de Métricas Claro y Detallado con Porcentajes -->
                             <div class="pt-2 border-top">
                                 <div class="d-flex justify-content-between align-items-center py-1 border-bottom" style="font-size: 0.79rem;">
-                                    <span class="text-dark"><i class="fa-solid fa-circle text-success mr-1" style="font-size: 8px;"></i> <strong>Presentes</strong> (A tiempo)</span>
+                                    <span class="text-dark"><i class="fa-solid fa-circle text-success mr-1" style="font-size: 8px;"></i> <strong>Presentes</strong> (Puntualidad)</span>
                                     <span class="font-weight-bold text-dark"><?= $presentesHoy ?> <span class="badge-pill-custom badge-pill-presente ml-1" style="font-size: 0.7rem;"><?= $porcPresentes ?>%</span></span>
                                 </div>
                                 <div class="d-flex justify-content-between align-items-center py-1 border-bottom" style="font-size: 0.79rem;">

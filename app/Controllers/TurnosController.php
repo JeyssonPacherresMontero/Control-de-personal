@@ -38,9 +38,9 @@ class TurnosController {
         $horaInicioRef = !empty($_POST['hora_inicio_refrigerio']) ? $_POST['hora_inicio_refrigerio'] : null;
         $horaFinRef = !empty($_POST['hora_fin_refrigerio']) ? $_POST['hora_fin_refrigerio'] : null;
         $minutosRef = (int)($_POST['minutos_refrigerio'] ?? 45);
-        $diasLab = isset($_POST['dias_laborables']) ? implode(',', $_POST['dias_laborables']) : '1,2,3,4,5,6';
-        $esNocturno = isset($_POST['es_nocturno']) ? 1 : 0;
-        $activo = isset($_POST['activo']) ? 1 : 0;
+        $diasLab = isset($_POST['dias_laborables']) ? (is_array($_POST['dias_laborables']) ? implode(',', $_POST['dias_laborables']) : (string)$_POST['dias_laborables']) : '1,2,3,4,5,6';
+        $esNocturno = (!empty($_POST['es_nocturno']) && $_POST['es_nocturno'] !== '0' && $_POST['es_nocturno'] !== 0) ? 1 : 0;
+        $activo = (!empty($_POST['activo']) && $_POST['activo'] !== '0' && $_POST['activo'] !== 0) ? 1 : 0;
 
         if (empty($nombre)) {
             header('Location: ?route=turnos&msg=campos_requeridos');

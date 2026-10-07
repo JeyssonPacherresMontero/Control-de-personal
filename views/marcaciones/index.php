@@ -200,7 +200,7 @@ if (!empty($dispositivoId)) {
                     </button>
                 <?php endif; ?>
 
-                <?php if (in_array($userRole, ['ADMIN', 'RRHH', 'SUPERVISOR', 'ASISTENTE'], true) || AuthController::hasPermission('asistencia')): ?>
+                <?php if (in_array($userRole, ['ADMIN', 'RRHH', 'SUPERVISOR', 'ASISTENTE'], true) || \App\Controllers\AuthController::hasPermission('asistencia')): ?>
                     <form method="POST" action="?route=asistencia&action=recalcular" class="d-inline" onsubmit="return confirm('¿Deseas recalcular y consolidar la asistencia laboral para el período del <?= date('d/m/Y', strtotime($fechaInicio)) ?> al <?= date('d/m/Y', strtotime($fechaFin)) ?>?')">
                         <?= csrf_field() ?>
                         <input type="hidden" name="fecha_inicio" value="<?= htmlspecialchars($fechaInicio) ?>">

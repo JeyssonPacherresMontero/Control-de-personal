@@ -320,3 +320,75 @@ Stack trace:
 Stack trace:
 #0 {main}
   thrown in Command line code on line 1
+[07-Oct-2026 10:58:41 America/Lima] [2026-10-07 10:58:41] Uncaught Exception: Class "AuthController" not found in C:\Users\JEYSSON\Downloads\Control de personal\views\asistencia\index.php:267
+Stack trace:
+#0 C:\Users\JEYSSON\Downloads\Control de personal\app\Controllers\AsistenciaController.php(254): require_once()
+#1 C:\Users\JEYSSON\Downloads\Control de personal\public\index.php(137): App\Controllers\AsistenciaController->index()
+#2 c:\Users\JEYSSON\Downloads\Control de personal\index.php(5): require_once('C:\\Users\\JEYSSO...')
+#3 {main}
+
+
+[07-Oct-2026 10:58:43 America/Lima] [2026-10-07 10:58:43] [SECURITY AUDIT] Usuario 'test_operador_1791388722' (ID: 13) ELIMINADO DEFINITIVAMENTE por el Administrador 'admin' (ID: 1)
+[07-Oct-2026 11:37:31 America/Lima] [2026-10-07 11:37:31] [SECURITY AUDIT] Usuario 'test_operador_1791391050' (ID: 14) ELIMINADO DEFINITIVAMENTE por el Administrador 'admin' (ID: 1)
+[07-Oct-2026 11:37:32 America/Lima] PHP Warning:  Undefined variable $horaFinRef in C:\Users\JEYSSON\Downloads\Control de personal\app\Controllers\TurnosController.php on line 64
+[07-Oct-2026 11:37:32 America/Lima] PHP Deprecated:  substr(): Passing null to parameter #1 ($string) of type string is deprecated in C:\Users\JEYSSON\Downloads\Control de personal\views\turnos\index.php on line 175
+[07-Oct-2026 11:37:32 America/Lima] PHP Warning:  Undefined variable $horaFinRef in C:\Users\JEYSSON\Downloads\Control de personal\app\Controllers\TurnosController.php on line 64
+[07-Oct-2026 11:42:41 America/Lima] [2026-10-07 11:42:41] [SECURITY AUDIT] Usuario 'test_operador_1791391360' (ID: 15) ELIMINADO DEFINITIVAMENTE por el Administrador 'admin' (ID: 1)
+[07-Oct-2026 11:42:42 America/Lima] PHP Warning:  Undefined variable $horaFinRef in C:\Users\JEYSSON\Downloads\Control de personal\app\Controllers\TurnosController.php on line 64
+[07-Oct-2026 11:42:42 America/Lima] PHP Deprecated:  substr(): Passing null to parameter #1 ($string) of type string is deprecated in C:\Users\JEYSSON\Downloads\Control de personal\views\turnos\index.php on line 175
+[07-Oct-2026 11:42:42 America/Lima] PHP Warning:  Undefined variable $horaFinRef in C:\Users\JEYSSON\Downloads\Control de personal\app\Controllers\TurnosController.php on line 64
+[07-Oct-2026 11:45:11 America/Lima] [2026-10-07 11:45:11] [SECURITY AUDIT] Usuario 'test_operador_1791391510' (ID: 16) ELIMINADO DEFINITIVAMENTE por el Administrador 'admin' (ID: 1)
+[07-Oct-2026 11:45:11 America/Lima] PHP Warning:  Undefined variable $horaFinRef in C:\Users\JEYSSON\Downloads\Control de personal\app\Controllers\TurnosController.php on line 64
+[07-Oct-2026 11:45:11 America/Lima] PHP Deprecated:  substr(): Passing null to parameter #1 ($string) of type string is deprecated in C:\Users\JEYSSON\Downloads\Control de personal\views\turnos\index.php on line 175
+[07-Oct-2026 11:45:11 America/Lima] PHP Warning:  Undefined variable $horaFinRef in C:\Users\JEYSSON\Downloads\Control de personal\app\Controllers\TurnosController.php on line 64
+[07-Oct-2026 11:52:25 America/Lima] [2026-10-07 11:52:25] [SECURITY AUDIT] Usuario 'test_operador_1791391944' (ID: 17) ELIMINADO DEFINITIVAMENTE por el Administrador 'admin' (ID: 1)
+[07-Oct-2026 11:52:26 America/Lima] PHP Warning:  Undefined variable $horaFinRef in C:\Users\JEYSSON\Downloads\Control de personal\app\Controllers\TurnosController.php on line 64
+[07-Oct-2026 11:52:26 America/Lima] PHP Deprecated:  substr(): Passing null to parameter #1 ($string) of type string is deprecated in C:\Users\JEYSSON\Downloads\Control de personal\views\turnos\index.php on line 175
+[07-Oct-2026 11:52:26 America/Lima] PHP Warning:  Undefined variable $horaFinRef in C:\Users\JEYSSON\Downloads\Control de personal\app\Controllers\TurnosController.php on line 64
+[07-Oct-2026 12:11:00 America/Lima] [2026-10-07 12:11:00] [SECURITY AUDIT] Usuario 'test_operador_1791393059' (ID: 18) ELIMINADO DEFINITIVAMENTE por el Administrador 'admin' (ID: 1)
+[07-Oct-2026 12:11:01 America/Lima] PHP Warning:  Undefined variable $horaFinRef in C:\Users\JEYSSON\Downloads\Control de personal\app\Controllers\TurnosController.php on line 64
+[07-Oct-2026 12:11:01 America/Lima] PHP Deprecated:  substr(): Passing null to parameter #1 ($string) of type string is deprecated in C:\Users\JEYSSON\Downloads\Control de personal\views\turnos\index.php on line 175
+[07-Oct-2026 12:11:01 America/Lima] PHP Warning:  Undefined variable $horaFinRef in C:\Users\JEYSSON\Downloads\Control de personal\app\Controllers\TurnosController.php on line 64
+[07-Oct-2026 12:17:57 America/Lima] [2026-10-07 12:17:57] [SECURITY AUDIT] Usuario 'test_operador_1791393476' (ID: 19) ELIMINADO DEFINITIVAMENTE por el Administrador 'admin' (ID: 1)
+[07-Oct-2026 12:39:21 America/Lima] [2026-10-07 12:39:21] Uncaught Exception: Error: las horas trabajadas deben computarse in C:\Users\JEYSSON\Downloads\Control de personal\scratch\test_en_jornada.php:99
+Stack trace:
+#0 C:\Users\JEYSSON\Downloads\Control de personal\scratch\test_en_jornada.php(99): assert(false, 'Error: las hora...')
+#1 C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php(158): {closure}()
+#2 C:\Users\JEYSSON\Downloads\Control de personal\scratch\test_en_jornada.php(22): App\Database::transaction(Object(Closure))
+#3 {main}
+
+
+[07-Oct-2026 12:40:20 America/Lima] [2026-10-07 12:40:20] Uncaught Exception: ROLLBACK_TEST_COMPLETE in C:\Users\JEYSSON\Downloads\Control de personal\scratch\test_en_jornada.php:104
+Stack trace:
+#0 C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php(158): {closure}()
+#1 C:\Users\JEYSSON\Downloads\Control de personal\scratch\test_en_jornada.php(22): App\Database::transaction(Object(Closure))
+#2 {main}
+
+
+[07-Oct-2026 12:42:09 America/Lima] [2026-10-07 12:42:09] Uncaught Exception: ROLLBACK_TEST_COMPLETE in C:\Users\JEYSSON\Downloads\Control de personal\scratch\test_en_jornada.php:84
+Stack trace:
+#0 C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php(158): {closure}()
+#1 C:\Users\JEYSSON\Downloads\Control de personal\scratch\test_en_jornada.php(17): App\Database::transaction(Object(Closure))
+#2 {main}
+
+
+[07-Oct-2026 12:48:29 America/Lima] [2026-10-07 12:48:29] Uncaught Exception: Call to undefined method App\Database::queryAll() in C:\Users\JEYSSON\Downloads\Control de personal\scratch\inspect_wilmer.php:17
+Stack trace:
+#0 {main}
+
+
+[07-Oct-2026 12:48:40 America/Lima] [2026-10-07 12:48:40] [SECURITY AUDIT] Usuario 'test_operador_1791395319' (ID: 20) ELIMINADO DEFINITIVAMENTE por el Administrador 'admin' (ID: 1)
+[07-Oct-2026 12:55:00 America/Lima] [2026-10-07 12:55:00] Uncaught Exception: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'control_personal.auditoria_modificaciones_asistencia' doesn't exist in C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php:66
+Stack trace:
+#0 C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php(66): PDO->prepare('SELECT * FROM a...')
+#1 C:\Users\JEYSSON\Downloads\Control de personal\scratch\check_audit.php(7): App\Database::query('SELECT * FROM a...')
+#2 {main}
+
+
+[07-Oct-2026 12:56:07 America/Lima] [2026-10-07 12:56:07] Uncaught Exception: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'id_empleado' in 'where clause' in C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php:66
+Stack trace:
+#0 C:\Users\JEYSSON\Downloads\Control de personal\app\Database.php(66): PDO->prepare('SELECT * FROM e...')
+#1 C:\Users\JEYSSON\Downloads\Control de personal\scratch\check_audit.php(7): App\Database::query('SELECT * FROM e...')
+#2 {main}
+
+

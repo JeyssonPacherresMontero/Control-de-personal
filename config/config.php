@@ -56,6 +56,17 @@ define('ATTENDANCE_DEBOUNCE_MINUTES', (int)($_ENV['ATTENDANCE_DEBOUNCE_MINUTES']
 define('APP_DEBUG', filter_var($_ENV['APP_DEBUG'] ?? false, FILTER_VALIDATE_BOOLEAN));
 define('API_SECRET_KEY', $_ENV['API_SECRET_KEY'] ?? 'zk_push_secret_key_8e94a1b89df50c3a218f4a');
 
+// Detección de binario PHP para tareas CLI en background
+if (!defined('PHP_BIN')) {
+    $detectedBin = $_ENV['PHP_BIN'] ?? (PHP_BINARY ?: 'php');
+    if (str_ends_with(strtolower($detectedBin), 'httpd.exe') || !file_exists($detectedBin)) {
+        if (file_exists('C:/xampp/php/php.exe')) {
+            $detectedBin = 'C:/xampp/php/php.exe';
+        }
+    }
+    define('PHP_BIN', $detectedBin);
+}
+
 // Manejo Global de Errores y Excepciones para Producción
 if (!defined('APP_ERROR_HANDLER_REGISTERED')) {
     define('APP_ERROR_HANDLER_REGISTERED', true);

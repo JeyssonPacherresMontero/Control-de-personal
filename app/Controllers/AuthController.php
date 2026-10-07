@@ -521,7 +521,7 @@ class AuthController {
                 echo json_encode(['success' => false, 'error' => $msg]);
                 exit;
             }
-            header('Location: ?route=' . self::getFirstAccessibleRoute() . '&msg_perfil_error=' . urlencode($msg));
+            header('Location: ?route=' . self::getFirstAccessibleRoute() . '&msg=error_campos&msg_perfil_error=' . urlencode($msg));
             exit;
         }
 
@@ -532,7 +532,7 @@ class AuthController {
                 echo json_encode(['success' => false, 'error' => $passError]);
                 exit;
             }
-            header('Location: ?route=' . self::getFirstAccessibleRoute() . '&msg_perfil_error=' . urlencode($passError));
+            header('Location: ?route=' . self::getFirstAccessibleRoute() . '&msg=error_pass_corta&msg_perfil_error=' . urlencode($passError));
             exit;
         }
 
@@ -543,7 +543,7 @@ class AuthController {
                 echo json_encode(['success' => false, 'error' => $msg]);
                 exit;
             }
-            header('Location: ?route=' . self::getFirstAccessibleRoute() . '&msg_perfil_error=' . urlencode($msg));
+            header('Location: ?route=' . self::getFirstAccessibleRoute() . '&msg=error_pass_no_coinciden&msg_perfil_error=' . urlencode($msg));
             exit;
         }
 
@@ -555,7 +555,7 @@ class AuthController {
                 echo json_encode(['success' => false, 'error' => $msg]);
                 exit;
             }
-            header('Location: ?route=' . self::getFirstAccessibleRoute() . '&msg_perfil_error=' . urlencode($msg));
+            header('Location: ?route=' . self::getFirstAccessibleRoute() . '&msg=error_actual&msg_perfil_error=' . urlencode($msg));
             exit;
         }
 
@@ -571,7 +571,7 @@ class AuthController {
             exit;
         }
 
-        header('Location: ?route=' . self::getFirstAccessibleRoute() . '&msg_perfil_ok=1');
+        header('Location: ?route=' . self::getFirstAccessibleRoute() . '&msg=guardado&msg_perfil_ok=1');
         exit;
     }
 

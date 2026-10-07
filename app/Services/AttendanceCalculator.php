@@ -59,7 +59,7 @@ class AttendanceCalculator {
 
         // 3. Carga en Lote: Registros manuales existentes protegidos
         $existingRecords = Database::query("
-            SELECT id_empleado, manual, estado 
+            SELECT id_empleado, manual, estado, hora_entrada_real, hora_salida_real, hora_inicio_refrigerio_real, hora_fin_refrigerio_real, observaciones 
             FROM asistencia_diaria 
             WHERE fecha = ?
         ", [$date]);
@@ -124,16 +124,27 @@ class AttendanceCalculator {
             if ($normEmpCode === '') $normEmpCode = '0';
             $turnoId = $emp['turno_id'] ? (int)$emp['turno_id'] : null;
 
-            // Si ya existe un registro modificado manualmente por RRHH, respetarlo
+            // Si ya existe un registro modificado manualmente por RRHH:
             if (isset($existingByEmp[$empId]) && (int)$existingByEmp[$empId]['manual'] === 1) {
-                $stats['processed']++;
-                $st = $existingByEmp[$empId]['estado'] ?? 'PRESENTE';
-                if ($st === 'PRESENTE') $stats['present']++;
-                elseif ($st === 'TARDANZA') $stats['late']++;
-                elseif ($st === 'FALTA' || $st === 'FALTA_INJUSTIFICADA') $stats['absent']++;
-                elseif ($st === 'JUSTIFICADO' || $st === 'PERMISO' || $st === 'VACACIONES') $stats['justified']++;
-                elseif ($st === 'SALIDA_SIN_MARCAR') $stats['missing_exit']++;
-                continue;
+                $exRec = $existingByEmp[$empId];
+                $tieneSalidaRegistrada = !empty($exRec['hora_salida_real']);
+                $esEstadoCerrado = in_array($exRec['estado'] ?? '', ['JUSTIFICADO', 'PERMISO', 'VACACIONES', 'COMISION_SERVICIO', 'DESCANSO']);
+
+                // Si ya tiene salida asignada o es justificación/vacaciones, respetar el registro completo y no recalcular
+                if ($tieneSalidaRegistrada || $esEstadoCerrado) {
+                    $stats['processed']++;
+                    $st = $exRec['estado'] ?? 'PRESENTE';
+                    if ($st === 'PRESENTE') $stats['present']++;
+                    elseif ($st === 'TARDANZA') $stats['late']++;
+                    elseif ($st === 'FALTA' || $st === 'FALTA_INJUSTIFICADA') $stats['absent']++;
+                    elseif ($st === 'JUSTIFICADO' || $st === 'PERMISO' || $st === 'VACACIONES') $stats['justified']++;
+                    elseif ($st === 'SALIDA_SIN_MARCAR') $stats['missing_exit']++;
+                    continue;
+                }
+
+                // Si solo se corrigió el ingreso administrativamente (sin salida):
+                // Se continúa el cálculo para incorporar las marcaciones del biométrico durante el día,
+                // respetando como oficial la hora de entrada real registrada por el Administrador.
             }
 
             $workdays = !empty($emp['dias_laborables']) ? explode(',', $emp['dias_laborables']) : [1,2,3,4,5];
@@ -312,8 +323,15 @@ class AttendanceCalculator {
                 continue;
             }
 
-            // Caso: Cero marcaciones en día laborable
-            if ($punchCount === 0) {
+            // Detectar si el empleado tiene corrección administrativa previa en el ingreso
+            $hasManualEntry = (isset($existingByEmp[$empId]) 
+                && (int)$existingByEmp[$empId]['manual'] === 1 
+                && !empty($existingByEmp[$empId]['hora_entrada_real']) 
+                && empty($existingByEmp[$empId]['hora_salida_real']));
+            $manualEntryTime = $hasManualEntry ? $existingByEmp[$empId]['hora_entrada_real'] : null;
+
+            // Caso: Cero marcaciones en día laborable y sin ingreso manual administrativo
+            if ($punchCount === 0 && !$hasManualEntry) {
                 if ($isToday && $scheduledEntryStr) {
                     $dtProgEntry = new DateTime($scheduledEntryStr);
                     $dtLimitFalta = (clone $dtProgEntry)->modify("+{$toleranciaFalta} minutes");
@@ -335,14 +353,79 @@ class AttendanceCalculator {
                 continue;
             }
 
-            // Caso: Existen marcaciones
+            // Caso: Existen marcaciones o tiene ingreso manual administrativo
             $entryPunch = null;
             $exitPunch = null;
             $breakOutPunch = null;
             $breakInPunch = null;
             $observaciones = [];
 
-            if ($isSaturday) {
+            if ($hasManualEntry) {
+                // Preservar estrictamente el ingreso establecido oficialmente por el Administrador
+                $entryPunch = $manualEntryTime;
+                $tsManual = strtotime($manualEntryTime);
+
+                // Filtrar marcaciones del biométrico que ocurrieron después del ingreso (con margen de 3 minutos)
+                $postPunches = [];
+                foreach ($cleanPunches as $cp) {
+                    if (strtotime($cp['fecha_hora']) > $tsManual + 180) {
+                        $postPunches[] = $cp;
+                    }
+                }
+                $postCount = count($postPunches);
+
+                if ($isSaturday) {
+                    if ($postCount >= 1) {
+                        $exitPunch = $postPunches[$postCount - 1]['fecha_hora'];
+                    }
+                } else {
+                    if ($postCount === 1) {
+                        $p1 = $postPunches[0]['fecha_hora'];
+                        $p1Time = date('H:i:s', strtotime($p1));
+                        if ($p1Time >= '15:00:00') {
+                            $exitPunch = $p1;
+                        } elseif ($p1Time >= '11:30:00' && $p1Time <= '14:30:00') {
+                            $breakOutPunch = $p1;
+                            $observaciones[] = "Registró salida a refrigerio (" . substr($p1Time, 0, 5) . "); en jornada";
+                        } else {
+                            $exitPunch = $p1;
+                        }
+                    } elseif ($postCount === 2) {
+                        $p1 = $postPunches[0]['fecha_hora'];
+                        $p2 = $postPunches[1]['fecha_hora'];
+                        $p1Time = date('H:i:s', strtotime($p1));
+                        $p2Time = date('H:i:s', strtotime($p2));
+
+                        if ($p1Time >= '11:30:00' && $p1Time <= '14:30:00' && $p2Time >= '15:00:00') {
+                            $breakOutPunch = $p1;
+                            $exitPunch = $p2;
+                            $observaciones[] = "Omitió marcación de retorno de refrigerio";
+                        } elseif ($p1Time >= '11:30:00' && $p1Time <= '14:30:00' && $p2Time >= '12:30:00' && $p2Time <= '15:15:00') {
+                            $breakOutPunch = $p1;
+                            $breakInPunch = $p2;
+                            $observaciones[] = "Registró refrigerio; en jornada laboral pendiente de salida";
+                        } else {
+                            $breakOutPunch = $p1;
+                            $exitPunch = $p2;
+                        }
+                    } elseif ($postCount >= 3) {
+                        $breakOutPunch = $postPunches[0]['fecha_hora'];
+                        $breakInPunch = $postPunches[1]['fecha_hora'];
+                        $exitPunch = $postPunches[$postCount - 1]['fecha_hora'];
+                        if ($postCount > 3) {
+                            $observaciones[] = "Total {$postCount} marcaciones registradas tras el ingreso";
+                        }
+                    }
+                }
+
+                // Preservar refrigerio previo si ya existía en BD y no hubo nueva marca
+                if ($breakOutPunch === null && !empty($existingByEmp[$empId]['hora_inicio_refrigerio_real'])) {
+                    $breakOutPunch = $existingByEmp[$empId]['hora_inicio_refrigerio_real'];
+                }
+                if ($breakInPunch === null && !empty($existingByEmp[$empId]['hora_fin_refrigerio_real'])) {
+                    $breakInPunch = $existingByEmp[$empId]['hora_fin_refrigerio_real'];
+                }
+            } elseif ($isSaturday) {
                 // SÁBADO: Se esperan 2 registros de huella (Ingreso 08:00 y Salida 13:00)
                 if ($punchCount === 1) {
                     $p1Time = date('H:i:s', strtotime($cleanPunches[0]['fecha_hora']));
@@ -602,13 +685,14 @@ class AttendanceCalculator {
                 }
             }
 
+            $isManualPreserved = $hasManualEntry ? 1 : 0;
             $recordsToUpsert[] = $this->buildRecordData(
                 $empId, $turnoId, $date,
                 $progHoraEntrada,
                 $progHoraSalida,
                 $entryPunch, $exitPunch, $breakOutPunch, $breakInPunch,
                 $minutosTardanza, $minutosTrabajados, $minutosExtra, $minutosSalidaTemprana,
-                $estado, implode(' | ', $observaciones), $tolerancia
+                $estado, implode(' | ', $observaciones), $tolerancia, null, $isManualPreserved
             );
 
             $stats['processed']++;
@@ -640,23 +724,23 @@ class AttendanceCalculator {
                     :ent_real, :sal_real,
                     :ref_sal, :ref_ent,
                     :tardanza, :trabajados, :extra, :temprana,
-                    :estado, :obs, :comision_dest, 0
+                    :estado, :obs, :comision_dest, :manual
                 )
                 ON DUPLICATE KEY UPDATE
-                    id_turno = IF(manual = 1, id_turno, VALUES(id_turno)),
-                    hora_entrada_programada = IF(manual = 1, hora_entrada_programada, VALUES(hora_entrada_programada)),
-                    hora_salida_programada  = IF(manual = 1, hora_salida_programada, VALUES(hora_salida_programada)),
+                    id_turno = VALUES(id_turno),
+                    hora_entrada_programada = VALUES(hora_entrada_programada),
+                    hora_salida_programada  = VALUES(hora_salida_programada),
                     hora_entrada_real = IF(manual = 1, hora_entrada_real, VALUES(hora_entrada_real)),
-                    hora_salida_real  = IF(manual = 1, hora_salida_real, VALUES(hora_salida_real)),
-                    hora_inicio_refrigerio_real = IF(manual = 1, hora_inicio_refrigerio_real, VALUES(hora_inicio_refrigerio_real)),
-                    hora_fin_refrigerio_real    = IF(manual = 1, hora_fin_refrigerio_real, VALUES(hora_fin_refrigerio_real)),
-                    minutos_tardanza  = IF(manual = 1, minutos_tardanza, VALUES(minutos_tardanza)),
-                    minutos_trabajados = IF(manual = 1, minutos_trabajados, VALUES(minutos_trabajados)),
-                    minutos_extra = IF(manual = 1, minutos_extra, VALUES(minutos_extra)),
-                    minutos_salida_temprana = IF(manual = 1, minutos_salida_temprana, VALUES(minutos_salida_temprana)),
-                    estado = IF(manual = 1, estado, VALUES(estado)),
-                    observaciones = IF(manual = 1, observaciones, VALUES(observaciones)),
-                    comision_destino = IF(manual = 1, comision_destino, VALUES(comision_destino)),
+                    hora_salida_real  = VALUES(hora_salida_real),
+                    hora_inicio_refrigerio_real = VALUES(hora_inicio_refrigerio_real),
+                    hora_fin_refrigerio_real    = VALUES(hora_fin_refrigerio_real),
+                    minutos_tardanza  = VALUES(minutos_tardanza),
+                    minutos_trabajados = VALUES(minutos_trabajados),
+                    minutos_extra = VALUES(minutos_extra),
+                    minutos_salida_temprana = VALUES(minutos_salida_temprana),
+                    estado = VALUES(estado),
+                    observaciones = VALUES(observaciones),
+                    comision_destino = VALUES(comision_destino),
                     procesado_en = NOW()
             ";
 
@@ -735,7 +819,8 @@ class AttendanceCalculator {
         ?string $horaEntradaReal, ?string $horaSalidaReal,
         ?string $refrigerioSalidaReal, ?string $refrigerioEntradaReal,
         int $minutosTardanza, int $minutosTrabajados, int $minutosExtra, int $minutosSalidaTemprana,
-        string $estado, string $observaciones, int $toleranciaAplicada = 10, ?string $comisionDestino = null
+        string $estado, string $observaciones, int $toleranciaAplicada = 10, ?string $comisionDestino = null,
+        int $manual = 0
     ): array {
         return [
             ':id_emp'        => $empId,
@@ -753,7 +838,8 @@ class AttendanceCalculator {
             ':temprana'      => $minutosSalidaTemprana,
             ':estado'        => $estado,
             ':obs'           => $observaciones ?: null,
-            ':comision_dest' => $comisionDestino ?: null
+            ':comision_dest' => $comisionDestino ?: null,
+            ':manual'        => $manual
         ];
     }
 }

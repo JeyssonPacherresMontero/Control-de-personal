@@ -174,6 +174,26 @@ switch ($route) {
         } elseif ($action === 'obtener_biometria_usuario') {
             AuthController::requireRole(['ADMIN', 'RRHH']);
             $controller->obtenerBiometriaUsuario();
+        } elseif ($action === 'logs_stream' || $action === 'get_log_tail') {
+            AuthController::requireRole(['ADMIN', 'RRHH']);
+            $controller->getLogTail();
+        } elseif ($action === 'logs_diagnostico') {
+            AuthController::requireRole(['ADMIN', 'RRHH']);
+            $controller->logsDiagnostico();
+        } elseif ($action === 'download_log') {
+            AuthController::requireRole(['ADMIN', 'RRHH']);
+            $controller->downloadLog();
+        } elseif ($action === 'clear_log') {
+            $requirePost('dispositivos');
+            AuthController::requireRole('ADMIN');
+            $controller->clearLog();
+        } elseif ($action === 'audit_stats') {
+            AuthController::requireRole(['ADMIN', 'RRHH']);
+            $controller->auditStats();
+        } elseif ($action === 'audit_purge') {
+            $requirePost('dispositivos');
+            AuthController::requireRole('ADMIN');
+            $controller->auditPurge();
         } else {
             // Administración de hardware exclusiva de ADMIN
             AuthController::requirePermission('dispositivos', 'dashboard');

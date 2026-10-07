@@ -76,7 +76,7 @@ class UsuariosController {
         $password = $_POST['password'] ?? '';
         $rol = $_POST['rol'] ?? 'RRHH';
         $departamentoId = !empty($_POST['departamento_id']) ? (int)$_POST['departamento_id'] : null;
-        $activo = isset($_POST['activo']) ? 1 : 0;
+        $activo = (!empty($_POST['activo']) && $_POST['activo'] !== '0' && $_POST['activo'] !== 0) ? 1 : 0;
         
         // Regla de Seguridad Estricta: Solo puede existir un único Administrador en el sistema.
         // No se permite crear nuevos usuarios con rol ADMIN ni promover usuarios existentes a ADMIN.

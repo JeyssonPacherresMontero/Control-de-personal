@@ -264,7 +264,7 @@ if (!empty($deptoId)) {
                     </div>
                 <?php endif; ?>
 
-                <?php if (in_array($userRole, ['ADMIN', 'RRHH', 'SUPERVISOR', 'ASISTENTE'], true) || AuthController::hasPermission('asistencia')): ?>
+                <?php if (in_array($userRole, ['ADMIN', 'RRHH', 'SUPERVISOR', 'ASISTENTE'], true) || \App\Controllers\AuthController::hasPermission('asistencia')): ?>
                     <form method="POST" action="?route=asistencia&action=recalcular" class="d-inline m-0">
                         <?= csrf_field() ?>
                         <input type="hidden" name="fecha_inicio" value="<?= htmlspecialchars($fechaInicio) ?>">
@@ -333,6 +333,7 @@ if (!empty($deptoId)) {
                         <select name="estado" class="form-control">
                             <option value="ASISTIERON" <?= ($estado ?? '') === 'ASISTIERON' ? 'selected' : '' ?>>Asistieron (Predeterminado)</option>
                             <option value="TODOS" <?= ($estado ?? '') === 'TODOS' ? 'selected' : '' ?>>-- Todo el Padrón (Con Faltas) --</option>
+                            <option value="EN_JORNADA" <?= ($estado ?? '') === 'EN_JORNADA' ? 'selected' : '' ?>>En Jornada (En Curso)</option>
                             <option value="PRESENTE" <?= ($estado ?? '') === 'PRESENTE' ? 'selected' : '' ?>>Puntuales (Presente)</option>
                             <option value="COMISION_SERVICIO" <?= ($estado ?? '') === 'COMISION_SERVICIO' ? 'selected' : '' ?>>Comisión de Servicio (JUSHSAL)</option>
                             <option value="VACACIONES" <?= ($estado ?? '') === 'VACACIONES' ? 'selected' : '' ?>>Vacaciones</option>
@@ -538,7 +539,11 @@ if (!empty($deptoId)) {
                                     <?php
                                         $est = $a['estado'];
                                         $obs = $a['observaciones'] ?? '';
-                                        if ($est === 'PRESENTE' && !empty($a['hora_entrada_real']) && str_contains($obs, 'Jornada en curso')) {
+                                        $isEnJornada = !empty($a['hora_entrada_real']) && empty($a['hora_salida_real']) && (str_contains($obs, 'Jornada en curso') || $a['fecha'] === date('Y-m-d'));
+
+                                        if ($isEnJornada && $est === 'TARDANZA') {
+                                            echo '<span class="badge-pill-custom badge-pill-tardanza"><i class="fa-solid fa-user-clock mr-1"></i>En Jornada (Tardanza)</span>';
+                                        } elseif ($isEnJornada) {
                                             echo '<span class="badge-pill-custom badge-pill-presente"><i class="fa-solid fa-user-clock mr-1"></i>En Jornada</span>';
                                         } elseif ($est === 'PRESENTE' && !empty($a['hora_entrada_real'])) {
                                             echo '<span class="badge-pill-custom badge-pill-presente"><i class="fa-solid fa-check mr-1"></i>Presente</span>';
@@ -895,7 +900,8 @@ if (!empty($deptoId)) {
                     <div class="col-md-6">
                         <div class="form-group mb-3">
                             <label class="small font-weight-bold text-secondary">Estado Oficial de Asistencia <span class="text-danger">*</span></label>
-                            <select name="estado" id="edit_estado" class="form-control font-weight-bold" required>
+                            <select name="estado" id="edit_estado" class="form-control font-weight-bold" onchange="onAdminEstadoChanged(this.value)" required>
+                                <option value="EN_JORNADA">EN JORNADA (En curso / pendiente salida)</option>
                                 <option value="PRESENTE">PRESENTE</option>
                                 <option value="TARDANZA">TARDANZA</option>
                                 <option value="JUSTIFICADO">JUSTIFICADO</option>
@@ -1397,7 +1403,13 @@ function openAdminEditModal(rec, focusField = 'entrada') {
     document.getElementById('edit_hora_inicio_refrigerio').value = realSalRef;
     document.getElementById('edit_hora_fin_refrigerio').value = realRetRef;
     document.getElementById('edit_hora_salida').value = realSal;
-    document.getElementById('edit_estado').value = rec.estado || 'PRESENTE';
+
+    let stInit = rec.estado || 'PRESENTE';
+    const todayStr = '<?= date('Y-m-d') ?>';
+    if (!realSal && realEnt && (fecha === todayStr || (rec.observaciones && rec.observaciones.includes('Jornada en curso')))) {
+        stInit = 'EN_JORNADA';
+    }
+    document.getElementById('edit_estado').value = stInit;
     document.getElementById('edit_tardanza').value = rec.minutos_tardanza || 0;
     document.getElementById('edit_extra').value = rec.minutos_extra || 0;
     document.getElementById('edit_obs').value = rec.observaciones || '';
@@ -1490,6 +1502,29 @@ function clearTime(field) {
         document.getElementById('edit_hora_salida').value = '';
     }
     calculateRealtimeAdminAttendance();
+}
+
+function onAdminEstadoChanged(val) {
+    if (val === 'EN_JORNADA') {
+        // Al seleccionar EN JORNADA: se limpia la hora de salida y refrigerios para esperar marcaciones del reloj
+        document.getElementById('edit_hora_salida').value = '';
+        document.getElementById('edit_hora_inicio_refrigerio').value = '';
+        document.getElementById('edit_hora_fin_refrigerio').value = '';
+        calculateRealtimeAdminAttendance();
+    } else if (val === 'PRESENTE') {
+        // Al seleccionar PRESENTE: si la salida está vacía, autocompletar con la salida programada del turno
+        const salEl = document.getElementById('edit_hora_salida');
+        if (!salEl.value) {
+            setProgrammedTime('salida');
+        } else {
+            calculateRealtimeAdminAttendance();
+        }
+    } else if (val === 'SALIDA_SIN_MARCAR') {
+        document.getElementById('edit_hora_salida').value = '';
+        calculateRealtimeAdminAttendance();
+    } else {
+        calculateRealtimeAdminAttendance();
+    }
 }
 
 function calculateRealtimeAdminAttendance() {
@@ -1603,8 +1638,16 @@ function calculateRealtimeAdminAttendance() {
             summaryParts.push(`<span class="font-weight-bold text-dark"><i class="fa-solid fa-business-time mr-1 text-muted"></i>${netHrs}h ${netMins}m laboradas${descText}</span>`);
         }
     } else if (entVal && !salVal) {
-        summaryParts.push(`<span class="font-weight-bold text-warning"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Sin marcación de salida general: no se calculan horas</span>`);
-        suggestedState = 'SALIDA_SIN_MARCAR';
+        const todayStr = '<?= date('Y-m-d') ?>';
+        const isToday = (fechaVal === todayStr);
+
+        if (isToday || estadoSelect.value === 'EN_JORNADA') {
+            summaryParts.push(`<span class="font-weight-bold text-primary"><i class="fa-solid fa-user-clock mr-1"></i>Jornada en curso: las horas se calcularán al marcar salida</span>`);
+            suggestedState = 'EN_JORNADA';
+        } else {
+            summaryParts.push(`<span class="font-weight-bold text-warning"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Sin marcación de salida general: no se calculan horas</span>`);
+            suggestedState = 'SALIDA_SIN_MARCAR';
+        }
     } else if (!entVal && salVal) {
         summaryParts.push(`<span class="font-weight-bold text-warning"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Sin marcación de entrada: no se calculan horas</span>`);
         suggestedState = 'ENTRADA_SIN_MARCAR';
@@ -1613,12 +1656,23 @@ function calculateRealtimeAdminAttendance() {
     tardanzaInput.value = computedTardanza;
     summaryEl.innerHTML = summaryParts.join(' &bull; ');
 
-    if (['PRESENTE', 'TARDANZA', 'FALTA', 'SALIDA_SIN_MARCAR'].includes(estadoSelect.value)) {
+    if (['PRESENTE', 'TARDANZA', 'FALTA', 'SALIDA_SIN_MARCAR', 'EN_JORNADA'].includes(estadoSelect.value)) {
         estadoSelect.value = suggestedState;
     }
     
-    badgeEl.className = suggestedState === 'PRESENTE' ? 'badge badge-success px-2 py-1 font-weight-bold' : 'badge badge-danger px-2 py-1 font-weight-bold';
-    badgeEl.innerText = suggestedState;
+    if (suggestedState === 'EN_JORNADA') {
+        badgeEl.className = 'badge badge-primary px-2 py-1 font-weight-bold';
+        badgeEl.innerText = computedTardanza > 0 ? 'EN JORNADA (TARDANZA)' : 'EN JORNADA';
+    } else if (suggestedState === 'PRESENTE') {
+        badgeEl.className = 'badge badge-success px-2 py-1 font-weight-bold';
+        badgeEl.innerText = suggestedState;
+    } else if (suggestedState === 'TARDANZA') {
+        badgeEl.className = 'badge badge-warning text-dark px-2 py-1 font-weight-bold';
+        badgeEl.innerText = suggestedState;
+    } else {
+        badgeEl.className = 'badge badge-danger px-2 py-1 font-weight-bold';
+        badgeEl.innerText = suggestedState;
+    }
 }
 
 function submitAdminEditAttendance(e) {

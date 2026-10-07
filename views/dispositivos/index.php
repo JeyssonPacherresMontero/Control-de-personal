@@ -134,6 +134,14 @@
                     <i class="fa-solid fa-bolt mr-1"></i> Sincronizar Hoy
                 </button>
 
+                <button type="button" class="btn btn-outline-info btn-sm" onclick="openLogsModal()">
+                    <i class="fa-solid fa-file-waveform mr-1"></i> Monitoreo de Logs
+                </button>
+
+                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="openAuditPurgeModal()">
+                    <i class="fa-solid fa-broom mr-1"></i> Depuración Auditoría
+                </button>
+
                 <!-- Menú Desplegable de Opciones Avanzadas -->
                 <div class="btn-group">
                     <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
@@ -142,6 +150,12 @@
                     <div class="dropdown-menu dropdown-menu-right shadow border-0">
                         <a class="dropdown-item py-2" href="javascript:void(0)" onclick="syncAllDevices('full', this)">
                             <i class="fa-solid fa-database mr-2 text-primary"></i> Sincronización Histórica
+                        </a>
+                        <a class="dropdown-item py-2" href="javascript:void(0)" onclick="openLogsModal()">
+                            <i class="fa-solid fa-file-waveform mr-2 text-info"></i> Monitoreo de Logs en Vivo
+                        </a>
+                        <a class="dropdown-item py-2" href="javascript:void(0)" onclick="openAuditPurgeModal()">
+                            <i class="fa-solid fa-broom mr-2 text-warning"></i> Optimización Semestral
                         </a>
                         <?php if (($currentUser['rol'] ?? '') === 'ADMIN'): ?>
                             <div class="dropdown-divider"></div>
@@ -513,6 +527,252 @@
                 </button>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- MODAL DE MONITOREO DE LOGS Y DIAGNÓSTICO ZKTECO -->
+<div class="modal fade" id="modalLogsMonitor" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width: 1100px;">
+        <div class="modal-content shadow-lg border-0 rounded-lg">
+            <div class="modal-header d-flex align-items-center justify-content-between py-2 px-3 bg-dark text-white">
+                <h5 class="modal-title font-weight-bold d-flex align-items-center text-white" style="font-size: 1.05rem;">
+                    <i class="fa-solid fa-file-waveform mr-2 text-info"></i> Centro de Monitoreo de Logs & Diagnóstico ZKTeco
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Cerrar">&times;</button>
+            </div>
+            <div class="modal-body p-3 bg-light">
+                <!-- KPI BANNERS DE SALUD -->
+                <div class="row mb-3">
+                    <div class="col-md-6 mb-2">
+                        <div class="p-3 bg-white rounded border shadow-sm h-100">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="font-weight-bold text-dark small text-uppercase">Salud de Red Biometría ZKTeco</span>
+                                <span id="logZkBadge" class="badge-pill-custom badge-pill-<?= $zkHealth['badge_class'] ?? 'secondary' ?> font-weight-bold">
+                                    <?= htmlspecialchars($zkHealth['status_label'] ?? 'Consultando...') ?>
+                                </span>
+                            </div>
+                            <div class="small text-muted" id="logZkDetails">
+                                Último éxito: <b><?= htmlspecialchars($zkHealth['last_success_time'] ?? 'N/D') ?></b> | Latencia: <b><?= $zkHealth['last_latency_ms'] ? $zkHealth['last_latency_ms'] . ' ms' : 'N/D' ?></b>
+                                <?php if (!empty($zkHealth['last_error_message'])): ?>
+                                    <div class="text-danger mt-1 small text-truncate" title="<?= htmlspecialchars($zkHealth['last_error_message']) ?>">
+                                        <i class="fa-solid fa-triangle-exclamation mr-1"></i> <?= htmlspecialchars(mb_strimwidth($zkHealth['last_error_message'], 0, 75, '...')) ?>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-2">
+                        <div class="p-3 bg-white rounded border shadow-sm h-100">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="font-weight-bold text-dark small text-uppercase">Salud Servidor PHP & Base de Datos</span>
+                                <span id="logPhpBadge" class="badge-pill-custom badge-pill-<?= $phpHealth['badge_class'] ?? 'secondary' ?> font-weight-bold">
+                                    <?= htmlspecialchars($phpHealth['status_label'] ?? 'Consultando...') ?>
+                                </span>
+                            </div>
+                            <div class="small text-muted" id="logPhpDetails">
+                                Errores fatales: <b><?= $phpHealth['fatal_count'] ?? 0 ?></b> | Conexión BD: <b><?= ($phpHealth['db_connection_errors'] ?? 0) === 0 ? 'Conectado OK' : 'Fallo de Red' ?></b>
+                                <?php if (!empty($phpHealth['last_issue'])): ?>
+                                    <div class="text-warning mt-1 small text-truncate" title="<?= htmlspecialchars($phpHealth['last_issue']) ?>">
+                                        <i class="fa-solid fa-circle-exclamation mr-1"></i> <?= htmlspecialchars(mb_strimwidth($phpHealth['last_issue'], 0, 75, '...')) ?>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SELECTOR DE LOG Y CONTROLES -->
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2 p-2 bg-white rounded border">
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-primary active font-weight-bold" id="btnTabLogSync" onclick="selectLogTab('sync')">
+                            <i class="fa-solid fa-network-wired mr-1"></i> sync_current.log
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary font-weight-bold" id="btnTabLogPhp" onclick="selectLogTab('php')">
+                            <i class="fa-brands fa-php mr-1"></i> php_error.log
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary font-weight-bold" id="btnTabLogAudit" onclick="selectLogTab('audit')">
+                            <i class="fa-solid fa-broom mr-1"></i> audit_purge.log
+                        </button>
+                    </div>
+
+                    <div class="d-flex align-items-center flex-wrap gap-2">
+                        <input type="text" id="logFilterInput" class="form-control form-control-sm" placeholder="Filtrar texto..." style="width: 170px;" oninput="applyLogFilter()">
+                        <select id="logLinesSelect" class="form-control form-control-sm" style="width: 110px;" onchange="reloadActiveLog()">
+                            <option value="50">50 líneas</option>
+                            <option value="100" selected>100 líneas</option>
+                            <option value="200">200 líneas</option>
+                        </select>
+                        <div class="custom-control custom-switch custom-control-inline ml-1" title="Actualiza el visor automáticamente cada 5 segundos">
+                            <input type="checkbox" class="custom-control-input" id="logAutoRefreshSwitch" onchange="toggleAutoRefresh(this.checked)">
+                            <label class="custom-control-label small text-muted" for="logAutoRefreshSwitch">Auto 5s</label>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="reloadActiveLog()" title="Recargar log">
+                            <i class="fa-solid fa-arrows-rotate"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-success" onclick="downloadActiveLog()" title="Descargar log crudo">
+                            <i class="fa-solid fa-download mr-1"></i> Descargar
+                        </button>
+                        <?php if (($currentUser['rol'] ?? '') === 'ADMIN'): ?>
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmClearActiveLog()" title="Vaciar y generar copia .bak">
+                                <i class="fa-solid fa-trash-can mr-1"></i> Vaciar (.bak)
+                            </button>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <!-- TERMINAL VIEW -->
+                <div class="position-relative">
+                    <pre id="logTerminalContent" style="background: #0f172a; color: #f8fafc; font-family: 'Consolas', 'Courier New', monospace; font-size: 0.81rem; line-height: 1.45; padding: 14px; border-radius: 8px; height: 420px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; border: 1px solid #1e293b; margin-bottom: 0;">Cargando registros del log...</pre>
+                </div>
+            </div>
+            <div class="modal-footer py-2 px-3 bg-white justify-content-between">
+                <span class="small text-muted" id="logTerminalFooter">Líneas cargadas: 0 | Tamaño: -</span>
+                <button type="button" class="btn btn-sm btn-outline-secondary px-3" data-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DE DEPURACIÓN Y ARCHIVADO DE AUDITORÍA -->
+<div class="modal fade" id="modalAuditPurge" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" style="max-width: 820px;">
+        <div class="modal-content shadow-lg border-0 rounded-lg">
+            <div class="modal-header d-flex align-items-center justify-content-between py-2 px-3 bg-dark text-white">
+                <h5 class="modal-title font-weight-bold d-flex align-items-center text-white" style="font-size: 1.05rem;">
+                    <i class="fa-solid fa-broom mr-2 text-warning"></i> Depuración y Archivado Semestral de Auditoría
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Cerrar">&times;</button>
+            </div>
+            <div class="modal-body p-4 bg-light">
+                <!-- INTRODUCTORY BANNER -->
+                <div class="alert alert-info border shadow-sm mb-3">
+                    <div class="d-flex align-items-start">
+                        <i class="fa-solid fa-circle-info fa-lg mr-2 mt-1 text-info"></i>
+                        <div>
+                            <strong>Optimización del Event Store y Colas:</strong>
+                            <p class="mb-0 small">
+                                Este proceso traslada registros antiguos de eventos y colas finalizadas hacia tablas históricas de respaldo comprimidas (<code>eventos_asistencia_historico</code>), liberando espacio en el motor de base de datos y acelerando la generación de reportes y consolidados anuales.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MÉTRICAS EN VIVO DE LAS TABLAS -->
+                <div class="row mb-3">
+                    <div class="col-md-4 mb-2">
+                        <div class="p-3 bg-white rounded border shadow-sm text-center">
+                            <span class="text-muted small text-uppercase d-block mb-1">Eventos Activos</span>
+                            <h4 class="font-weight-bold text-dark mb-0" id="ap_stat_eventos"><?= number_format($auditStats['eventos']['total'] ?? 0) ?></h4>
+                            <small class="text-muted" id="ap_stat_eventos_mb"><?= $auditStats['eventos']['size_mb'] ?? 0 ?> MB en disco</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <div class="p-3 bg-white rounded border shadow-sm text-center">
+                            <span class="text-muted small text-uppercase d-block mb-1">Cola Finalizada</span>
+                            <h4 class="font-weight-bold text-dark mb-0" id="ap_stat_cola"><?= number_format($auditStats['cola']['total'] ?? 0) ?></h4>
+                            <small class="text-muted" id="ap_stat_cola_mb"><?= $auditStats['cola']['size_mb'] ?? 0 ?> MB en disco</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <div class="p-3 bg-white rounded border shadow-sm text-center">
+                            <span class="text-muted small text-uppercase d-block mb-1">Archivados Históricos</span>
+                            <h4 class="font-weight-bold text-success mb-0" id="ap_stat_hist"><?= number_format($auditStats['historico']['eventos_total'] ?? 0) ?></h4>
+                            <small class="text-muted" id="ap_stat_hist_mb"><?= $auditStats['historico']['eventos_size_mb'] ?? 0 ?> MB archivados</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FORMULARIO DE DEPURACIÓN -->
+                <div class="card bg-white border shadow-sm mb-3">
+                    <div class="card-header bg-white font-weight-bold py-2 px-3 border-bottom small text-uppercase">
+                        <i class="fa-solid fa-gears mr-1 text-primary"></i> Parámetros de Retención
+                    </div>
+                    <div class="card-body p-3">
+                        <div class="row align-items-center mb-3">
+                            <div class="col-md-6">
+                                <label class="small font-weight-bold text-dark mb-1">Periodo de Conservación de Registros</label>
+                                <select id="ap_months_select" class="form-control form-control-sm" onchange="actualizarElegiblesAuditoria()">
+                                    <option value="6" selected>6 Meses (Semestral - Recomendado Oficial)</option>
+                                    <option value="3">3 Meses (Trimestral - Para alta concurrencia)</option>
+                                    <option value="12">12 Meses (Anual - Máximo histórico activo)</option>
+                                </select>
+                                <small class="text-muted d-block mt-1">Registros con fecha anterior al corte serán procesados.</small>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="p-2 rounded bg-light border">
+                                    <span class="small text-muted d-block">Registros elegibles calculados:</span>
+                                    <span class="font-weight-bold text-primary h6 mb-0" id="ap_elegibles_badge">
+                                        <?= number_format($auditStats['eventos']['depurables'] ?? 0) ?> eventos detectados
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="custom-control custom-checkbox mb-3">
+                            <input type="checkbox" class="custom-control-input" id="ap_archive_checkbox" checked>
+                            <label class="custom-control-label small font-weight-bold text-dark" for="ap_archive_checkbox">
+                                Archivar en tablas históricas antes de eliminar (Recomendado: Preserva trazabilidad inmutable)
+                            </label>
+                        </div>
+
+                        <div class="form-group mb-0">
+                            <label class="small font-weight-bold text-dark mb-1">Notas u Observaciones del Mantenimiento (Opcional)</label>
+                            <input type="text" id="ap_notes_input" class="form-control form-control-sm" placeholder="Ej: Depuración semestral programada de segundo semestre">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ÚLTIMOS MANTENIMIENTOS REALIZADOS -->
+                <div class="card bg-white border shadow-sm mb-0">
+                    <div class="card-header bg-white font-weight-bold py-2 px-3 border-bottom small text-uppercase">
+                        <i class="fa-solid fa-timeline mr-1 text-secondary"></i> Historial Reciente de Mantenimientos
+                    </div>
+                    <div class="card-body p-0 table-responsive" style="max-height: 160px;">
+                        <table class="table table-sm table-hover mb-0 text-nowrap small">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Operador</th>
+                                    <th>Modo</th>
+                                    <th class="text-center">Eventos</th>
+                                    <th class="text-center">Cola</th>
+                                    <th class="text-center">Tiempo</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ap_history_tbody">
+                                <?php if (!empty($auditStats['historial_mantenimientos'])): ?>
+                                    <?php foreach ($auditStats['historial_mantenimientos'] as $hm): ?>
+                                        <tr>
+                                            <td class="font-monospace text-muted"><?= htmlspecialchars($hm['fecha_ejecucion']) ?></td>
+                                            <td class="font-weight-bold"><?= htmlspecialchars($hm['usuario']) ?></td>
+                                            <td><span class="badge badge-light border"><?= htmlspecialchars($hm['modo']) ?></span></td>
+                                            <td class="text-center text-success font-weight-bold"><?= number_format($hm['eventos_eliminados']) ?></td>
+                                            <td class="text-center text-info font-weight-bold"><?= number_format($hm['cola_eliminada']) ?></td>
+                                            <td class="text-center font-monospace"><?= $hm['duracion_ms'] ?> ms</td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted py-2">No se han registrado ejecuciones previas de depuración.</td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer py-2 px-3 bg-white justify-content-between">
+                <button type="button" class="btn btn-sm btn-outline-secondary px-3" data-dismiss="modal">Cancelar</button>
+                <?php if (($currentUser['rol'] ?? '') === 'ADMIN'): ?>
+                    <button type="button" class="btn btn-sm btn-primary px-4 font-weight-bold" onclick="ejecutarDepuracionAuditoria()">
+                        <i class="fa-solid fa-broom mr-1"></i> Ejecutar Depuración y Archivado
+                    </button>
+                <?php else: ?>
+                    <span class="small text-muted font-italic"><i class="fa-solid fa-lock mr-1"></i> Acción reservada exclusivamente para Administradores</span>
+                <?php endif; ?>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -1002,6 +1262,286 @@ function pollDeviceHealth() {
 document.addEventListener('DOMContentLoaded', () => {
     setInterval(pollDeviceHealth, 20000);
 });
+
+/* ==========================================================
+   CENTRO DE MONITOREO DE LOGS Y DIAGNÓSTICO ZKTECO
+   ========================================================== */
+let activeLogTab = 'sync';
+let rawLogLines = [];
+let logAutoRefreshInterval = null;
+
+function openLogsModal() {
+    $('#modalLogsMonitor').modal('show');
+    reloadActiveLog();
+}
+
+function selectLogTab(tab) {
+    activeLogTab = tab;
+    $('#btnTabLogSync').toggleClass('btn-primary active', tab === 'sync').toggleClass('btn-outline-secondary', tab !== 'sync');
+    $('#btnTabLogPhp').toggleClass('btn-primary active', tab === 'php').toggleClass('btn-outline-secondary', tab !== 'php');
+    $('#btnTabLogAudit').toggleClass('btn-primary active', tab === 'audit').toggleClass('btn-outline-secondary', tab !== 'audit');
+    $('#logFilterInput').val('');
+    reloadActiveLog();
+}
+
+function formatLogLine(line) {
+    const escaped = escapeHtml(line);
+    if (!escaped) return '';
+
+    // Detección de errores y excepciones
+    if (/error|fatal|exception|failed|falló|refused|timed out|critical/i.test(escaped)) {
+        return `<span style="color: #f87171; font-weight: 600;">${escaped}</span>`;
+    }
+    // Detección de advertencias y alertas
+    if (/warning|deprecated|alerta|retry|intento/i.test(escaped)) {
+        return `<span style="color: #fbbf24;">${escaped}</span>`;
+    }
+    // Detección de éxitos y confirmaciones
+    if (/success|éxito|exitosa|sincronizados|finalizado exitosamente/i.test(escaped)) {
+        return `<span style="color: #34d399;">${escaped}</span>`;
+    }
+    // Detección de timestamps
+    if (/^\d{4}-\d{2}-\d{2}|\[\d{2}-\w{3}-\d{4}/.test(escaped)) {
+        return `<span style="color: #38bdf8;">${escaped}</span>`;
+    }
+    return `<span style="color: #cbd5e1;">${escaped}</span>`;
+}
+
+function renderLogLines(lines) {
+    const term = document.getElementById('logTerminalContent');
+    if (!lines || lines.length === 0) {
+        term.innerHTML = '<span class="text-muted font-italic">No hay registros en este archivo de log.</span>';
+        document.getElementById('logTerminalFooter').innerText = '0 líneas';
+        return;
+    }
+
+    const filterVal = (document.getElementById('logFilterInput').value || '').toLowerCase().trim();
+    const filtered = filterVal ? lines.filter(l => l.toLowerCase().includes(filterVal)) : lines;
+
+    const html = filtered.map(l => formatLogLine(l)).join('\n');
+    term.innerHTML = html;
+    term.scrollTop = term.scrollHeight;
+
+    document.getElementById('logTerminalFooter').innerText = `Mostrando ${filtered.length} de ${lines.length} líneas cargadas`;
+}
+
+function applyLogFilter() {
+    renderLogLines(rawLogLines);
+}
+
+function reloadActiveLog() {
+    const lines = document.getElementById('logLinesSelect').value || 100;
+    const term = document.getElementById('logTerminalContent');
+
+    fetch(`?route=dispositivos&action=logs_stream&type=${activeLogTab}&lines=${lines}`, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success && Array.isArray(data.lines)) {
+            rawLogLines = data.lines;
+            renderLogLines(rawLogLines);
+        } else {
+            term.innerHTML = `<span class="text-danger">${escapeHtml(data.error || 'Error al leer el archivo de log')}</span>`;
+        }
+    })
+    .catch(err => {
+        term.innerHTML = `<span class="text-danger">Error de comunicación: ${escapeHtml(err.message)}</span>`;
+    });
+
+    // Actualizar también diagnóstico de salud
+    fetch('?route=dispositivos&action=logs_diagnostico', {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            if (data.zk_health) {
+                const zk = data.zk_health;
+                const zkBadge = document.getElementById('logZkBadge');
+                if (zkBadge) {
+                    zkBadge.className = `badge-pill-custom badge-pill-${zk.badge_class} font-weight-bold`;
+                    zkBadge.innerText = zk.status_label;
+                }
+            }
+            if (data.php_health) {
+                const php = data.php_health;
+                const phpBadge = document.getElementById('logPhpBadge');
+                if (phpBadge) {
+                    phpBadge.className = `badge-pill-custom badge-pill-${php.badge_class} font-weight-bold`;
+                    phpBadge.innerText = php.status_label;
+                }
+            }
+        }
+    })
+    .catch(() => {});
+}
+
+function toggleAutoRefresh(enable) {
+    if (logAutoRefreshInterval) {
+        clearInterval(logAutoRefreshInterval);
+        logAutoRefreshInterval = null;
+    }
+    if (enable) {
+        logAutoRefreshInterval = setInterval(reloadActiveLog, 5000);
+    }
+}
+
+function downloadActiveLog() {
+    window.location.href = `?route=dispositivos&action=download_log&type=${activeLogTab}`;
+}
+
+function confirmClearActiveLog() {
+    const fileLabels = {
+        'sync': 'sync_current.log (Relojes ZKTeco)',
+        'php': 'php_error.log (Servidor PHP)',
+        'audit': 'audit_purge.log (Auditoría)'
+    };
+    const logDesc = fileLabels[activeLogTab] || activeLogTab;
+
+    Swal.fire({
+        title: '¿Vaciar este archivo de log?',
+        html: `Se creará automáticamente una copia de respaldo <b>.bak</b> antes de vaciar <code>${logDesc}</code>.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sí, vaciar y respaldar',
+        cancelButtonText: 'Cancelar'
+    }).then(result => {
+        if (result.isConfirmed) {
+            const formData = new FormData();
+            formData.append('type', activeLogTab);
+
+            fetch('?route=dispositivos&action=clear_log', {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire('¡Log Vaciado!', data.message || 'Se ha creado la copia .bak y vaciado el archivo.', 'success');
+                    reloadActiveLog();
+                } else {
+                    Swal.fire('Error', data.error || 'No se pudo vaciar el log.', 'error');
+                }
+            })
+            .catch(err => {
+                Swal.fire('Error', 'Fallo de red: ' + err.message, 'error');
+            });
+        }
+    });
+}
+
+// Al cerrar modal de logs, limpiar intervalo automático
+$('#modalLogsMonitor').on('hidden.bs.modal', function () {
+    toggleAutoRefresh(false);
+    const sw = document.getElementById('logAutoRefreshSwitch');
+    if (sw) sw.checked = false;
+});
+
+/* ==========================================================
+   DEPURACIÓN Y ARCHIVADO SEMESTRAL DE AUDITORÍA
+   ========================================================== */
+function openAuditPurgeModal() {
+    $('#modalAuditPurge').modal('show');
+    actualizarElegiblesAuditoria();
+}
+
+function actualizarElegiblesAuditoria() {
+    const months = document.getElementById('ap_months_select').value || 6;
+    const badge = document.getElementById('ap_elegibles_badge');
+    badge.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Calculando...';
+
+    fetch(`?route=dispositivos&action=audit_stats&months=${months}`, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success && data.stats) {
+            const s = data.stats;
+            badge.innerText = `${parseInt(s.eventos.depurables).toLocaleString()} eventos detectados (< ${s.cutoff_date.substring(0, 10)})`;
+            document.getElementById('ap_stat_eventos').innerText = parseInt(s.eventos.total).toLocaleString();
+            document.getElementById('ap_stat_eventos_mb').innerText = `${s.eventos.size_mb} MB en disco`;
+            document.getElementById('ap_stat_cola').innerText = parseInt(s.cola.total).toLocaleString();
+            document.getElementById('ap_stat_cola_mb').innerText = `${s.cola.size_mb} MB en disco`;
+            document.getElementById('ap_stat_hist').innerText = parseInt(s.historico.eventos_total).toLocaleString();
+            document.getElementById('ap_stat_hist_mb').innerText = `${s.historico.eventos_size_mb} MB archivados`;
+        } else {
+            badge.innerText = 'No se pudo calcular';
+        }
+    })
+    .catch(() => {
+        badge.innerText = 'Error al consultar';
+    });
+}
+
+function ejecutarDepuracionAuditoria() {
+    const months = document.getElementById('ap_months_select').value || 6;
+    const archive = document.getElementById('ap_archive_checkbox').checked ? 1 : 0;
+    const notes = document.getElementById('ap_notes_input').value.trim();
+
+    Swal.fire({
+        title: '¿Confirmar Mantenimiento de Auditoría?',
+        html: `Se depurarán los registros con más de <b>${months} meses</b> de antigüedad.<br>${archive ? 'Los registros serán respaldados en <code>eventos_asistencia_historico</code>.' : '<span class="text-danger font-weight-bold">Atención: No se creará copia histórica.</span>'}`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#1d4ed8',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sí, ejecutar mantenimiento',
+        cancelButtonText: 'Cancelar'
+    }).then(result => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Ejecutando depuración y archivado...',
+                text: 'Optimizando tablas de auditoría en MySQL...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            const formData = new FormData();
+            formData.append('months', months);
+            formData.append('archive', archive);
+            formData.append('notes', notes);
+
+            fetch('?route=dispositivos&action=audit_purge', {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Depuración Completada!',
+                        html: `
+                            <p class="mb-2">${escapeHtml(data.message)}</p>
+                            <div class="small text-muted text-left p-2 bg-light rounded border">
+                                • Eventos archivados: <b>${parseInt(data.eventos_archivados || 0).toLocaleString()}</b><br>
+                                • Eventos eliminados de tabla activa: <b>${parseInt(data.eventos_eliminados || 0).toLocaleString()}</b><br>
+                                • Cola archivada: <b>${parseInt(data.cola_archivada || 0).toLocaleString()}</b><br>
+                                • Cola procesada liberada: <b>${parseInt(data.cola_eliminada || 0).toLocaleString()}</b><br>
+                                • Duración de la operación: <b>${data.duracion_ms} ms</b>
+                            </div>
+                        `,
+                        confirmButtonColor: '#1d4ed8'
+                    }).then(() => {
+                        actualizarElegiblesAuditoria();
+                    });
+                } else {
+                    Swal.fire('Error', data.error || 'Ocurrió un error al depurar.', 'error');
+                }
+            })
+            .catch(err => {
+                Swal.fire('Error', 'Fallo de red: ' + err.message, 'error');
+            });
+        }
+    });
+}
 </script>
 
 <?php require_once APP_ROOT . '/views/layout/footer.php'; ?>

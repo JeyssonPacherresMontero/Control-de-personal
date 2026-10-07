@@ -5,6 +5,8 @@ namespace App\Controllers;
 
 use App\Database;
 use App\Services\PythonRunner;
+use App\Services\LogMonitorService;
+use App\Services\AuditPurgeService;
 
 class DispositivosController {
     public function index(): void {
@@ -28,6 +30,12 @@ class DispositivosController {
             ORDER BY l.fecha_hora DESC
             LIMIT 50
         ");
+
+        // Diagnóstico de logs del sistema y auditoría
+        $logOverview = LogMonitorService::getLogsOverview();
+        $zkHealth = LogMonitorService::getZkNetworkHealth();
+        $phpHealth = LogMonitorService::getPhpErrorHealth();
+        $auditStats = AuditPurgeService::getAuditStats(6);
 
         require_once APP_ROOT . '/views/dispositivos/index.php';
     }
@@ -86,7 +94,7 @@ class DispositivosController {
         }
         $ubicacion = trim($_POST['ubicacion'] ?? '');
         $modelo = trim($_POST['modelo'] ?? '');
-        $activo = isset($_POST['activo']) ? 1 : 0;
+        $activo = (!empty($_POST['activo']) && $_POST['activo'] !== '0' && $_POST['activo'] !== 0) ? 1 : 0;
 
         if (empty($nombre) || empty($ip)) {
             header('Location: ?route=dispositivos&msg=campos_requeridos');
@@ -640,6 +648,146 @@ class DispositivosController {
         }
 
         header('Location: ?route=dispositivos&msg=' . ($success ? 'memoria_liberada' : 'error_limpiar'));
+        exit;
+    }
+
+    /**
+     * AJAX: Retorna el resumen consolidado de salud de logs y diagnóstico de red ZKTeco
+     */
+    public function logsDiagnostico(): void {
+        AuthController::checkAuth();
+        AuthController::requireRole(['ADMIN', 'RRHH']);
+        session_write_close();
+        header('Content-Type: application/json; charset=utf-8');
+
+        $overview = LogMonitorService::getLogsOverview();
+        $zkHealth = LogMonitorService::getZkNetworkHealth();
+        $phpHealth = LogMonitorService::getPhpErrorHealth();
+
+        echo json_encode([
+            'success'   => true,
+            'timestamp' => date('Y-m-d H:i:s'),
+            'overview'  => $overview,
+            'zk_health' => $zkHealth,
+            'php_health'=> $phpHealth
+        ], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+        exit;
+    }
+
+    /**
+     * AJAX: Retorna las últimas N líneas de un archivo de log específico
+     */
+    public function getLogTail(): void {
+        AuthController::checkAuth();
+        AuthController::requireRole(['ADMIN', 'RRHH']);
+        session_write_close();
+        header('Content-Type: application/json; charset=utf-8');
+
+        $type = $_GET['type'] ?? 'sync';
+        $lines = min(300, max(10, (int)($_GET['lines'] ?? 100)));
+        $path = LogMonitorService::getLogPath($type);
+
+        if (!$path || !file_exists($path)) {
+            echo json_encode([
+                'success' => false,
+                'error'   => 'Archivo de log no disponible o ruta inválida.',
+                'lines'   => []
+            ]);
+            exit;
+        }
+
+        $logLines = LogMonitorService::tail($path, $lines);
+
+        echo json_encode([
+            'success' => true,
+            'type'    => $type,
+            'file'    => basename($path),
+            'count'   => count($logLines),
+            'lines'   => $logLines
+        ], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+        exit;
+    }
+
+    /**
+     * Descarga el archivo de log crudo completo
+     */
+    public function downloadLog(): void {
+        AuthController::checkAuth();
+        AuthController::requireRole(['ADMIN', 'RRHH']);
+
+        $type = $_GET['type'] ?? 'sync';
+        $path = LogMonitorService::getLogPath($type);
+
+        if (!$path || !file_exists($path)) {
+            header('Location: ?route=dispositivos&msg=error_interno');
+            exit;
+        }
+
+        $filename = basename($path);
+        header('Content-Description: File Transfer');
+        header('Content-Type: text/plain; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Expires: 0');
+        header('Cache-Control: must-revalidate');
+        header('Pragma: public');
+        header('Content-Length: ' . filesize($path));
+        readfile($path);
+        exit;
+    }
+
+    /**
+     * AJAX/POST: Vacía y rota un archivo de log generando respaldo .bak previo
+     */
+    public function clearLog(): void {
+        AuthController::checkAuth();
+        AuthController::requireRole('ADMIN');
+        \App\Csrf::validateRequest();
+        header('Content-Type: application/json; charset=utf-8');
+
+        $type = $_POST['type'] ?? '';
+        $user = AuthController::user()['usuario'] ?? 'ADMIN';
+
+        $res = LogMonitorService::clearLog($type, $user);
+        echo json_encode($res, JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    /**
+     * AJAX: Retorna estadísticas detalladas de las tablas de auditoría para depuración
+     */
+    public function auditStats(): void {
+        AuthController::checkAuth();
+        AuthController::requireRole(['ADMIN', 'RRHH']);
+        session_write_close();
+        header('Content-Type: application/json; charset=utf-8');
+
+        $months = max(1, (int)($_GET['months'] ?? 6));
+        $stats = AuditPurgeService::getAuditStats($months);
+
+        echo json_encode([
+            'success' => true,
+            'stats'   => $stats
+        ], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+        exit;
+    }
+
+    /**
+     * AJAX/POST: Ejecuta el archivado y depuración de tablas de auditoría
+     */
+    public function auditPurge(): void {
+        AuthController::checkAuth();
+        AuthController::requireRole('ADMIN');
+        \App\Csrf::validateRequest();
+        header('Content-Type: application/json; charset=utf-8');
+
+        $months = max(1, (int)($_POST['months'] ?? 6));
+        $archive = !empty($_POST['archive']) && $_POST['archive'] !== '0';
+        $notes = trim($_POST['notes'] ?? '');
+        $user = AuthController::user()['usuario'] ?? 'ADMIN';
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+
+        $res = AuditPurgeService::purgeAndArchive($months, $archive, $user, $ip, $notes);
+        echo json_encode($res, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
         exit;
     }
 }

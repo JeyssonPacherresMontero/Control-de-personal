@@ -1,22 +1,27 @@
-=== Iniciando sincronizaciÃ³n [INCREMENTAL (PENDIENTES) - 2026-10-05 09:31:03] ===
-2026-10-05 09:31:03,437 [INFO] [SyncEngine] Iniciando ciclo de sincronización (INCREMENTAL (7 DÍAS)) para 1 dispositivo(s)...
-2026-10-05 09:31:03,439 [INFO] [SyncEngine] ==> Iniciando sincronización (INCREMENTAL (7 DÍAS)) con biométrico #1 [Reloj Principal - Entrada] en 192.168.1.201:4370 (TCP)
-2026-10-05 09:31:03,439 [INFO] [ZKService] Intentando conectar a 192.168.1.201:4370 (Intento 1/4)...
-2026-10-05 09:31:03,502 [INFO] [ZKService] Conexión exitosa con dispositivo 192.168.1.201:4370 (Latencia: 62.3ms)
-2026-10-05 09:31:03,537 [INFO] [ZKService] Hora del reloj 192.168.1.201 sincronizada a: 2026-10-05 09:31:03.524330 (America/Lima)
-2026-10-05 09:31:04,266 [INFO] [SyncEngine] Sincronizados/actualizados 75 empleados desde el biométrico.
-2026-10-05 09:32:01,971 [INFO] [ZKService] Se descargaron 67115 registros brutos de 192.168.1.201
-2026-10-05 09:32:02,385 [INFO] [SyncEngine] 
-[2026-10-05 09:32:02]
+=== Iniciando sincronizaciÃ³n [INCREMENTAL (PENDIENTES) - 2026-10-07 10:59:34] ===
+2026-10-07 10:59:35,568 [INFO] [SyncEngine] Iniciando ciclo de sincronización (INCREMENTAL (7 DÍAS)) para 1 dispositivo(s)...
+2026-10-07 10:59:35,570 [INFO] [SyncEngine] ==> Iniciando sincronización (INCREMENTAL (7 DÍAS)) con biométrico #1 [Reloj Principal - Entrada] en 192.168.1.201:4370 (TCP)
+2026-10-07 10:59:35,570 [INFO] [ZKService] Intentando conectar a 192.168.1.201:4370 (Intento 1/4)...
+2026-10-07 10:59:35,638 [INFO] [ZKService] Conexión exitosa con dispositivo 192.168.1.201:4370 (Latencia: 67.94ms)
+2026-10-07 10:59:35,695 [INFO] [ZKService] Hora del reloj 192.168.1.201 sincronizada a: 2026-10-07 10:59:35.682335 (America/Lima)
+2026-10-07 10:59:36,463 [INFO] [SyncEngine] Sincronizados/actualizados 75 empleados desde el biométrico.
+2026-10-07 11:00:29,253 [INFO] [ZKService] Se descargaron 67192 registros brutos de 192.168.1.201
+2026-10-07 11:00:29,586 [INFO] [SyncEngine] 
+[2026-10-07 11:00:29]
 DEVICE: Reloj Principal - Entrada (ID: #1)
 IP: 192.168.1.201:4370
 MODE: PULL
 ACTION: GET_ATTENDANCE
 RESULT: SUCCESS
-RECORDS: 67115
-NEW: 0
-DUPLICATED: 205
-TIME: 58.95s (Latency: 62.3ms)
-2026-10-05 09:32:02,429 [INFO] [ZKService] Desconectado de 192.168.1.201:4370
-2026-10-05 09:32:02,439 [INFO] [SyncEngine] No hubo marcaciones nuevas insertadas en este ciclo.
-2026-10-05 09:32:02,439 [INFO] [SyncEngine] Ciclo de sincronización finalizado exitosamente.
+RECORDS: 67192
+NEW: 77
+DUPLICATED: 146
+TIME: 54.02s (Latency: 67.94ms)
+2026-10-07 11:00:29,652 [INFO] [ZKService] Desconectado de 192.168.1.201:4370
+2026-10-07 11:00:29,660 [INFO] [SyncEngine] Se insertaron 77 marcaciones. Recalculando 7 fecha(s) afectadas...
+2026-10-07 11:00:29,669 [INFO] [SyncEngine] Ejecutando motor de cálculo de asistencia diaria para rango 2026-09-30 al 2026-10-07...
+2026-10-07 11:00:30,039 [INFO] [SyncEngine] Cálculo completado exitosamente: Procesando rango de asistencia desde 2026-09-30 hasta 2026-10-07...
+[2026-09-30] Procesados: 75 | Presentes: 7 | Tardanzas: 1 | Faltas: 53 | Justificados: 0
+[2026-10-01] Procesados: 75 | Presentes: 6 | Tardanzas: 4 | Faltas: 58 | Justificados: 0
+[2026-10-02] Procesados: 75 | Presentes: 9 | Tardanzas
+2026-10-07 11:00:30,040 [INFO] [SyncEngine] Ciclo de sincronización finalizado exitosamente.
