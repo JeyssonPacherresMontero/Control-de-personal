@@ -116,6 +116,10 @@ class ZKDeviceService:
         """Cierra la conexión de forma segura"""
         if self.conn:
             try:
+                self.conn.cancel_capture()
+            except Exception:
+                pass
+            try:
                 self.conn.enable_device()
             except Exception:
                 pass
@@ -302,8 +306,9 @@ class ZKDeviceService:
         if not self.conn:
             self.connect()
         try:
-            self.conn.disable_device()
-            uid_val = int(uid) if uid else int(user_id) if user_id.isdigit() else 1
+            uid_val = int(uid) if uid else (int(user_id) if str(user_id).isdigit() else 1)
+            if not (1 <= uid_val <= 65535):
+                raise ValueError(f"El UID {uid_val} está fuera del rango permitido por ZKTeco (1 a 65535).")
             user_id_str = str(user_id).strip()
             name_str = str(name)[:24].strip() # ZKTeco name limit typical 24 chars
             
@@ -345,22 +350,67 @@ class ZKDeviceService:
             except Exception:
                 pass
 
-    def enroll_user(self, uid: int, temp_id: int = 0):
+    def enroll_user(self, uid: int, temp_id: int = 0, user_id: str = ''):
         """
-        Activa el modo de enrolamiento en el reloj biométrico.
-        El reloj solicitará al usuario colocar su dedo o ubicarse frente a la cámara.
-        temp_id: 0 a 9 (dedo a enrolar)
+        Ejecuta el ciclo de enrolamiento de huella en el reloj (3 capturas en el sensor).
+        Retorna True únicamente si pyzk confirmó las 3 lecturas con éxito (res == 0).
+        Retorna False si ocurrió timeout (60s), dedo duplicado o cancelación.
         """
         if not self.conn:
             self.connect()
         try:
-            # Enrolar en el reloj
-            res = self.conn.enroll_user(uid=int(uid), temp_id=int(temp_id))
-            logger.info(f"Enrolamiento iniciado en {self.ip} para UID {uid}, dedo/tipo {temp_id}")
-            return True
+            uid_val = int(uid)
+            temp_val = int(temp_id)
+            user_id_str = str(user_id).strip() if user_id else ''
+
+            logger.info(f"Iniciando ciclo de enrolamiento en {self.ip} (UID: {uid_val}, Dedo: {temp_val})...")
+            enroll_result = self.conn.enroll_user(uid=uid_val, temp_id=temp_val, user_id=user_id_str)
+
+            success = bool(enroll_result)
+            if success:
+                logger.info(f"Enrolamiento completado exitosamente en {self.ip} para UID {uid_val}, dedo {temp_val}")
+            else:
+                logger.warning(f"Enrolamiento NO completado en {self.ip} para UID {uid_val}, dedo {temp_val} (posible timeout, dedo duplicado o cancelado)")
+
+            return success
         except Exception as e:
-            logger.error(f"Error al iniciar enrolamiento en {self.ip}: {str(e)}")
+            logger.error(f"Excepción durante enrolamiento en {self.ip}: {str(e)}")
             raise
+        finally:
+            try:
+                self.conn.cancel_capture()
+            except Exception:
+                pass
+            try:
+                self.conn.enable_device()
+            except Exception:
+                pass
+    def get_user_template(self, uid: int, temp_id: int = 0):
+        """Descarga la plantilla de un dedo específico de un usuario del reloj"""
+        if not self.conn:
+            self.connect()
+        try:
+            self.conn.disable_device()
+            if hasattr(self.conn, 'get_user_template'):
+                finger = self.conn.get_user_template(uid=int(uid), temp_id=int(temp_id))
+                if finger:
+                    raw_tmpl = getattr(finger, 'template', b'')
+                    return {
+                        "uid": getattr(finger, 'uid', uid),
+                        "fid": getattr(finger, 'fid', temp_id),
+                        "size": getattr(finger, 'size', len(raw_tmpl)),
+                        "valid": getattr(finger, 'valid', 1),
+                        "template": raw_tmpl
+                    }
+            return None
+        except Exception as e:
+            logger.warning(f"Aviso al obtener plantilla individual de {self.ip} (UID {uid}, Dedo {temp_id}): {str(e)}")
+            return None
+        finally:
+            try:
+                self.conn.enable_device()
+            except Exception:
+                pass
 
     def get_templates(self):
         """Descarga todas las plantillas biométricas (huellas) registradas en el reloj"""

@@ -78,15 +78,45 @@
     box-shadow: 0 0 14px rgba(37, 99, 235, 0.65);
 }
 .finger-hotspot-btn.is-active {
+    background: #0284c7 !important;
+    border-color: #ffffff !important;
+    color: #ffffff !important;
+    font-weight: 900 !important;
+    transform: translate(-50%, -50%) scale(1.26);
+    box-shadow: 0 0 16px rgba(2, 132, 199, 0.85);
+    animation: pulse-node-blue 1.8s infinite;
+}
+.finger-hotspot-btn.is-enrolled {
     background: #16a34a !important;
     border-color: #ffffff !important;
     color: #ffffff !important;
     font-weight: 900 !important;
     transform: translate(-50%, -50%) scale(1.26);
-    box-shadow: 0 0 16px rgba(22, 163, 74, 0.90);
-    animation: pulse-node 1.8s infinite;
+    box-shadow: 0 0 18px rgba(22, 163, 74, 0.95);
+    animation: pulse-node-green 1.8s infinite;
 }
-@keyframes pulse-node {
+.finger-hotspot-btn.is-enrolled::after {
+    content: '✓';
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 15px;
+    height: 15px;
+    background: #ffffff;
+    color: #16a34a;
+    border-radius: 50%;
+    font-size: 0.65rem;
+    font-weight: 900;
+    line-height: 15px;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.35);
+}
+@keyframes pulse-node-blue {
+    0% { box-shadow: 0 0 0 0 rgba(2, 132, 199, 0.7); }
+    70% { box-shadow: 0 0 0 12px rgba(2, 132, 199, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(2, 132, 199, 0); }
+}
+@keyframes pulse-node-green {
     0% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.7); }
     70% { box-shadow: 0 0 0 12px rgba(22, 163, 74, 0); }
     100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
@@ -116,15 +146,31 @@
     color: #0f172a;
 }
 .finger-btn-chip.is-active {
-    background: #16a34a !important;
-    border-color: #15803d !important;
-    color: #ffffff !important;
-    box-shadow: 0 2px 6px rgba(22, 163, 74, 0.35);
+    background: #e0f2fe !important;
+    border-color: #0284c7 !important;
+    color: #0369a1 !important;
+    box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
 }
 .finger-btn-chip.is-active .chip-badge {
-    background: #ffffff !important;
-    color: #15803d !important;
+    background: #0284c7 !important;
+    color: #ffffff !important;
     font-weight: 800;
+}
+.finger-btn-chip.is-enrolled {
+    background: #dcfce7 !important;
+    border-color: #22c55e !important;
+    color: #15803d !important;
+    box-shadow: 0 2px 6px rgba(34, 197, 94, 0.25);
+}
+.finger-btn-chip.is-enrolled .chip-badge {
+    background: #16a34a !important;
+    color: #ffffff !important;
+    font-weight: 800;
+}
+.selected-finger-tag.is-enrolled {
+    border-color: #16a34a !important;
+    background: #f0fdf4 !important;
+    color: #15803d !important;
 }
 .chip-badge {
     font-size: 0.70rem;
@@ -537,6 +583,7 @@
             </div>
             <div class="modal-body p-4">
                 <input type="hidden" name="id" id="emp_id">
+                <input type="hidden" name="auto_bio" id="emp_auto_bio" value="0">
                 
                 <div class="modal-section-title mt-0">
                     <i class="fa-solid fa-id-card"></i> 1. Identificación y Reloj ZKTeco
@@ -859,7 +906,12 @@
             </div>
             <div class="modal-footer justify-content-between">
                 <button type="button" class="btn btn-outline-secondary btn-sm px-3" data-dismiss="modal">Cancelar</button>
-                <button type="submit" class="btn btn-primary btn-sm px-4 font-weight-bold"><i class="fa-solid fa-floppy-disk mr-1"></i> Guardar Empleado</button>
+                <div class="d-flex" style="gap: 6px;">
+                    <button type="submit" class="btn btn-primary btn-sm px-4 font-weight-bold" id="btnGuardarEmpleado"><i class="fa-solid fa-floppy-disk mr-1"></i> Guardar Empleado</button>
+                    <button type="button" class="btn btn-success btn-sm px-3 font-weight-bold" onclick="submitEmpWithAutoBio()" title="Guarda el empleado e inicia de inmediato la captura de sus huellas en el reloj biométrico">
+                        <i class="fa-solid fa-fingerprint mr-1"></i> Guardar y Capturar Huellas
+                    </button>
+                </div>
             </div>
         </form>
     </div>
@@ -1060,20 +1112,29 @@ function updateFingerUI() {
     // 2. Resaltar puntos táctiles (hotspots) en las manos realistas
     document.querySelectorAll('.finger-hotspot-btn').forEach(function(el) {
         var fid = parseInt(el.getAttribute('data-finger-id'));
-        if (selectedFingers.includes(fid)) {
+        el.classList.remove('is-active', 'is-enrolled');
+        if (enrolledInSession.has(fid)) {
+            el.classList.add('is-enrolled');
+            el.setAttribute('title', (FINGER_MAP[fid] || ('Dedo ' + fid)) + ' - ¡Huella Capturada en Reloj y Guardada en MySQL!');
+        } else if (selectedFingers.includes(fid)) {
             el.classList.add('is-active');
-        } else {
-            el.classList.remove('is-active');
+            el.setAttribute('title', (FINGER_MAP[fid] || ('Dedo ' + fid)) + ' - Seleccionado para registro');
         }
     });
 
     // 3. Resaltar chips en las listas de dedos
     document.querySelectorAll('.finger-btn-chip').forEach(function(btn) {
         var fid = parseInt(btn.getAttribute('data-finger-id'));
-        if (selectedFingers.includes(fid)) {
+        btn.classList.remove('is-active', 'is-enrolled');
+        var chipBadge = btn.querySelector('.chip-badge');
+        if (enrolledInSession.has(fid)) {
+            btn.classList.add('is-enrolled');
+            if (chipBadge) chipBadge.innerHTML = '<i class="fa-solid fa-check mr-1"></i>ID ' + fid;
+        } else if (selectedFingers.includes(fid)) {
             btn.classList.add('is-active');
+            if (chipBadge) chipBadge.innerText = 'ID ' + fid;
         } else {
-            btn.classList.remove('is-active');
+            if (chipBadge) chipBadge.innerText = 'ID ' + fid;
         }
     });
 
@@ -1086,8 +1147,17 @@ function updateFingerUI() {
             countBadge.className = 'badge badge-warning px-2 py-1 font-weight-bold';
             countBadge.innerHTML = '<i class="fa-solid fa-triangle-exclamation mr-1"></i> 0 Dedos Seleccionados';
         } else {
-            countBadge.className = 'badge badge-success px-2 py-1 font-weight-bold';
-            countBadge.innerHTML = '<i class="fa-solid fa-fingerprint mr-1"></i> ' + selectedFingers.length + ' Dedo(s) Seleccionado(s)';
+            var enrolledCount = selectedFingers.filter(function(id) { return enrolledInSession.has(id); }).length;
+            if (enrolledCount === selectedFingers.length && enrolledCount > 0) {
+                countBadge.className = 'badge badge-success px-2 py-1 font-weight-bold';
+                countBadge.innerHTML = '<i class="fa-solid fa-check-double mr-1"></i> ' + enrolledCount + '/' + selectedFingers.length + ' Dedos Capturados en Reloj';
+            } else if (enrolledCount > 0) {
+                countBadge.className = 'badge badge-info px-2 py-1 font-weight-bold';
+                countBadge.innerHTML = '<i class="fa-solid fa-fingerprint mr-1"></i> ' + enrolledCount + '/' + selectedFingers.length + ' Capturados (' + (selectedFingers.length - enrolledCount) + ' Pendientes)';
+            } else {
+                countBadge.className = 'badge badge-primary px-2 py-1 font-weight-bold';
+                countBadge.innerHTML = '<i class="fa-solid fa-fingerprint mr-1"></i> ' + selectedFingers.length + ' Dedo(s) Seleccionado(s)';
+            }
         }
     }
 
@@ -1099,9 +1169,15 @@ function updateFingerUI() {
             selectedFingers.forEach(function(id) {
                 var isLeft = id >= 6;
                 var sideColor = isLeft ? 'text-info' : 'text-primary';
-                html += '<span class="selected-finger-tag" title="Haz clic en la X para quitar este dedo">' +
-                        '<i class="fa-solid fa-check text-success mr-1" style="font-size: 0.7rem;"></i>' +
+                var isEnrolled = enrolledInSession.has(id);
+                var tagClass = isEnrolled ? 'selected-finger-tag is-enrolled' : 'selected-finger-tag';
+                var statusBadge = isEnrolled
+                    ? '<span class="badge badge-success px-1.5 py-0.5 ml-1" style="font-size: 0.68rem;"><i class="fa-solid fa-check mr-1"></i>Capturado</span>'
+                    : '<span class="badge badge-light border text-muted px-1.5 py-0.5 ml-1" style="font-size: 0.68rem;"><i class="fa-regular fa-clock mr-1"></i>Pendiente</span>';
+
+                html += '<span class="' + tagClass + '" title="' + (isEnrolled ? 'Huella ya registrada en reloj y respaldada en MySQL' : 'Pendiente de captura en sensor') + '">' +
                         '<strong class="' + sideColor + ' mr-1">ID ' + id + ':</strong> ' + FINGER_MAP[id] +
+                        statusBadge +
                         '<span class="tag-remove-btn" onclick="event.stopPropagation(); toggleFinger(' + id + ');" title="Quitar">&times;</span>' +
                         '</span>';
             });
@@ -1110,7 +1186,21 @@ function updateFingerUI() {
     }
 }
 
+var enrolledInSession = new Set();
+var bioHasChanged = false;
+var activeEmpBio = null;
+
+function getCsrfToken() {
+    return window._csrfToken || $('meta[name="csrf-token"]').attr('content') || '';
+}
+
 function openNewEmpleadoModal() {
+    enrolledInSession.clear();
+    var autoBioInput = document.getElementById('emp_auto_bio');
+    if (autoBioInput) autoBioInput.value = '0';
+    var saveBtn = document.getElementById('btnGuardarEmpleado');
+    if (saveBtn) saveBtn.classList.remove('shadow-lg', 'border-success');
+
     document.getElementById('empModalTitle').innerText = 'Registrar Nuevo Empleado';
     document.getElementById('emp_id').value = '';
     document.getElementById('emp_codigo_reloj').value = '<?= $siguienteCodigo ?>';
@@ -1134,6 +1224,12 @@ function openNewEmpleadoModal() {
 }
 
 function openEditEmpleadoModal(e) {
+    enrolledInSession.clear();
+    var autoBioInput = document.getElementById('emp_auto_bio');
+    if (autoBioInput) autoBioInput.value = '0';
+    var saveBtn = document.getElementById('btnGuardarEmpleado');
+    if (saveBtn) saveBtn.classList.remove('shadow-lg', 'border-success');
+
     document.getElementById('empModalTitle').innerText = 'Editar Datos de Empleado';
     document.getElementById('emp_id').value = e.id;
     document.getElementById('emp_codigo_reloj').value = e.codigo_reloj;
@@ -1163,7 +1259,37 @@ function openEditEmpleadoModal(e) {
     var count = parseInt(e.huellas_count || 0);
     document.getElementById('emp_inline_bio_text').innerText = count + ' Huella(s) en BDD';
 
+    if (e.codigo_reloj) {
+        fetch('?route=dispositivos&action=obtener_biometria_usuario&user_id=' + encodeURIComponent(e.codigo_reloj))
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (d.success && d.plantillas) {
+                    d.plantillas.forEach(function(p) {
+                        if (p.tipo === 'HUELLA' && p.dedo_indice !== null && p.dedo_indice !== undefined) {
+                            var uiFid = parseInt(p.dedo_indice) + 1;
+                            enrolledInSession.add(uiFid);
+                        }
+                    });
+                    updateFingerUI();
+                    var bioText = document.getElementById('emp_inline_bio_text');
+                    if (bioText) {
+                        bioText.innerText = (d.huellas_count || enrolledInSession.size) + ' Huella(s) en BDD';
+                    }
+                }
+            })
+            .catch(function() {});
+    }
+
     $('#modalEmpleado').modal('show');
+}
+
+function submitEmpWithAutoBio() {
+    var form = document.querySelector('#modalEmpleado form');
+    if (!form.reportValidity()) {
+        return;
+    }
+    document.getElementById('emp_auto_bio').value = '1';
+    form.submit();
 }
 
 // CAPTURA RÁPIDA DIRECTA DENTRO DEL FORMULARIO DE EMPLEADO
@@ -1193,6 +1319,7 @@ function quickRegisterInClock() {
     });
 
     var fd = new FormData();
+    fd.append('_csrf', getCsrfToken());
     fd.append('device_id', devId);
     fd.append('user_id', userId);
     fd.append('name', fullName);
@@ -1218,6 +1345,7 @@ function quickRegisterInClock() {
 function quickEnrollFingerInClock() {
     var devId = document.getElementById('emp_inline_device_id').value;
     var userId = document.getElementById('emp_codigo_reloj').value.trim();
+    var dni = document.getElementById('emp_dni') ? document.getElementById('emp_dni').value.trim() : '';
     var nombres = document.getElementById('emp_nombres').value.trim();
     var apellidos = document.getElementById('emp_apellidos').value.trim();
     var fullName = (nombres + ' ' + apellidos).trim();
@@ -1227,148 +1355,184 @@ function quickEnrollFingerInClock() {
         document.getElementById('emp_codigo_reloj').focus();
         return;
     }
+    if (!dni || !/^\d{8}$/.test(dni)) {
+        Swal.fire('DNI Requerido', 'Por favor ingresa un número de <strong>DNI válido (8 dígitos)</strong> antes de capturar las huellas biométricas.', 'warning');
+        if (document.getElementById('emp_dni')) document.getElementById('emp_dni').focus();
+        return;
+    }
+    if (!fullName) {
+        Swal.fire('Atención', 'Por favor ingresa los <strong>Nombres y Apellidos</strong> del empleado antes de capturar la huella.', 'warning');
+        document.getElementById('emp_nombres').focus();
+        return;
+    }
 
     if (selectedFingers.length === 0) {
         Swal.fire('Atención', 'Por favor selecciona al menos 1 dedo en las manos antes de iniciar la captura.', 'warning');
         return;
     }
 
-    // Si tiene múltiples dedos seleccionados, permitir escoger cuál enrolar en este paso
-    if (selectedFingers.length > 1) {
-        var optionsHtml = '';
-        selectedFingers.forEach(function(fid, idx) {
-            optionsHtml += '<option value="' + fid + '" ' + (idx === 0 ? 'selected' : '') + '>ID ' + fid + ' - ' + FINGER_MAP[fid] + '</option>';
-        });
+    // Filtrar los dedos asignados que aún NO han sido capturados en esta sesión
+    var pendingFingers = selectedFingers.filter(function(fid) { return !enrolledInSession.has(fid); });
 
+    if (pendingFingers.length === 0) {
         Swal.fire({
-            title: '🖐️ Selecciona el Dedo a Capturar',
-            html: '<p class="small text-muted mb-2">El empleado tiene <strong>' + selectedFingers.length + ' dedos asignados</strong>. Elige cuál deseas enrolar en el sensor en este momento:</p>' +
-                  '<select id="swal_enroll_finger_select" class="form-control form-control-sm mb-2">' + optionsHtml + '</select>',
-            icon: 'question',
+            title: '🎉 ¡Dedos Ya Capturados!',
+            html: '<p>Los <strong>' + selectedFingers.length + ' dedos asignados</strong> ya fueron capturados y respaldados en esta sesión.</p>' +
+                  '<p class="small text-muted mb-0">¿Deseas volver a capturar alguno de ellos o agregar otro dedo?</p>',
+            icon: 'info',
             showCancelButton: true,
-            confirmButtonText: '<i class="fa-solid fa-fingerprint mr-1"></i> Iniciar Captura',
-            cancelButtonText: 'Cancelar',
+            confirmButtonText: '<i class="fa-solid fa-rotate mr-1"></i> Re-capturar un dedo',
+            cancelButtonText: 'Listo, continuar',
             confirmButtonColor: '#16a34a'
-        }).then(function(result) {
-            if (result.isConfirmed) {
-                var selectEl = document.getElementById('swal_enroll_finger_select');
-                var chosenFinger = selectEl ? parseInt(selectEl.value) : selectedFingers[0];
-                proceedQuickEnroll(devId, userId, fullName, chosenFinger);
+        }).then(function(res) {
+            if (res.isConfirmed) {
+                chooseAndEnrollFinger(devId, userId, fullName, selectedFingers);
             }
         });
-    } else {
-        proceedQuickEnroll(devId, userId, fullName, selectedFingers[0]);
+        return;
     }
+
+    if (pendingFingers.length > 1) {
+        chooseAndEnrollFinger(devId, userId, fullName, pendingFingers);
+    } else {
+        proceedQuickEnroll(devId, userId, fullName, pendingFingers[0]);
+    }
+}
+
+function chooseAndEnrollFinger(devId, userId, fullName, fingerList) {
+    var optionsHtml = '';
+    fingerList.forEach(function(fid, idx) {
+        var isCap = enrolledInSession.has(fid);
+        var label = 'ID ' + fid + ' - ' + (FINGER_MAP[fid] || ('Dedo ' + fid)) + (isCap ? ' (Ya Capturado ✓)' : ' (Pendiente)');
+        optionsHtml += '<option value="' + fid + '" ' + (idx === 0 ? 'selected' : '') + '>' + label + '</option>';
+    });
+
+    Swal.fire({
+        title: '🖐️ Selecciona el Dedo a Capturar',
+        html: '<p class="small text-muted mb-2">El empleado tiene <strong>' + fingerList.length + ' dedos asignados</strong>. Elige cuál deseas enrolar en el sensor:</p>' +
+              '<select id="swal_enroll_finger_select" class="form-control form-control-sm mb-2">' + optionsHtml + '</select>',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: '<i class="fa-solid fa-fingerprint mr-1"></i> Iniciar Captura',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#16a34a'
+    }).then(function(result) {
+        if (result.isConfirmed) {
+            var selectEl = document.getElementById('swal_enroll_finger_select');
+            var chosenFinger = selectEl ? parseInt(selectEl.value) : fingerList[0];
+            proceedQuickEnroll(devId, userId, fullName, chosenFinger);
+        }
+    });
 }
 
 function proceedQuickEnroll(devId, userId, fullName, fingerId) {
     var fingerName = FINGER_MAP[fingerId] || ('Dedo ' + fingerId);
 
-    // 1. Enviar usuario primero si tiene nombre
-    if (fullName) {
-        var fdUser = new FormData();
-        fdUser.append('device_id', devId);
-        fdUser.append('user_id', userId);
-        fdUser.append('name', fullName);
-        fdUser.append('privilege', '0');
-        fetch('?route=dispositivos&action=enviar_usuario_reloj', { method: 'POST', body: fdUser });
-    }
-
-    // 2. Activar modo captura en el reloj para el dedo exacto seleccionado
-    var fdEnroll = new FormData();
-    fdEnroll.append('device_id', devId);
-    fdEnroll.append('user_id', userId);
-    fdEnroll.append('temp_id', fingerId);
-    fetch('?route=dispositivos&action=enrolar_huella', { method: 'POST', body: fdEnroll });
-
-    // 3. Mostrar modal interactivo al operador indicando el dedo seleccionado
     Swal.fire({
-        title: '🖐️ ¡Coloca el dedo en el sensor del reloj!',
+        title: '🖐️ ¡Coloca el dedo en el sensor!',
         html: '<div class="text-left">' +
-              '<p>Se ha activado el sensor óptico en el reloj biométrico para el usuario <strong>ID ' + userId + '</strong>.</p>' +
               '<div class="p-2 mb-2 bg-light border rounded text-center">' +
               '<span class="badge badge-success px-2 py-1 mr-1"><i class="fa-solid fa-hand-point-right mr-1"></i> Dedo a Registrar:</span> ' +
               '<strong class="text-dark">' + fingerName + '</strong> (ID ' + fingerId + ')' +
               '</div>' +
-              '<div class="alert alert-info py-2 px-3 small mb-2">' +
-              '<i class="fa-solid fa-circle-info mr-1"></i> <strong>Instrucciones:</strong> Solicita al empleado que coloque su <strong>' + fingerName + '</strong> en el sensor del reloj <strong>3 veces consecutivas</strong> hasta escuchar el pitido de confirmación del reloj.' +
-              '</div>' +
+              '<p class="mb-2">El sensor del reloj biométrico está activo.<br>' +
+              '<strong>Coloca el dedo 3 veces consecutivas sobre el lector.</strong></p>' +
+              '<div class="text-center text-muted small py-1"><i class="fa-solid fa-spinner fa-spin mr-1"></i> Esperando confirmación y guardado en MySQL...</div>' +
               '</div>',
-        icon: 'info',
-        showCancelButton: true,
-        confirmButtonText: '<i class="fa-solid fa-cloud-arrow-down mr-1"></i> Ya colocó la huella (Respaldar en BDD)',
-        cancelButtonText: 'Cancelar',
-        confirmButtonColor: '#16a34a'
-    }).then(function(result) {
-        if (result.isConfirmed) {
-            Swal.fire({
-                title: 'Descargando y Respaldando Huella...',
-                text: 'Guardando plantilla biométrica en MySQL...',
-                allowOutsideClick: false,
-                didOpen: function() { Swal.showLoading(); }
-            });
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        showConfirmButton: false,
+        didOpen: function() { Swal.showLoading(); }
+    });
 
-            var fdSync = new FormData();
-            fdSync.append('device_id', devId);
-            fdSync.append('user_id', userId);
+    var fd = new FormData();
+    fd.append('_csrf', getCsrfToken());
+    fd.append('device_id', devId);
+    fd.append('user_id', userId);
+    fd.append('name', fullName);
+    fd.append('temp_id', fingerId);
 
-            fetch('?route=dispositivos&action=sincronizar_biometria', {
-                method: 'POST',
-                body: fdSync
-            })
-            .then(function(r) { return r.json(); })
-            .then(function(res) {
-                if (res.success) {
-                    var bioText = document.getElementById('emp_inline_bio_text');
-                    if (bioText) bioText.innerText = 'Huellas respaldadas en BDD';
+    fetch('?route=dispositivos&action=enrolar_completo', {
+        method: 'POST',
+        body: fd
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+        if (res.success) {
+            enrolledInSession.add(fingerId);
+            bioHasChanged = true;
+            updateFingerUI();
+            var bioText = document.getElementById('emp_inline_bio_text');
+            if (bioText) {
+                bioText.innerText = enrolledInSession.size + ' Huella(s) en BDD';
+            }
 
-                    // Comprobar si hay un siguiente dedo en la lista de dedos seleccionados (Enrolamiento en Cadena)
-                    var currentIdx = selectedFingers.indexOf(fingerId);
-                    var nextFingerId = (currentIdx !== -1 && (currentIdx + 1) < selectedFingers.length) ? selectedFingers[currentIdx + 1] : null;
+            // Buscar si faltan otros dedos seleccionados por capturar
+            var pending = selectedFingers.filter(function(fid) { return !enrolledInSession.has(fid); });
 
-                    if (nextFingerId) {
-                        var nextName = FINGER_MAP[nextFingerId] || ('Dedo ' + nextFingerId);
-                        Swal.fire({
-                            title: '✅ ¡' + fingerName + ' Registrado!',
-                            html: '<div class="text-left">' +
-                                  '<p class="mb-2">La huella fue capturada en el sensor y respaldada en MySQL con éxito.</p>' +
-                                  '<div class="p-3 bg-light rounded border mb-2">' +
-                                  '<span class="badge badge-warning text-dark px-2 py-1 mb-1"><i class="fa-solid fa-clock mr-1"></i> Siguiente Dedo Asignado:</span>' +
-                                  '<div class="h6 font-weight-bold text-dark mt-1 mb-0"><i class="fa-solid fa-hand-point-right text-primary mr-1"></i> ' + nextName + ' (ID ' + nextFingerId + ')</div>' +
-                                  '</div>' +
-                                  '<p class="small text-muted mb-0">¿Deseas activar el sensor del reloj biométrico para enrolar este siguiente dedo ahora mismo?</p>' +
-                                  '</div>',
-                            icon: 'success',
-                            showCancelButton: true,
-                            confirmButtonText: '<i class="fa-solid fa-fingerprint mr-1"></i> Sí, Enrolar ' + nextName,
-                            cancelButtonText: 'Terminar por ahora',
-                            confirmButtonColor: '#16a34a',
-                            cancelButtonColor: '#6c757d'
-                        }).then(function(chainRes) {
-                            if (chainRes.isConfirmed) {
-                                proceedQuickEnroll(devId, userId, fullName, nextFingerId);
-                            }
-                        });
-                    } else {
-                        Swal.fire({
-                            title: '🎉 ¡Biometría Multidedo Completa!',
-                            html: 'Se han capturado y respaldado exitosamente todas las huellas seleccionadas (<strong>' + selectedFingers.length + ' dedo(s)</strong>) en el reloj ZKTeco y en la base de datos MySQL.',
-                            icon: 'success',
-                            confirmButtonColor: '#16a34a'
-                        });
+            if (pending.length > 0) {
+                var nextFingerId = pending[0];
+                var nextName = FINGER_MAP[nextFingerId] || ('Dedo ' + nextFingerId);
+
+                Swal.fire({
+                    title: '✅ ¡' + fingerName + ' Registrado!',
+                    html: '<div class="text-left">' +
+                          '<p class="mb-2">La huella fue capturada y respaldada en MySQL con éxito.</p>' +
+                          '<div class="alert alert-info py-2 px-3 small mb-2">' +
+                          '<i class="fa-solid fa-hands mr-1"></i> Faltan <strong>' + pending.length + ' dedo(s) asignado(s)</strong> por registrar.' +
+                          '</div>' +
+                          '<div class="p-2 bg-light rounded border mb-2 text-center">' +
+                          '<span class="badge badge-warning text-dark mr-1"><i class="fa-solid fa-hand-point-right mr-1"></i> Siguiente Dedo:</span> ' +
+                          '<strong class="text-dark">' + nextName + ' (ID ' + nextFingerId + ')</strong>' +
+                          '</div>' +
+                          '</div>',
+                    icon: 'success',
+                    showCancelButton: true,
+                    confirmButtonText: '<i class="fa-solid fa-fingerprint mr-1"></i> Sí, Enrolar ' + nextName,
+                    cancelButtonText: 'Terminar por ahora',
+                    confirmButtonColor: '#16a34a',
+                    cancelButtonColor: '#6c757d'
+                }).then(function(chainRes) {
+                    if (chainRes.isConfirmed) {
+                        proceedQuickEnroll(devId, userId, fullName, nextFingerId);
                     }
-                } else {
-                    Swal.fire('Aviso', res.error || 'No se pudo descargar la huella.', 'warning');
+                });
+            } else {
+                Swal.fire({
+                    title: '🎉 ¡Todas las Huellas Registradas!',
+                    html: '<p class="mb-2">Se han capturado y respaldado en MySQL las <strong>' + selectedFingers.length + ' huellas asignadas</strong> para ' + fullName + '.</p>' +
+                          '<p class="small text-muted mb-0">Haz clic en <strong>"Guardar Empleado"</strong> para completar el registro de la ficha laboral.</p>',
+                    icon: 'success',
+                    confirmButtonText: '<i class="fa-solid fa-check mr-1"></i> Entendido',
+                    confirmButtonColor: '#16a34a'
+                });
+
+                var saveBtn = document.getElementById('btnGuardarEmpleado');
+                if (saveBtn) {
+                    saveBtn.classList.add('shadow-lg', 'border-success');
                 }
-            })
-            .catch(function() {
-                Swal.fire('Error', 'Fallo al sincronizar huella.', 'error');
+            }
+        } else {
+            Swal.fire({
+                title: 'Error en Captura de Huella',
+                html: '<p class="text-danger mb-2">' + (res.error || 'No se completó la captura en el reloj.') + '</p>' +
+                      '<small class="text-muted">Asegúrese de colocar el dedo 3 veces firmemente sobre el sensor óptico.</small>',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: '<i class="fa-solid fa-rotate mr-1"></i> Reintentar',
+                cancelButtonText: 'Cerrar',
+                confirmButtonColor: '#16a34a'
+            }).then(function(retryRes) {
+                if (retryRes.isConfirmed) {
+                    proceedQuickEnroll(devId, userId, fullName, fingerId);
+                }
             });
         }
+    })
+    .catch(function(err) {
+        Swal.fire('Error de Conexión', 'Fallo de comunicación con el servidor al procesar el enrolamiento.', 'error');
     });
 }
-
-var activeEmpBio = null;
 
 function openEmpBiometricModal(e) {
     activeEmpBio = e;
@@ -1390,7 +1554,7 @@ function openEmpBiometricModal(e) {
         fingerSelect.value = defaultF;
     }
 
-    loadEmpBiometricStatus(e.codigo_reloj);
+    loadEmpBiometricStatus(e.codigo_reloj, false);
     $('#modalBiometriaEmp').modal('show');
 }
 
@@ -1482,7 +1646,7 @@ function loadEmpBiometricStatus(userId, offerChainNext) {
                     }
                 }
 
-                // Si viene de un enrolamiento reciente, ofrecer el siguiente dedo automáticamente (Opción A)
+                // Chaining: Si viene de un enrolamiento reciente, ofrecer el siguiente dedo automáticamente
                 if (offerChainNext === true) {
                     if (pendingFingers.length > 0) {
                         var nextPendingFid = pendingFingers[0];
@@ -1494,7 +1658,7 @@ function loadEmpBiometricStatus(userId, offerChainNext) {
                                   '<div class="alert alert-warning py-2 px-3 small mb-2">' +
                                   '<i class="fa-solid fa-clock mr-1"></i> Aún tienes <strong>' + pendingFingers.length + ' dedo(s) pendiente(s)</strong> de registro.' +
                                   '</div>' +
-                                  '<div class="p-2 bg-light rounded border mb-2">' +
+                                  '<div class="p-2 bg-light rounded border mb-2 text-center">' +
                                   '<span class="badge badge-warning text-dark mr-1"><i class="fa-solid fa-hand-point-right mr-1"></i> Siguiente Dedo:</span> ' +
                                   '<strong class="text-dark">' + nextPendingName + ' (ID ' + nextPendingFid + ')</strong>' +
                                   '</div>' +
@@ -1508,7 +1672,7 @@ function loadEmpBiometricStatus(userId, offerChainNext) {
                             cancelButtonColor: '#6c757d'
                         }).then(function(nextRes) {
                             if (nextRes.isConfirmed) {
-                                directEnrollFinger(nextPendingFid);
+                                triggerEnrollEmpFinger(nextPendingFid);
                             }
                         });
                     } else {
@@ -1531,11 +1695,7 @@ function loadEmpBiometricStatus(userId, offerChainNext) {
 }
 
 function directEnrollFinger(fingerId) {
-    var fingerSelect = document.getElementById('emp_bio_finger_select');
-    if (fingerSelect) {
-        fingerSelect.value = String(fingerId);
-    }
-    triggerEnrollEmpFinger();
+    triggerEnrollEmpFinger(fingerId);
 }
 
 function sendEmpToClock() {
@@ -1551,6 +1711,7 @@ function sendEmpToClock() {
     });
 
     var fd = new FormData();
+    fd.append('_csrf', getCsrfToken());
     fd.append('device_id', devId);
     fd.append('user_id', userId);
     fd.append('name', name);
@@ -1573,52 +1734,91 @@ function sendEmpToClock() {
     });
 }
 
-function triggerEnrollEmpFinger() {
+function triggerEnrollEmpFinger(targetFingerId) {
     var devId = document.getElementById('emp_bio_device_select').value;
     var userId = document.getElementById('emp_bio_user_id').value;
+    var userName = document.getElementById('emp_bio_user_name').value || '';
     var fingerSelect = document.getElementById('emp_bio_finger_select');
-    var tempId = fingerSelect ? fingerSelect.value : '2';
-    var fingerName = fingerSelect ? fingerSelect.options[fingerSelect.selectedIndex].text : 'Dedo';
+    var fid = targetFingerId || (fingerSelect ? parseInt(fingerSelect.value) : 2);
+    var fingerName = FINGER_MAP[fid] || ('Dedo ' + fid);
+
+    if (fingerSelect && fid) {
+        fingerSelect.value = String(fid);
+    }
 
     Swal.fire({
-        title: '¡Coloca el dedo en el sensor!',
-        html: 'Se ha activado el modo de captura para <strong>' + fingerName + '</strong>.<br><strong>El empleado debe colocar su dedo en el sensor óptico del reloj biométrico 3 veces consecutivas.</strong>',
-        icon: 'info',
-        showCancelButton: true,
-        confirmButtonText: '<i class="fa-solid fa-check mr-1"></i> Ya colocó la huella',
-        cancelButtonText: 'Cancelar',
-        confirmButtonColor: '#16a34a'
-    }).then(function(result) {
-        if (result.isConfirmed) {
-            syncEmpTemplatesToDB(true);
-        }
+        title: '🖐️ ¡Coloca el dedo en el sensor!',
+        html: '<div class="text-left">' +
+              '<div class="p-2 mb-2 bg-light border rounded text-center">' +
+              '<span class="badge badge-success px-2 py-1 mr-1"><i class="fa-solid fa-hand-point-right mr-1"></i> Dedo a Registrar:</span> ' +
+              '<strong class="text-dark">' + fingerName + '</strong> (ID ' + fid + ')' +
+              '</div>' +
+              '<p class="mb-2">El sensor óptico del reloj biométrico está activo.<br>' +
+              '<strong>Coloca el dedo en el lector 3 veces consecutivas.</strong></p>' +
+              '<div class="text-center text-muted small py-1"><i class="fa-solid fa-spinner fa-spin mr-1"></i> Esperando confirmación y guardado en MySQL...</div>' +
+              '</div>',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        showConfirmButton: false,
+        didOpen: function() { Swal.showLoading(); }
     });
 
     var fd = new FormData();
+    fd.append('_csrf', getCsrfToken());
     fd.append('device_id', devId);
     fd.append('user_id', userId);
-    fd.append('temp_id', tempId);
+    fd.append('name', userName);
+    fd.append('temp_id', fid);
 
-    fetch('?route=dispositivos&action=enrolar_huella', {
+    fetch('?route=dispositivos&action=enrolar_completo', {
         method: 'POST',
         body: fd
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+        if (res.success) {
+            bioHasChanged = true;
+            loadEmpBiometricStatus(userId, true);
+        } else {
+            Swal.fire({
+                title: 'Error al Capturar Huella',
+                html: '<p class="text-danger mb-2">' + (res.error || 'No se pudo completar la captura en el reloj biométrico.') + '</p>' +
+                      '<small class="text-muted">Asegúrate de que el empleado colocó el dedo 3 veces firmemente sobre el sensor y que el reloj esté en línea.</small>',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: '<i class="fa-solid fa-rotate mr-1"></i> Reintentar Captura',
+                cancelButtonText: 'Cerrar',
+                confirmButtonColor: '#16a34a'
+            }).then(function(retryRes) {
+                if (retryRes.isConfirmed) {
+                    triggerEnrollEmpFinger(fid);
+                }
+            });
+        }
+    })
+    .catch(function() {
+        Swal.fire('Error', 'Fallo de comunicación con el servidor al procesar el enrolamiento.', 'error');
     });
 }
 
-function syncEmpTemplatesToDB(offerChainNext) {
+function syncEmpTemplatesToDB() {
     var devId = document.getElementById('emp_bio_device_select').value;
     var userId = document.getElementById('emp_bio_user_id').value;
+    var fingerSelect = document.getElementById('emp_bio_finger_select');
+    var fingerId = fingerSelect ? parseInt(fingerSelect.value) : 2;
 
     Swal.fire({
-        title: 'Descargando y Respaldando Biometría...',
-        text: 'Guardando huellas y rostros del reloj en la base de datos MySQL.',
+        title: 'Respaldando Plantillas...',
+        text: 'Descargando huellas registradas en el reloj hacia MySQL.',
         allowOutsideClick: false,
         didOpen: function() { Swal.showLoading(); }
     });
 
     var fd = new FormData();
+    fd.append('_csrf', getCsrfToken());
     fd.append('device_id', devId);
     fd.append('user_id', userId);
+    fd.append('temp_id', fingerId);
 
     fetch('?route=dispositivos&action=sincronizar_biometria', {
         method: 'POST',
@@ -1626,19 +1826,50 @@ function syncEmpTemplatesToDB(offerChainNext) {
     })
     .then(function(r) { return r.json(); })
     .then(function(res) {
-        if (res.success) {
-            loadEmpBiometricStatus(userId, offerChainNext === true);
-            if (!offerChainNext) {
-                Swal.fire('¡Respaldado!', res.message || 'Plantillas biométricas guardadas en MySQL exitosamente.', 'success');
-            }
+        if (res.success && (res.saved === undefined || res.saved > 0)) {
+            bioHasChanged = true;
+            loadEmpBiometricStatus(userId, false);
+            Swal.fire('¡Respaldado!', res.message || 'Plantillas biométricas guardadas en MySQL exitosamente.', 'success');
         } else {
-            Swal.fire('Aviso', res.error || 'No se pudieron descargar las plantillas.', 'warning');
+            Swal.fire({
+                title: 'Aviso de Respaldo',
+                html: '<p class="text-danger mb-2">' + (res.error || 'No se encontraron plantillas para este usuario en el reloj.') + '</p>',
+                icon: 'warning',
+                confirmButtonColor: '#16a34a'
+            });
         }
     })
     .catch(function() {
         Swal.fire('Error', 'Fallo al procesar sincronización biométrica.', 'error');
     });
 }
+
+$('#modalBiometriaEmp').on('hidden.bs.modal', function () {
+    if (bioHasChanged) {
+        window.location.href = '?route=empleados';
+    }
+});
+
+<?php if (!empty($_GET['auto_bio'])): ?>
+$(document).ready(function() {
+    var autoBioCode = <?= json_encode((string)$_GET['auto_bio']) ?>;
+    var empList = <?= json_encode($empleados) ?>;
+    var targetEmp = empList.find(function(e) { return String(e.codigo_reloj) === String(autoBioCode); });
+    if (targetEmp) {
+        setTimeout(function() {
+            Swal.fire({
+                title: '✅ Empleado Guardado',
+                text: 'Empleado ' + (targetEmp.nombres || '') + ' ' + (targetEmp.apellidos || '') + ' registrado exitosamente. Ahora procedamos a capturar sus huellas en el reloj biométrico.',
+                icon: 'success',
+                confirmButtonText: '<i class="fa-solid fa-fingerprint mr-1"></i> Comenzar Captura de Huellas',
+                confirmButtonColor: '#16a34a'
+            }).then(function() {
+                openEmpBiometricModal(targetEmp);
+            });
+        }, 400);
+    }
+});
+<?php endif; ?>
 </script>
 <?php endif; ?>
 

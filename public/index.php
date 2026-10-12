@@ -167,6 +167,10 @@ switch ($route) {
             $requirePost('dispositivos');
             AuthController::requireRole(['ADMIN', 'RRHH']);
             $controller->enrolarHuella();
+        } elseif ($action === 'enrolar_completo') {
+            $requirePost('dispositivos');
+            AuthController::requireRole(['ADMIN', 'RRHH']);
+            $controller->enrolarCompleto();
         } elseif ($action === 'sincronizar_biometria') {
             $requirePost('dispositivos');
             AuthController::requireRole(['ADMIN', 'RRHH']);

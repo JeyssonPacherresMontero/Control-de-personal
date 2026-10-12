@@ -202,12 +202,37 @@ class EmpleadosController {
             ", $params);
         }
 
+        $isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') 
+                  || isset($_GET['ajax']) 
+                  || isset($_POST['ajax'])
+                  || (isset($_SERVER['HTTP_ACCEPT']) && str_contains($_SERVER['HTTP_ACCEPT'], 'application/json'));
+
         if (!$result['success']) {
+            if ($isAjax) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'error' => $result['error']], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
             header('Location: ?route=empleados&msg=' . $result['error']);
             exit;
         }
 
-        header('Location: ?route=empleados&msg=guardado');
+        if ($isAjax) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'success' => true, 
+                'message' => 'Empleado guardado correctamente.', 
+                'codigo_reloj' => $codigoReloj,
+                'auto_bio' => !empty($_POST['auto_bio'])
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $redirectUrl = '?route=empleados&msg=guardado';
+        if (!empty($_POST['auto_bio'])) {
+            $redirectUrl .= '&auto_bio=' . urlencode($codigoReloj);
+        }
+        header('Location: ' . $redirectUrl);
         exit;
     }
 

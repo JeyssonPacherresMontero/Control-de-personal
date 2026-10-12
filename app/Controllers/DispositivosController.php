@@ -450,9 +450,21 @@ class DispositivosController {
         $privilege = max(0, min(2, (int)($_POST['privilege'] ?? 0)));
         $password = trim($_POST['password'] ?? '');
 
-        if (empty($userId) || empty($name)) {
+        if (empty($userId)) {
             header('Content-Type: application/json; charset=utf-8');
-            echo json_encode(['success' => false, 'error' => 'Se requiere el código/ID de reloj y el nombre del usuario.']);
+            echo json_encode(['success' => false, 'error' => 'Se requiere el código/ID de reloj del usuario.']);
+            exit;
+        }
+
+        if (empty($name)) {
+            $emp = Database::queryOne("SELECT nombres, apellidos FROM empleados WHERE codigo_reloj = ?", [$userId]);
+            if ($emp) {
+                $name = trim(($emp['nombres'] ?? '') . ' ' . ($emp['apellidos'] ?? ''));
+            }
+        }
+        if (empty($name)) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'error' => 'Se requiere el nombre del empleado para registrarlo en el reloj.']);
             exit;
         }
 
@@ -490,6 +502,8 @@ class DispositivosController {
         AuthController::requireRole(['ADMIN', 'RRHH']);
         \App\Csrf::validateRequest();
 
+        @set_time_limit(150);
+
         $deviceId = (int)($_POST['device_id'] ?? 1);
         $userId = trim($_POST['user_id'] ?? '');
         $rawTempId = (int)($_POST['temp_id'] ?? 2);
@@ -505,7 +519,7 @@ class DispositivosController {
         $pythonScript = APP_ROOT . '/sync/biometric_admin.py';
         $args = ['enroll', '--device', $deviceId, '--user-id', $userId, '--temp-id', $tempId];
 
-        $res = PythonRunner::run($pythonScript, $args, 35);
+        $res = PythonRunner::run($pythonScript, $args, 120);
         $output = $res['output'];
 
         $jsonStart = strpos($output, '{');
@@ -525,6 +539,76 @@ class DispositivosController {
     }
 
     /**
+     * AJAX: Flujo atómico de alta, captura de huella y respaldo directo en MySQL
+     */
+    public function enrolarCompleto(): void {
+        AuthController::checkAuth();
+        AuthController::requireRole(['ADMIN', 'RRHH']);
+        \App\Csrf::validateRequest();
+
+        @set_time_limit(150);
+
+        $deviceId = (int)($_POST['device_id'] ?? 1);
+        $userId = trim($_POST['user_id'] ?? '');
+        $name = trim($_POST['name'] ?? '');
+        $rawTempId = (int)($_POST['temp_id'] ?? 2);
+        $tempId = ($rawTempId >= 1 && $rawTempId <= 10) ? ($rawTempId - 1) : max(0, min(9, $rawTempId));
+        $privilege = max(0, min(2, (int)($_POST['privilege'] ?? 0)));
+        $password = trim($_POST['password'] ?? '');
+
+        if (empty($userId)) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'error' => 'Se requiere el código/ID de reloj del usuario.']);
+            exit;
+        }
+
+        if (empty($name)) {
+            $emp = Database::queryOne("SELECT nombres, apellidos FROM empleados WHERE codigo_reloj = ?", [$userId]);
+            if ($emp) {
+                $name = trim(($emp['nombres'] ?? '') . ' ' . ($emp['apellidos'] ?? ''));
+            }
+        }
+        if (empty($name)) {
+            $name = "Empleado $userId";
+        }
+
+        $pythonScript = APP_ROOT . '/sync/biometric_admin.py';
+        $args = [
+            'enroll-full',
+            '--device', $deviceId,
+            '--user-id', $userId,
+            '--name', $name,
+            '--temp-id', $tempId,
+            '--privilege', $privilege
+        ];
+        if (!empty($password)) {
+            $args[] = '--password';
+            $args[] = $password;
+        }
+
+        $res = PythonRunner::run($pythonScript, $args, 120);
+        $output = $res['output'];
+
+        $jsonStart = strpos($output, '{');
+        if ($jsonStart !== false) {
+            $jsonStr = substr($output, $jsonStart);
+            $parsed = json_decode($jsonStr, true);
+            if (is_array($parsed)) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode($parsed, JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+        }
+
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'success' => false,
+            'error' => $output ?: 'Error desconocido al ejecutar enrolamiento completo.'
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    /**
      * AJAX: Descarga las huellas/rostros del reloj y las guarda en la tabla plantillas_biometricas
      */
     public function sincronizarBiometria(): void {
@@ -534,6 +618,8 @@ class DispositivosController {
 
         $deviceId = (int)($_POST['device_id'] ?? 1);
         $userId = trim($_POST['user_id'] ?? '');
+        $rawTempId = isset($_POST['temp_id']) ? (int)$_POST['temp_id'] : null;
+        $tempId = ($rawTempId !== null) ? (($rawTempId >= 1 && $rawTempId <= 10) ? ($rawTempId - 1) : max(0, min(9, $rawTempId))) : null;
 
         $pythonScript = APP_ROOT . '/sync/biometric_admin.py';
         $args = ['download-templates', '--device', $deviceId];
@@ -544,8 +630,16 @@ class DispositivosController {
             $args[] = '--user-id';
             $args[] = '';
         }
+        if ($tempId !== null) {
+            $args[] = '--temp-id';
+            $args[] = $tempId;
+        }
 
-        $res = PythonRunner::run($pythonScript, $args, 45);
+        $timeout = empty($userId) ? 120 : 45;
+        if (empty($userId)) {
+            @set_time_limit(150);
+        }
+        $res = PythonRunner::run($pythonScript, $args, $timeout);
         $output = $res['output'];
 
         $jsonStart = strpos($output, '{');
@@ -553,6 +647,12 @@ class DispositivosController {
             $jsonStr = substr($output, $jsonStart);
             $parsed = json_decode($jsonStr, true);
             if (is_array($parsed)) {
+                if (!empty($userId) && isset($parsed['saved']) && (int)$parsed['saved'] === 0) {
+                    $parsed['success'] = false;
+                    if (empty($parsed['error'])) {
+                        $parsed['error'] = 'No se encontró la plantilla de huella esperada en el reloj para respaldar.';
+                    }
+                }
                 header('Content-Type: application/json; charset=utf-8');
                 echo json_encode($parsed, JSON_UNESCAPED_UNICODE);
                 exit;

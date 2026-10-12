@@ -27,6 +27,7 @@ from config import DB_CONFIG, ZK_CONFIG
 from zk_service import ZKDeviceService
 from idempotency import compute_idempotency_key
 from queue_manager import QueueManager
+from device_lock import DeviceLock
 
 # Configurar logging
 logging.basicConfig(
@@ -125,16 +126,15 @@ class AttendanceSynchronizer:
                             INSERT INTO empleados (codigo_reloj, dni, nombres, apellidos, turno_id, activo)
                             VALUES (%s, %s, %s, %s, 1, 1)
                             ON DUPLICATE KEY UPDATE 
-                                nombres = VALUES(nombres),
-                                apellidos = VALUES(apellidos),
                                 activo = 1
                         """, (user_id_str, dni_dummy, nombres, apellidos))
-                        new_users_count += 1
+                        if cursor.rowcount == 1:
+                            new_users_count += 1
                     except Exception as e:
                         logger.warning(f"No se pudo guardar empleado para user_id {user_id_str}: {str(e)}")
 
             if new_users_count > 0:
-                logger.info(f"Sincronizados/actualizados {new_users_count} empleados desde el biométrico.")
+                logger.info(f"Insertados {new_users_count} nuevos empleados desde el biométrico.")
             return new_users_count
         except Exception as e:
             logger.error(f"Error al sincronizar usuarios de dispositivo {device_id}: {str(e)}")
@@ -190,6 +190,17 @@ class AttendanceSynchronizer:
         protocol = device['protocolo'] or 'TCP'
         comm_key = device['clave_comunicacion'] or 0
         force_udp = (protocol.upper() == 'UDP')
+
+        # Mutex de dispositivo: evitar colisión si hay enrolamiento biométrico en curso
+        lock = DeviceLock(device_id, purpose="sync_pull")
+        if not lock.acquire(wait_timeout=0.0):
+            logger.info(f"Dispositivo #{device_id} [{device.get('nombre', 'ZKTeco')}] ocupado por sesión biométrica activa. Postergando pull...")
+            return {
+                "success": False,
+                "device_id": device_id,
+                "postponed": True,
+                "message": "Dispositivo ocupado por enrolamiento de huellas en curso."
+            }
 
         start_time = time.time()
         filter_mode = "HISTÓRICO COMPLETO" if full else ("SOLO HOY" if today_only else (f"FECHA {target_date}" if target_date else (f"ÚLTIMOS {days} DÍAS" if days else "INCREMENTAL (7 DÍAS)")))
@@ -438,6 +449,12 @@ class AttendanceSynchronizer:
                 "device_id": device_id,
                 "error": err_msg
             }
+        finally:
+            try:
+                zk_service.disconnect()
+            except Exception:
+                pass
+            lock.release()
 
     def run_attendance_calculation(self, dates=None):
         """Invoca el motor de cálculo de asistencia diaria en PHP tras sincronizar"""
